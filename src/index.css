@@ -1,0 +1,229 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 0 0% 23%;
+    --primary-foreground: 0 0% 96%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 23%;
+    --muted: 0 0% 93%;
+    --muted-foreground: 0 0% 33%;
+    --accent: 0 0% 93%;
+    --accent-foreground: 0 0% 23%;
+    --destructive: 0 72% 39%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 130 55% 33%;
+    --success-foreground: 0 0% 100%;
+    --warning: 24 100% 45%;
+    --warning-foreground: 0 0% 100%;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 0 0% 23%;
+    --radius: 0.375rem;
+    --sidebar-background: 0 0% 18%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 18%;
+    --sidebar-accent: 0 0% 25%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 28%;
+    --sidebar-ring: 0 0% 50%;
+
+    --grade-green: 150 63% 32%;
+    --grade-green-bg: 140 39% 93%;
+    --grade-blue: 213 73% 38%;
+    --grade-blue-bg: 210 65% 95%;
+    --grade-black: 0 0% 13%;
+    --grade-black-bg: 0 0% 96%;
+
+    /* Semantic action colors */
+    --info: 213 73% 42%;
+    --info-foreground: 0 0% 100%;
+    --info-bg: 210 65% 95%;
+
+    /* Status colors */
+    --status-open: 150 60% 36%;
+    --status-open-bg: 140 40% 94%;
+    --status-draft: 35 80% 46%;
+    --status-draft-bg: 38 80% 95%;
+    --status-closed: 0 0% 50%;
+    --status-closed-bg: 0 0% 95%;
+
+    /* Interactive accent for management buttons */
+    --action: 213 65% 45%;
+    --action-foreground: 0 0% 100%;
+    --action-muted: 213 40% 94%;
+  }
+
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 0 0% 96%;
+    --primary-foreground: 0 0% 13%;
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 0 0% 20%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 0 72% 39%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 130 55% 33%;
+    --success-foreground: 0 0% 100%;
+    --warning: 24 100% 45%;
+    --warning-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 80%;
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 0 0% 96%;
+    --sidebar-primary-foreground: 0 0% 8%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 0 0% 50%;
+
+    --info: 213 73% 55%;
+    --info-foreground: 0 0% 100%;
+    --info-bg: 213 50% 20%;
+
+    --status-open: 150 55% 45%;
+    --status-open-bg: 150 30% 18%;
+    --status-draft: 35 75% 55%;
+    --status-draft-bg: 35 40% 18%;
+    --status-closed: 0 0% 55%;
+    --status-closed-bg: 0 0% 18%;
+
+    --action: 213 65% 60%;
+    --action-foreground: 0 0% 100%;
+    --action-muted: 213 30% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 800;
+  }
+  h2 {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  h3 {
+    font-size: 14px;
+    font-weight: 700;
+  }
+}
+
+/* Zoom SDK 내부 요소 드래그/이동 방지 */
+.zoom-fixed-container,
+.zoom-fixed-container * {
+  -webkit-user-drag: none;
+}
+
+.zoom-fixed-container [style*="cursor: move"],
+.zoom-fixed-container [style*="cursor: grab"] {
+  cursor: default !important;
+}
+
+.zoom-fixed-container [class*="suspension-window"],
+.zoom-fixed-container [class*="popper"],
+.zoom-fixed-container [class*="draggable"] {
+  transform: none !important;
+  left: 0 !important;
+  top: 0 !important;
+}
+
+/* Zoom SDK 상단 오버레이/가이드/컨트롤 바 숨김 */
+.zoom-fixed-container [class*="meeting-info-icon"],
+.zoom-fixed-container [class*="meeting-info-container"],
+.zoom-fixed-container [class*="suspension"] [class*="header"],
+.zoom-fixed-container [class*="window-content-resize"],
+.zoom-fixed-container [role="tooltip"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Zoom SDK 하단 툴바 (오디오, 비디오, 참가자 등) 숨김 */
+.zoom-fixed-container [class*="footer"],
+.zoom-fixed-container [class*="toolbar"],
+.zoom-fixed-container [class*="meeting-client-inner"] > div:last-child,
+.zoom-fixed-container [class*="action-bar"],
+.zoom-fixed-container [class*="meeting-action"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+/* 최소화/닫기 같은 상단 우측 소형 컨트롤 숨김 */
+.zoom-fixed-container button[class*="minimize"],
+.zoom-fixed-container button[class*="close"],
+.zoom-fixed-container [aria-label="minimize"],
+.zoom-fixed-container [aria-label="Minimize"],
+.zoom-fixed-container [aria-label="close"],
+.zoom-fixed-container [aria-label="Close"] {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  opacity: 0 !important;
+}
+
+/* Zoom 녹화 알림 팝업 숨김 */
+.zoom-fixed-container [class*="recording"],
+.zoom-fixed-container [class*="Recording"],
+.zoom-fixed-container [class*="rec-notify"],
+.zoom-fixed-container [class*="cloud-record"],
+.zoom-fixed-container [aria-label*="recording"],
+.zoom-fixed-container [aria-label*="Recording"],
+.zoom-fixed-container [class*="dialog"] [class*="record"],
+.zoom-fixed-container [class*="modal"] [class*="record"],
+.zoom-fixed-container [class*="notification-bar"],
+.zoom-fixed-container [class*="consent"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+/* 최소화 시 SDK가 display:none/크기 0으로 만드는 것 방지 */
+.zoom-fixed-container [class*="zmwebsdk"] > div,
+.zoom-fixed-container [id*="zmmtg"] > div {
+  display: block !important;
+  min-width: 100% !important;
+  min-height: 120px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
