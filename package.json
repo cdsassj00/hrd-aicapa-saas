@@ -10,7 +10,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:start": "supabase db start",
+    "db:reset": "supabase db reset --local",
+    "db:guard": "./scripts/db-guard.sh",
+    "db:test": "./scripts/db-test.sh",
+    "db:check": "npm run db:guard && npm run db:test"
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.89.1",
