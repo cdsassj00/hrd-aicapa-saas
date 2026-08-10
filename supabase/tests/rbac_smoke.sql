@@ -463,6 +463,116 @@ select pg_temp.assert(
   exists (select 1 from public.questions where visibility = 'platform'),
   '플랫폼 공용은 타 조직에도 보여야 함');
 
+-- ---------------------------------------------------------------------------
+-- 10. 시험 도메인 (0007)
+-- ---------------------------------------------------------------------------
+reset role;
+-- A조직 응시자 한 명 추가
+insert into auth.users (id, email, instance_id, aud, role) values
+  ('66666666-6666-6666-6666-666666666666','taker@acme.test',
+   '00000000-0000-0000-0000-000000000000','authenticated','authenticated');
+insert into public.org_members (org_id, user_id, role) values
+  ('aaaaaaaa-0000-0000-0000-000000000001','66666666-6666-6666-6666-666666666666','applicant');
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+
+-- INSERT 는 서브쿼리에 못 들어간다. 데이터 수정 CTE 로.
+create temp table _ex as
+with ins as (
+  insert into public.exams (org_id, title, status, duration_minutes)
+  values ('aaaaaaaa-0000-0000-0000-000000000001', '2026 상반기 AI 역량진단', 'open', 60)
+  returning id
+)
+select id from ins;
+
+-- 남의 조직 역량 체계는 못 쓴다
+do $$
+declare _fw uuid;
+begin
+  -- B조직 전용 체계를 만들려면 B조직 관리자여야 하므로, 여기서는 A가
+  -- 자기 회차에 '플랫폼 기본'을 붙이는 것은 되는지만 본다(허용돼야 함).
+  select id into _fw from public.competency_frameworks where org_id is null limit 1;
+  update public.exams set framework_id = _fw where id = (select id from _ex);
+end $$;
+
+-- 출제: 플랫폼 공용 문항은 넣을 수 있다
+insert into public.exam_questions (exam_id, question_id)
+select (select id from _ex), 'cc000000-0000-0000-0000-000000000001';
+
+-- 라이선스 없는 프리미엄 문항은 출제 불가 (RLS 가 아니라 트리거가 막는다 —
+-- INSERT 로 남의 문항 id 를 직접 박는 경로)
+do $$
+begin
+  insert into public.exam_questions (exam_id, question_id)
+  select (select id from _ex), 'cc000000-0000-0000-0000-000000000002';
+  raise exception 'RBAC 검증 실패: 라이선스 없는 문항이 출제됨';
+exception
+  when insufficient_privilege then null;
+end $$;
+
+-- org_id 는 트리거가 덮어쓴다. 앱이 남의 org_id 를 박아도 무시돼야 한다.
+insert into public.exam_sessions (id, exam_id, org_id, user_id, status)
+values ('ee000000-0000-0000-0000-000000000001', (select id from _ex),
+        'bbbbbbbb-0000-0000-0000-000000000002',  -- 일부러 B조직으로 박음
+        '66666666-6666-6666-6666-666666666666', 'in_progress');
+
+select pg_temp.assert(
+  (select org_id from public.exam_sessions where id = 'ee000000-0000-0000-0000-000000000001')
+    = 'aaaaaaaa-0000-0000-0000-000000000001',
+  'org_id 비정규화가 트리거로 강제돼야 함 (앱이 박은 값 무시)');
+
+-- 응시자 시점
+set local request.jwt.claims = '{"sub":"66666666-6666-6666-6666-666666666666","role":"authenticated"}';
+
+-- 회차는 보이지만 출제 내용(exam_questions)은 보이면 안 된다.
+-- 보이면 시험 전에 문제를 다 볼 수 있다.
+select pg_temp.assert(
+  exists (select 1 from public.exams where status = 'open'),
+  '응시자에게 공개된 회차가 보여야 함');
+select pg_temp.assert(
+  (select count(*) from public.exam_questions) = 0,
+  '응시자에게 출제 목록이 보이면 안 됨');
+
+-- 본인 세션은 보이고 답안을 쓸 수 있다
+select pg_temp.assert(
+  (select count(*) from public.exam_sessions) = 1, '본인 세션이 보여야 함');
+
+insert into public.answers (session_id, question_id, content)
+values ('ee000000-0000-0000-0000-000000000001',
+        'cc000000-0000-0000-0000-000000000001', '{"choice":"a"}');
+
+select pg_temp.assert(
+  (select org_id from public.answers where session_id = 'ee000000-0000-0000-0000-000000000001')
+    = 'aaaaaaaa-0000-0000-0000-000000000001',
+  '답안 org_id 가 세션에서 상속돼야 함');
+
+-- 응시자는 채점 잡을 만들 수 없다
+do $$
+begin
+  insert into public.grading_jobs (exam_id, org_id)
+  select (select id from _ex), 'aaaaaaaa-0000-0000-0000-000000000001';
+  raise exception 'RBAC 검증 실패: 응시자가 채점 잡을 생성함';
+exception
+  when insufficient_privilege then null;
+end $$;
+
+-- 다른 조직 사람에게는 회차도 답안도 보이지 않는다
+set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
+select pg_temp.assert((select count(*) from public.exams) = 0, '타 조직 회차가 보임');
+select pg_temp.assert((select count(*) from public.answers) = 0, '타 조직 답안이 보임');
+select pg_temp.assert((select count(*) from public.exam_sessions) = 0, '타 조직 세션이 보임');
+
+-- draft 회차는 응시자에게 안 보인다
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+insert into public.exams (org_id, title, status)
+values ('aaaaaaaa-0000-0000-0000-000000000001', '작성 중 회차', 'draft');
+
+set local request.jwt.claims = '{"sub":"66666666-6666-6666-6666-666666666666","role":"authenticated"}';
+select pg_temp.assert(
+  not exists (select 1 from public.exams where status = 'draft'),
+  '작성 중(draft) 회차가 응시자에게 보이면 안 됨');
+
 reset role;
 select '✅ RBAC 스모크 테스트 통과' as result;
 
