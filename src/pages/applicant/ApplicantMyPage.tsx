@@ -22,7 +22,7 @@ export default function ApplicantMyPage() {
   const [isApplying, setIsApplying] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
-  const { user, role } = useAuth();
+  const { user, role, activeOrg } = useAuth();
   const isApplicantRole = role === 'applicant';
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -459,7 +459,7 @@ export default function ApplicantMyPage() {
             )}
             <div className="grid grid-cols-2 gap-3 text-[12px]">
               <div><Label className="text-muted-foreground">이름</Label><p className="font-medium">{user?.name}</p></div>
-              <div><Label className="text-muted-foreground">소속</Label><p className="font-medium">{user?.organization || '-'}</p></div>
+              <div><Label className="text-muted-foreground">소속</Label><p className="font-medium">{activeOrg?.orgName || '-'}</p></div>
             </div>
           </div>
           <DialogFooter>

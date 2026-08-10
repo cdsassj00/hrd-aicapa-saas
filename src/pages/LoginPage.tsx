@@ -47,7 +47,8 @@ export default function LoginPage() {
   const routes: Record<UserRole, string> = {
     applicant: '/applicant',
     examiner: '/examiner/monitor',
-    admin: '/admin/exams',
+    org_owner: '/admin/exams',
+    org_admin: '/admin/exams',
     viewer: '/admin/certifications',
   };
 
@@ -143,7 +144,9 @@ export default function LoginPage() {
       return;
     }
     setIsLoading(true);
-    const { error } = await signUp(email, password, { name, organization, department, position, phone }, selectedRole);
+    // 역할은 조직 멤버십으로 정해진다 — 가입 시점에는 고르지 않는다.
+    // 부서·직급도 조직별 정보라 org_members 로 옮겼다(0004).
+    const { error } = await signUp(email, password, { name, phone });
     setIsLoading(false);
     if (error) {
       setSignupError(error.message || '회원가입에 실패했습니다.');

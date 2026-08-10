@@ -195,6 +195,113 @@ select pg_temp.assert(
     (select id from public.organizations where slug = 'gamma'), 'org_owner'),
   '생성자가 org_owner 여야 함');
 
+-- ---------------------------------------------------------------------------
+-- 7. 초대 플로우 (0004)
+-- ---------------------------------------------------------------------------
+reset role;
+insert into auth.users (id, email, instance_id, aud, role)
+values ('55555555-5555-5555-5555-555555555555', 'newbie@acme.test',
+        '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated');
+
+-- 가입 트리거가 프로필을 만들었는지
+select pg_temp.assert(
+  exists (select 1 from public.profiles where id = '55555555-5555-5555-5555-555555555555'),
+  'handle_new_user 트리거가 프로필을 생성해야 함');
+
+-- 남의 조직에 초대할 수 없다
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
+do $$
+begin
+  perform public.create_org_invitation(
+    'aaaaaaaa-0000-0000-0000-000000000001', 'newbie@acme.test', 'examiner');
+  raise exception 'RBAC 검증 실패: 타 조직에 초대가 허용됨';
+exception
+  when insufficient_privilege then null;
+end $$;
+
+-- org_owner 는 초대로 부여할 수 없다
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+do $$
+begin
+  perform public.create_org_invitation(
+    'aaaaaaaa-0000-0000-0000-000000000001', 'newbie@acme.test', 'org_owner');
+  raise exception 'RBAC 검증 실패: 초대로 org_owner 부여됨';
+exception
+  when insufficient_privilege then null;
+end $$;
+
+-- 정상 초대 발급
+create temp table _tok as
+select public.create_org_invitation(
+  'aaaaaaaa-0000-0000-0000-000000000001', 'newbie@acme.test', 'examiner') as token;
+
+select pg_temp.assert(
+  (select length(token) from _tok) = 64,
+  '토큰은 32바이트 hex(64자)여야 함');
+
+-- 원문 토큰이 DB 에 저장되면 안 된다
+select pg_temp.assert(
+  not exists (select 1 from public.org_invitations i, _tok t where i.token_hash = t.token),
+  '원문 토큰이 그대로 저장됨 — 해시만 저장해야 함');
+
+-- 엉뚱한 계정으로는 수락 불가 (토큰이 새어도 이메일이 다르면 막힌다)
+set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
+do $$
+declare _t text;
+begin
+  select token into _t from _tok;
+  perform public.accept_org_invitation(_t);
+  raise exception 'RBAC 검증 실패: 수신자가 아닌 계정이 초대를 수락함';
+exception
+  when insufficient_privilege then null;
+end $$;
+
+-- 수신자 본인은 수락 가능
+set local request.jwt.claims = '{"sub":"55555555-5555-5555-5555-555555555555","role":"authenticated"}';
+do $$
+declare _t text; _org uuid;
+begin
+  select token into _t from _tok;
+  _org := public.accept_org_invitation(_t);
+  if _org <> 'aaaaaaaa-0000-0000-0000-000000000001' then
+    raise exception 'RBAC 검증 실패: 수락 결과 org_id 불일치';
+  end if;
+end $$;
+
+select pg_temp.assert(
+  public.has_org_role('aaaaaaaa-0000-0000-0000-000000000001', 'examiner'),
+  '수락 후 examiner 역할이 있어야 함');
+
+-- 같은 토큰 재사용 불가
+do $$
+declare _t text;
+begin
+  select token into _t from _tok;
+  perform public.accept_org_invitation(_t);
+  raise exception 'RBAC 검증 실패: 토큰이 재사용됨';
+exception
+  when invalid_parameter_value then null;
+end $$;
+
+-- 초대 목록은 조직 관리자만 (수락한 일반 멤버에게는 안 보인다)
+select pg_temp.assert(
+  (select count(*) from public.org_invitations) = 0,
+  '일반 멤버에게 초대 목록이 보이면 안 됨');
+
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+select pg_temp.assert(
+  (select count(*) from public.org_invitations) >= 1,
+  '조직 관리자에게는 초대 목록이 보여야 함');
+
+-- 같은 조직 멤버의 프로필은 보이고, 남의 조직 사람은 안 보인다
+select pg_temp.assert(
+  exists (select 1 from public.profiles where id = '55555555-5555-5555-5555-555555555555'),
+  '같은 조직 멤버 프로필이 보여야 함');
+select pg_temp.assert(
+  not exists (select 1 from public.profiles where id = '33333333-3333-3333-3333-333333333333'),
+  '다른 조직 사용자 프로필이 보이면 안 됨');
+
 reset role;
 select '✅ RBAC 스모크 테스트 통과' as result;
 

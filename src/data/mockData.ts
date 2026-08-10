@@ -4,10 +4,6 @@ export const mockUser: User = {
   id: 'u1',
   email: 'hong@gov.kr',
   name: '홍길동',
-  role: 'applicant',
-  organization: '행정안전부',
-  department: '디지털정부국',
-  position: '주무관',
   phone: '010-1234-5678',
 };
 

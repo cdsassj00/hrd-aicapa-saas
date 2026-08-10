@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 interface ExamChatPanelProps {
   sessionId: string;
   currentUserId: string;
-  currentRole: 'applicant' | 'examiner' | 'admin';
+  currentRole: 'applicant' | 'examiner' | 'org_admin' | 'org_owner';
   applicantName?: string;
   onOpen?: () => void;
   /** 외부에서 메시지를 관리하는 경우(감독관 대시보드). 지정 시 내부 fetch/subscribe를 건너뛴다. */
@@ -209,7 +209,7 @@ export default function ExamChatPanel({
     }
   };
 
-  const isExaminer = currentRole === 'examiner' || currentRole === 'admin';
+  const isExaminer = currentRole === 'examiner' || currentRole === 'org_admin' || currentRole === 'org_owner';
 
   return (
     <>
@@ -285,7 +285,7 @@ export default function ExamChatPanel({
             {messages.map((msg) => {
               const isMine = msg.sender_id === currentUserId;
               const isWarning = msg.message.startsWith('🚨') || msg.message.startsWith('⚠️');
-              const senderIsExaminer = msg.sender_role === 'examiner' || msg.sender_role === 'admin';
+              const senderIsExaminer = msg.sender_role === 'examiner' || msg.sender_role === 'org_admin' || msg.sender_role === 'org_owner';
               const senderLabel = senderIsExaminer ? '🛡️ 감독관' : '👤 응시자';
               return (
                 <div key={msg.id} className={cn("flex", isMine ? "justify-end" : "justify-start")}>
