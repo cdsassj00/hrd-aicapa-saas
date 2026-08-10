@@ -253,7 +253,9 @@ CREATE POLICY "question read" ON public.questions FOR SELECT USING (
 );
 ```
 
-쓰기는 `owner_org_id`가 자기 조직일 때만. 플랫폼 공용 문항은 `platform_admins`만.
+쓰기는 소유 조직일 때만. 플랫폼 공용 문항은 `platform_admins`만.
+
+> 구현에서는 컬럼명을 `owner_org_id` 대신 **`org_id`** 로 통일했습니다. 0002~0005 가 전부 `org_id` 이고 CI 가드가 그 이름을 봅니다. 이름 하나 때문에 가드 예외를 파면 그 예외가 나중에 진짜 누락을 가려 줍니다. 의미는 동일 — `NULL` 이면 플랫폼 소유.
 
 동시에 `question_category` enum(한글 3종 고정)은 테이블로 풀어야 합니다:
 
@@ -359,7 +361,7 @@ supabase/migrations/
   0003_identity_and_rbac.sql         -- user_org_ids(), has_org_role(), is_platform_admin()       [적용됨]
   0004_profiles_and_invitations.sql  -- profiles, org_invitations, 초대 함수      [적용됨]
   0005_competency_model.sql          -- frameworks, competencies, grade_scales + 플랫폼 기본 시드 [적용됨]
-  0006_question_bank.sql             -- questions, question_sets, 소유권/라이선스
+  0006_question_bank.sql             -- questions, question_sets, 소유권/라이선스 [적용됨]
   0007_assessment_core.sql           -- exams, exam_sessions, answers, grading_jobs
   0008_proctoring.sql                -- monitoring_events, recording_chunks, diagnostics
   0009_certification.sql             -- certifications (org 스코프 채번)

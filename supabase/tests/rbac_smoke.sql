@@ -364,6 +364,105 @@ exception
   when insufficient_privilege then null;
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- 9. 문제은행 소유권·라이선스 (0006)
+-- ---------------------------------------------------------------------------
+reset role;
+-- 플랫폼 문항 3종: 공용 / 라이선스 / (조직 문항은 아래에서 A조직이 만든다)
+insert into public.questions (id, org_id, visibility, type, content, answer_key) values
+  ('cc000000-0000-0000-0000-000000000001', null, 'platform', 'multiple_choice',
+   '공용 문항', '{"options":[{"id":"a","text":"보기1","is_correct":true},{"id":"b","text":"보기2","is_correct":false}]}'),
+  ('cc000000-0000-0000-0000-000000000002', null, 'licensed', 'essay', '프리미엄 문항', '{}');
+
+insert into public.question_sets (id, org_id, visibility, code, name)
+values ('dd000000-0000-0000-0000-000000000001', null, 'licensed', 'premium-1', '프리미엄 세트');
+insert into public.question_set_items (set_id, question_id)
+values ('dd000000-0000-0000-0000-000000000001', 'cc000000-0000-0000-0000-000000000002');
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+
+-- 공용은 보이고, 라이선스 없는 프리미엄은 안 보인다
+select pg_temp.assert(
+  exists (select 1 from public.questions where visibility = 'platform'),
+  '플랫폼 공용 문항이 보여야 함');
+select pg_temp.assert(
+  not exists (select 1 from public.questions where visibility = 'licensed'),
+  '라이선스 없이 프리미엄 문항이 보이면 안 됨');
+
+-- 조직이 스스로 라이선스를 부여할 수 없어야 한다(유료 콘텐츠가 공짜가 되는 경로)
+do $$
+begin
+  insert into public.question_licenses (org_id, set_id)
+  values ('aaaaaaaa-0000-0000-0000-000000000001', 'dd000000-0000-0000-0000-000000000001');
+  raise exception 'RBAC 검증 실패: 조직이 스스로 라이선스를 부여함';
+exception
+  when insufficient_privilege then null;
+end $$;
+
+-- 플랫폼 문항을 조직 관리자가 고칠 수 없다(전 고객사 진단이 바뀌는 경로)
+with u as (
+  update public.questions set content = '변조됨' where visibility = 'platform' returning 1
+)
+select pg_temp.assert((select count(*) from u) = 0, '플랫폼 문항이 조직 관리자에게 수정됨');
+
+-- 소유와 공개 범위가 어긋난 문항은 만들 수 없다
+do $$
+begin
+  insert into public.questions (org_id, visibility, type, content)
+  values ('aaaaaaaa-0000-0000-0000-000000000001', 'platform', 'essay', '유출 시도');
+  raise exception 'RBAC 검증 실패: 조직 소유인데 platform 공개인 문항이 생성됨';
+exception
+  when check_violation then null;
+end $$;
+
+-- 조직 문항 생성
+insert into public.questions (id, org_id, visibility, type, content, answer_key)
+values ('cc000000-0000-0000-0000-000000000003',
+        'aaaaaaaa-0000-0000-0000-000000000001', 'org', 'multiple_choice', 'A사 문항',
+        '{"options":[{"id":"a","text":"정답","is_correct":true}]}');
+
+-- 응시자용 뷰에는 정답이 없어야 한다. 이게 새면 시험 자체가 무의미해진다.
+select pg_temp.assert(
+  (select prompt_data::text not like '%is_correct%'
+     from public.questions_public where id = 'cc000000-0000-0000-0000-000000000003'),
+  'questions_public 에 is_correct 가 노출됨');
+select pg_temp.assert(
+  (select prompt_data->'options'->0->>'text' = '정답'
+     from public.questions_public where id = 'cc000000-0000-0000-0000-000000000003'),
+  '보기 텍스트는 응시자에게 내려가야 함');
+
+-- 라이선스를 부여하면(플랫폼 운영자만 가능) 프리미엄이 보인다
+reset role;
+insert into public.question_licenses (org_id, set_id)
+values ('aaaaaaaa-0000-0000-0000-000000000001', 'dd000000-0000-0000-0000-000000000001');
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+select pg_temp.assert(
+  exists (select 1 from public.questions where visibility = 'licensed'),
+  '라이선스 부여 후 프리미엄 문항이 보여야 함');
+
+-- 만료된 라이선스는 즉시 차단된다
+reset role;
+update public.question_licenses set expires_at = now() - interval '1 day'
+ where org_id = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+select pg_temp.assert(
+  not exists (select 1 from public.questions where visibility = 'licensed'),
+  '만료된 라이선스로 프리미엄 문항이 보임');
+
+-- 다른 조직에는 A사 문항이 보이지 않는다
+set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
+select pg_temp.assert(
+  not exists (select 1 from public.questions where content = 'A사 문항'),
+  '타 조직 문항이 보이면 안 됨');
+select pg_temp.assert(
+  exists (select 1 from public.questions where visibility = 'platform'),
+  '플랫폼 공용은 타 조직에도 보여야 함');
+
 reset role;
 select '✅ RBAC 스모크 테스트 통과' as result;
 
