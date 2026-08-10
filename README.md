@@ -37,13 +37,37 @@ npm run build     # 프로덕션 빌드
 
 > `service_role` 키는 `.env`에 절대 두지 마세요. Supabase Edge Function Secrets에만 보관합니다.
 
+## 데이터베이스
+
+원격 프로젝트: `hrd-aicapa-saas` (`eoeiqpgzoyltrawfflhj`, ap-northeast-2 서울, Pro, Postgres 17)
+
+```bash
+npm run db:start    # 로컬 Postgres 기동 + 마이그레이션 전체 적용 (Docker 필요)
+npm run db:reset    # 0001부터 깨끗하게 재적용
+npm run db:check    # 테넌시 가드 + RBAC 스모크 테스트
+
+npx supabase link --project-ref eoeiqpgzoyltrawfflhj   # 원격 연결 (DB 비밀번호 필요)
+npx supabase db push                                   # 원격에 마이그레이션 적용
+```
+
+`db:check`는 CI(`.github/workflows/db-guard.yml`)에서도 그대로 돌아갑니다.
+
+| 검사 | 파일 | 내용 |
+|---|---|---|
+| 테넌시 가드 | `supabase/tests/tenancy_guard.sql` | `org_id` 누락 · RLS 미적용 · `org_id` 타입/FK · `search_path` 안 잠근 함수 · `anon`이 실행 가능한 SECURITY DEFINER 함수 |
+| RBAC 스모크 | `supabase/tests/rbac_smoke.sql` | 테넌트 격리, 권한 상승 차단, 마지막 `org_owner` 보호, 익명 브랜딩 읽기 |
+
+가드에 걸린 테이블을 예외 목록에 넣는 것은 "이 테이블은 테넌트 경계 밖"이라는 보안 선언입니다. 사유 없이 추가하지 마세요.
+
 ## 현재 상태
 
-부트스트랩 단계입니다. `supabase/migrations/`는 비어 있으며, `docs/MULTITENANT_DESIGN.md` §7의 구성(`0001`~`0012`)으로 새로 작성합니다.
+부트스트랩 단계입니다. `docs/MULTITENANT_DESIGN.md` §7의 구성(`0001`~`0012`) 중 `0001`~`0003`(테넌시 코어 · RBAC · CI 가드)까지 작성되어 있습니다.
 
 ### 남은 정리 작업
 
-- [ ] `supabase/migrations/` 재작성 (테넌시 코어 → RBAC → 도메인 순)
+- [ ] `0004`~`0012` 마이그레이션 (역량모델 → 문제은행 → 시험 도메인 → 감독 → 인증서 → 과금 → 감사 → RLS 정책 → 시드)
+- [ ] 조직 초대 플로우 — 미가입 이메일 초대는 `auth.users` 행이 없어 `org_members`로 표현 불가. `org_invitations` 테이블 필요
+- [ ] 프런트엔드 `user_roles` 참조 제거 (`src/contexts/AuthContext.tsx`, `src/pages/admin/UserManagePage.tsx`) → `org_members` 기반 조직 전환 UI로 교체
 - [ ] `@lovable.dev/cloud-auth-js`, `@lovable.dev/mcp-js` 의존성 제거 — `src/lib/mcp/`가 참조 중이라 함께 정리 필요
-- [ ] `supabase/config.toml`의 `project_id`를 신규 프로젝트 ID로 교체
+- [x] ~~`supabase/config.toml`의 `project_id`를 신규 프로젝트 ID로 교체~~
 - [ ] Edge Function 19개의 비즈니스 로직을 순수 TS 모듈로 분리 (이식성 확보)

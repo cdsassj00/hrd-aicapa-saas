@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<title>AICAPA for Business — AI 활용 역량진단 · 인증평가 SaaS</title>
+
+<style>
+
+/* ============================================================
+   ssjsite 디자인 토큰 — 애플 다크 몰입형
+   순수 블랙 배경 + iOS 시스템 그레이 계단. 의도적 단일 테마.
+   ============================================================ */
+:root {
+  --paper:#000000; --surf:#1c1c1e; --tint:#2c2c2e; --tint2:#3a3a3c;
+  --hair:#38383a; --hair2:#48484a;
+  --ink:#f5f5f7; --body:#d1d1d6; --mut:#98989d; --faint:#6e6e73;
+  --accent:#0a84ff; --accent-hi:#409cff; --accent-lo:#0071e3;
+  --red:#ff453a; --green:#30d158; --gold:#ffd60a; --gold-warm:#ff9f0a;
+  --shadow-card: 0 2px 16px rgb(0 0 0 / 0.5);
+  --shadow-lift: 0 8px 32px rgb(0 0 0 / 0.6);
+  --maxw: 1120px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  letter-spacing: -0.01em;
+  font-feature-settings: "ss05";
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px;
+  line-height: 1.6;
+}
+h1, h2, h3, h4 { margin: 0; letter-spacing: -0.028em; font-variation-settings: "wght" 600; text-wrap: balance; }
+h1 { font-variation-settings: "wght" 650; }
+p { margin: 0; }
+ul { margin: 0; padding: 0; list-style: none; }
+a { color: inherit; text-decoration: none; }
+img, svg { display: block; max-width: 100%; }
+.tabular { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+button:not(:disabled), summary { cursor: pointer; }
+.sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+/* ─── 시그니처 컴포넌트 ─────────────────────────────────── */
+.panel { border-radius: 16px; background: var(--surf); }
+.h-judge {
+  font-size: clamp(30px, 5vw, 38px);
+  font-variation-settings: "wght" 600;
+  line-height: 1.15; letter-spacing: -0.02em; color: var(--ink);
+}
+.overline-label { font-size: 13px; font-variation-settings: "wght" 600; color: var(--mut); letter-spacing: 0.01em; }
+.on-dark-mut { color: rgba(245,245,247,0.68); }
+
+.btn-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: var(--accent);
+  padding: 11px 26px; font-size: 15px; font-variation-settings: "wght" 550; color: #fff;
+  transition: background .2s ease, transform .2s ease;
+}
+.btn-pill:hover { background: var(--accent-hi); }
+.btn-pill:active { transform: scale(.98); }
+.btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; padding: 10px 22px; font-size: 15px;
+  font-variation-settings: "wght" 550; color: var(--ink);
+  border: 1px solid var(--hair2); transition: background .2s ease, border-color .2s ease;
+}
+.btn-ghost:hover { background: var(--tint); border-color: var(--hair2); }
+.btn-link { color: var(--accent-hi); font-size: 15px; font-variation-settings: "wght" 550; }
+.btn-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  border-radius: 999px; padding: 4px 10px;
+  font-size: 12.5px; font-variation-settings: "wght" 600; line-height: 1.4;
+}
+.chip-blue  { background: rgba(10,132,255,.16); color:#64b5ff; }
+.chip-green { background: rgba(48,209,88,.14);  color:#4cd964; }
+.chip-gold  { background: rgba(255,214,10,.14); color:#ffd451; }
+.chip-red   { background: rgba(255,69,58,.16);  color:#ff6961; }
+
+/* ─── 모션 (전부 reduced-motion 가드) ────────────────────── */
+[data-reveal] { opacity: 0; transform: translateY(28px);
+  transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+[data-reveal].show { opacity: 1; transform: none; }
+[data-stagger] > * { opacity: 0; transform: translateY(22px);
+  transition: opacity .6s cubic-bezier(.2,.7,.2,1), transform .6s cubic-bezier(.2,.7,.2,1); }
+[data-stagger].show > * { opacity: 1; transform: none; }
+
+.ln { display: block; overflow: hidden; }
+.ln > span { display: block; transform: translateY(115%); animation: ln-up .9s cubic-bezier(.2,.7,.2,1) forwards; }
+.ln:nth-of-type(2) > span { animation-delay: .14s; }
+@keyframes ln-up { to { transform: none; } }
+
+.scroll-cue { animation: cue 1.8s ease-in-out infinite; }
+@keyframes cue { 0%,100%{transform:translateY(0);opacity:.5} 50%{transform:translateY(8px);opacity:1} }
+
+.aurora-text {
+  background: linear-gradient(100deg,#f5f5f7 0%,#7fb7ff 30%,#ffd257 55%,#9db8ff 75%,#f5f5f7 100%);
+  background-size: 280% 100%; -webkit-background-clip: text; background-clip: text;
+  color: transparent; animation: aurora-flow 6.5s ease-in-out infinite;
+}
+@keyframes aurora-flow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+
+.ping { position:absolute; inset:0; border-radius:999px; background: var(--green);
+  opacity:.6; animation: ping 1.6s cubic-bezier(0,0,.2,1) infinite; }
+@keyframes ping { 75%,100% { transform: scale(2.4); opacity: 0; } }
+
+/* ─── 레이아웃 ──────────────────────────────────────────── */
+.wrap { margin-inline: auto; max-width: var(--maxw); padding-inline: 20px; }
+.narrow { margin-inline: auto; max-width: 760px; }
+section { padding-block: 96px; }
+/* 고정 헤더(52px) 아래로 앵커가 파묻히지 않게 */
+section[id], .stats { scroll-margin-top: 78px; }
+
+/* 상단 진행바 */
+#progress-track { position: fixed; inset-inline: 0; top: 0; z-index: 60; height: 2px; background: transparent; }
+#progress-bar { height: 100%; width: 100%; transform-origin: left; transform: scaleX(0);
+  background: linear-gradient(90deg, var(--accent-lo), var(--accent-hi)); }
+
+/* 프로스티드 헤더 */
+header.site {
+  position: fixed; inset-inline: 0; top: 0; z-index: 50;
+  background: rgba(0,0,0,.62);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+header.site .bar { display: flex; align-items: center; gap: 28px; height: 52px; }
+.wordmark { display:flex; align-items:baseline; gap:7px; font-size:15px; font-variation-settings:"wght" 650; letter-spacing:-0.03em; }
+.wordmark .sub { font-size: 12.5px; font-variation-settings:"wght" 500; color: var(--mut); letter-spacing: 0; }
+header.site nav { display:none; gap: 26px; margin-inline-start: auto; }
+header.site nav a { font-size: 13.5px; color: var(--mut); transition: color .2s; }
+header.site nav a:hover { color: var(--ink); }
+header.site .cta-slot { margin-inline-start: auto; }
+@media (min-width: 900px) {
+  header.site nav { display: flex; }
+  header.site .cta-slot { margin-inline-start: 0; }
+}
+.btn-sm { border-radius:999px; background: var(--accent); color:#fff; padding:7px 15px;
+  font-size:13.5px; font-variation-settings:"wght" 550; transition: background .2s; }
+.btn-sm:hover { background: var(--accent-hi); }
+
+/* ─── 히어로 ────────────────────────────────────────────── */
+.hero {
+  position: relative; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100svh; overflow: hidden; padding: 120px 20px 88px; text-align: center;
+}
+.hero canvas { position:absolute; inset:0; width:100%; height:100%; }
+.hero .vignette { pointer-events:none; position:absolute; inset:0;
+  background: radial-gradient(ellipse at center, transparent 28%, #000 78%); }
+.hero .inner { position: relative; }
+.badge-live {
+  display:inline-flex; align-items:center; gap:8px; margin-top:10px;
+  border-radius:999px; border:1px solid rgba(48,209,88,.3); background: rgba(48,209,88,.10);
+  padding:5px 13px; font-size:12.5px; font-variation-settings:"wght" 600; color:#4cd964;
+}
+.dot { position:relative; display:inline-flex; width:6px; height:6px; }
+.dot i { position:relative; display:inline-flex; width:6px; height:6px; border-radius:999px; background: var(--green); }
+h1.hero-title {
+  margin-inline: auto; margin-top: 18px; max-width: 900px;
+  font-size: 44px; line-height: 1.06; letter-spacing: -0.03em;
+}
+@media (min-width: 640px) { h1.hero-title { font-size: 68px; } }
+.hero-sub { margin-inline:auto; margin-top: 24px; max-width: 600px; font-size: 17px; line-height: 1.65; }
+@media (min-width: 640px) { .hero-sub { font-size: 19px; } }
+.hero-cta { margin-top: 34px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap: 20px; }
+.hero-note { margin-top: 20px; font-size: 13px; color: var(--faint); }
+.cue-link { position:absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+  color: var(--faint); font-size: 22px; line-height: 1; }
+
+/* ─── 통계 스트립 ───────────────────────────────────────── */
+.stats { border-block: 1px solid var(--hair); padding-block: 40px; }
+.stats ul { display:grid; grid-template-columns: 1fr; gap: 26px; text-align:center; }
+@media (min-width: 720px) { .stats ul { grid-template-columns: repeat(4, 1fr); gap: 20px; } }
+.stat-n { font-size: 34px; font-variation-settings:"wght" 600; color: var(--ink); letter-spacing:-0.03em; line-height:1.1; }
+.stat-n small { font-size: 18px; font-variation-settings:"wght" 550; color: var(--mut); margin-inline-start:2px; }
+.stat-l { margin-top: 6px; font-size: 13.5px; color: var(--mut); }
+
+/* ─── 섹션 공통 ─────────────────────────────────────────── */
+.sec-head { max-width: 640px; }
+.sec-head .h-judge { margin-top: 6px; }
+.sec-head p.lede { margin-top: 14px; font-size: 16.5px; line-height: 1.7; color: var(--mut); }
+.center { text-align: center; margin-inline: auto; }
+
+/* ─── 문제 제기 ─────────────────────────────────────────── */
+.gaps { margin-top: 44px; display:grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 860px) { .gaps { grid-template-columns: repeat(3, 1fr); } }
+.gap-card { padding: 24px; border: 1px solid var(--hair); border-radius: 16px; background: linear-gradient(180deg, rgba(28,28,30,.9), rgba(12,12,13,.9)); }
+.gap-card .q { font-size: 15.5px; font-variation-settings:"wght" 600; color: var(--ink); line-height:1.5; }
+.gap-card .a { margin-top: 10px; font-size: 14.5px; line-height: 1.7; color: var(--mut); }
+.gap-card .mark { font-size: 13px; color: var(--red); font-variation-settings:"wght" 600; }
+
+/* ─── 기능 카드 ─────────────────────────────────────────── */
+.features { margin-top: 48px; display:grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 760px) { .features { grid-template-columns: repeat(2, 1fr); } }
+.feature {
+  display:flex; flex-direction:column; gap: 6px; padding: 28px;
+  box-shadow: var(--shadow-card);
+  transition: transform .3s ease, box-shadow .3s ease, background .3s ease;
+}
+.feature:hover { transform: translateY(-4px); box-shadow: var(--shadow-lift); background: #202022; }
+.feature .icon { width: 34px; height: 34px; margin-bottom: 12px; color: var(--accent-hi); }
+.feature h3 { font-size: 18px; letter-spacing: -0.022em; }
+.feature p { margin-top: 4px; font-size: 14.5px; line-height: 1.72; color: var(--body); }
+.feature ul.meta { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--hair);
+  display:flex; flex-wrap:wrap; gap: 8px; }
+
+/* ─── 강조 패널 (화이트라벨) ───────────────────────────── */
+.spotlight {
+  position: relative; overflow: hidden; border-radius: 28px;
+  border: 1px solid rgba(255,255,255,.10);
+  padding: 60px 28px;
+  background: linear-gradient(165deg,#0b1830 0%,#070d1a 45%,#050508 100%);
+  text-align: center;
+}
+.spotlight .glow {
+  pointer-events:none; position:absolute; top:-96px; left:50%; transform: translateX(-50%);
+  width: min(560px, 92%); height: 224px; border-radius: 999px;
+  background: rgba(10,132,255,.16); filter: blur(64px);
+}
+.spotlight .inner { position: relative; }
+.brandbar { margin-top: 36px; display:grid; grid-template-columns: 1fr; gap: 12px; text-align:left; }
+@media (min-width: 760px) { .brandbar { grid-template-columns: repeat(2, 1fr); } }
+.brand-item { display:flex; gap: 12px; padding: 16px 18px; border-radius: 14px;
+  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.06); }
+.brand-item .k { font-size: 14px; font-variation-settings:"wght" 600; color: var(--ink); }
+.brand-item .v { margin-top: 3px; font-size: 13.5px; line-height:1.6; color: var(--mut); }
+.brand-item .num { flex: none; width: 22px; font-size: 12.5px; color: var(--accent-hi);
+  font-variation-settings:"wght" 600; padding-top: 2px; }
+
+/* ─── 보안 ──────────────────────────────────────────────── */
+.sec-security { background: linear-gradient(180deg, #000 0%, #08080a 50%, #000 100%); }
+.sec-list { margin-top: 40px; display:grid; grid-template-columns: 1fr; gap: 0; }
+.sec-row { display:grid; grid-template-columns: 1fr; gap: 6px; padding-block: 22px; border-top: 1px solid var(--hair); }
+@media (min-width: 800px) { .sec-row { grid-template-columns: 220px 1fr; gap: 28px; align-items:start; } }
+.sec-row:last-child { border-bottom: 1px solid var(--hair); }
+.sec-row dt { font-size: 15px; font-variation-settings:"wght" 600; color: var(--ink); }
+.sec-row dd { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--mut); }
+.sec-row code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px; color: var(--body); background: var(--tint); padding: 1px 6px; border-radius: 6px; }
+
+/* ─── 도입 절차 ─────────────────────────────────────────── */
+.steps { margin-top: 44px; display:grid; grid-template-columns: 1fr; gap: 16px; counter-reset: s; }
+@media (min-width: 860px) { .steps { grid-template-columns: repeat(3, 1fr); } }
+.step { position:relative; padding: 26px; border-radius: 16px; background: var(--surf); }
+.step .n { display:inline-flex; align-items:center; justify-content:center;
+  width: 26px; height: 26px; border-radius: 999px; background: var(--tint2);
+  font-size: 12.5px; font-variation-settings:"wght" 650; color: var(--ink); }
+.step h3 { margin-top: 14px; font-size: 16.5px; }
+.step p { margin-top: 8px; font-size: 14.5px; line-height: 1.72; color: var(--mut); }
+.step .arrow { display:none; }
+@media (min-width: 860px) {
+  .step .arrow { display:block; position:absolute; top: 34px; right: -22px; color: var(--hair2); font-size: 16px; }
+  .step:last-child .arrow { display:none; }
+}
+
+/* ─── 요금제 ────────────────────────────────────────────── */
+.plans { margin-top: 48px; display:grid; grid-template-columns: 1fr; gap: 16px; align-items:start; }
+@media (min-width: 900px) { .plans { grid-template-columns: repeat(3, 1fr); } }
+.plan { padding: 28px; border-radius: 18px; background: var(--surf); border: 1px solid transparent; display:flex; flex-direction:column; height:100%; }
+.plan.featured { border-color: rgba(10,132,255,.45); background: linear-gradient(180deg, #131a26 0%, #1c1c1e 60%); box-shadow: var(--shadow-card); }
+.plan .name { font-size: 16px; font-variation-settings:"wght" 650; letter-spacing:-0.02em; }
+.plan .who { margin-top: 5px; font-size: 13.5px; color: var(--mut); }
+.plan .price { margin-top: 20px; font-size: 26px; font-variation-settings:"wght" 600; letter-spacing:-0.03em; }
+.plan .price span { font-size: 14px; color: var(--mut); font-variation-settings:"wght" 500;
+  letter-spacing: -0.01em; margin-inline-start: 4px; }
+.plan ul.f { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--hair); display:grid; gap: 11px; }
+.plan ul.f li { display:flex; gap: 9px; font-size: 14px; line-height:1.6; color: var(--body); }
+.plan ul.f li .tick { flex:none; color: var(--accent-hi); font-variation-settings:"wght" 650; }
+.plan ul.f li.off { color: var(--faint); }
+.plan ul.f li.off .tick { color: var(--faint); }
+.plan .foot { margin-top: auto; padding-top: 24px; }
+.plan .foot a { width: 100%; }
+
+/* ─── FAQ ───────────────────────────────────────────────── */
+.faq { margin-top: 40px; display:grid; gap: 10px; }
+details.qa { border-radius: 14px; background: var(--surf); padding: 18px 20px; }
+details.qa summary { display:flex; align-items:center; gap: 14px; list-style:none;
+  font-size: 15.5px; font-variation-settings:"wght" 600; color: var(--ink); }
+details.qa summary::-webkit-details-marker { display:none; }
+details.qa summary .t { flex: 1; }
+details.qa summary .cv { flex:none; color: var(--mut); transition: transform .25s ease; font-size: 13px; }
+details.qa[open] summary .cv { transform: rotate(180deg); }
+details.qa .ans { margin-top: 12px; font-size: 14.5px; line-height: 1.78; color: var(--mut); }
+details.qa .ans code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+  color: var(--body); background: var(--tint); padding: 1px 6px; border-radius: 6px; }
+
+/* ─── 최종 CTA ──────────────────────────────────────────── */
+.final { text-align:center; padding-block: 120px; }
+.final h2 { font-size: clamp(32px, 6vw, 52px); line-height: 1.1; letter-spacing: -0.032em; }
+.final p { margin-top: 20px; font-size: 17px; color: var(--mut); }
+.final .row { margin-top: 32px; display:flex; flex-wrap:wrap; gap: 16px; justify-content:center; }
+
+/* ─── 푸터 ──────────────────────────────────────────────── */
+footer.site { border-top: 1px solid var(--hair); padding-block: 40px; }
+footer.site .cols { display:flex; flex-wrap:wrap; gap: 24px; align-items:baseline; justify-content:space-between; }
+footer.site p { font-size: 13px; color: var(--faint); line-height:1.7; }
+footer.site .links { display:flex; flex-wrap:wrap; gap: 20px; }
+footer.site .links a { font-size: 13px; color: var(--mut); }
+footer.site .links a:hover { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  [data-reveal], [data-stagger] > * { opacity: 1; transform: none; transition: none; }
+  .ln > span { transform: none; animation: none; }
+  .scroll-cue, .aurora-text, .ping { animation: none; }
+  .feature:hover { transform: none; }
+}
+</style>
+
+</head>
+<body>
+<div id="progress-track" aria-hidden="true"><div id="progress-bar"></div></div>
+
+<header class="site">
+  <div class="wrap bar">
+    <a class="wordmark" href="#top">AICAPA <span class="sub">for Business</span></a>
+    <nav aria-label="주요 섹션">
+      <a href="#why">왜 필요한가</a>
+      <a href="#product">제품</a>
+      <a href="#brand">화이트라벨</a>
+      <a href="#security">보안</a>
+      <a href="#pricing">요금제</a>
+    </nav>
+    <div class="cta-slot"><a class="btn-sm" href="#contact">파일럿 신청</a></div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ── 히어로 ────────────────────────────────────────── -->
+  <section class="hero">
+    <canvas id="grid-canvas" aria-hidden="true"></canvas>
+    <div class="vignette"></div>
+    <div class="inner">
+      <p class="overline-label">기업 HRD를 위한 AI 활용 역량진단 · 인증평가</p>
+      <p class="badge-live">
+        <span class="dot"><span class="ping"></span><i></i></span>
+        2026년 하반기 오픈 준비 중 · 파일럿 고객사 모집
+      </p>
+      <h1 class="hero-title">
+        <span class="ln"><span>AI를 쓴다는 말,</span></span>
+        <span class="ln"><span>이제 <span class="aurora-text">증명</span>하세요.</span></span>
+      </h1>
+      <p class="hero-sub on-dark-mut">
+        교육 이수 시간이 아니라 실제 수행 능력으로. 감독형 온라인 진단과 AI 채점,
+        조직 명의 인증서까지 한 흐름으로 처리하는 기업 전용 역량진단 플랫폼입니다.
+      </p>
+      <div class="hero-cta">
+        <a class="btn-pill" href="#contact">파일럿 신청하기</a>
+        <a class="btn-link" href="#product">제품 살펴보기 ›</a>
+      </div>
+      <p class="hero-note">공공 CBT 인증시험 플랫폼에서 검증된 감독·채점 엔진을 기업용으로 재설계했습니다.</p>
+    </div>
+    <a class="cue-link scroll-cue" href="#why" aria-label="아래로 스크롤">⌄</a>
+  </section>
+
+  <!-- ── 통계 스트립 ───────────────────────────────────── -->
+  <div class="stats">
+    <div class="wrap">
+      <ul data-stagger>
+        <li>
+          <p class="stat-n tabular"><span data-count="500">0</span><small>명</small></p>
+          <p class="stat-l">검증된 동시 응시 규모</p>
+        </li>
+        <li>
+          <p class="stat-n tabular"><span data-count="4">0</span><small>종</small></p>
+          <p class="stat-l">부정행위 자동 감지 항목</p>
+        </li>
+        <li>
+          <p class="stat-n tabular"><span data-count="3">0</span><small>영역</small></p>
+          <p class="stat-l">기본 역량 체계 (변경 가능)</p>
+        </li>
+        <li>
+          <p class="stat-n">서울</p>
+          <p class="stat-l">데이터 저장 리전 (ap-northeast-2)</p>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── 문제 제기 ─────────────────────────────────────── -->
+  <section id="why">
+    <div class="wrap">
+      <div class="sec-head" data-reveal>
+        <p class="overline-label">The Gap</p>
+        <h2 class="h-judge">AI 교육은 늘었는데,<br>역량은 증명되지 않습니다.</h2>
+        <p class="lede">
+          작년에 전사 AI 교육을 돌렸습니다. 그래서 우리 직원 중 몇 명이
+          실제로 AI를 업무에 쓸 수 있습니까 — 이 질문에 답할 수 있는 HRD 조직은 드뭅니다.
+        </p>
+      </div>
+      <div class="gaps" data-stagger>
+        <div class="gap-card">
+          <p class="mark">이수율 92%</p>
+          <p class="q">그런데 실제로 쓰는 사람은 몇 명입니까?</p>
+          <p class="a">출석과 이수는 참여의 기록이지 능력의 증거가 아닙니다. 수행 과제 기반으로
+            직접 측정하지 않으면 교육비는 계속 비용으로만 잡힙니다.</p>
+        </div>
+        <div class="gap-card">
+          <p class="mark">객관식 만점</p>
+          <p class="q">프롬프트를 직접 써 본 적은 있습니까?</p>
+          <p class="a">지식 문항으로는 활용 역량이 안 잡힙니다. 실제 산출물을 만들게 하고
+            그 결과를 채점해야 합니다. 그러려면 서술형·수행형 채점이 필요합니다.</p>
+        </div>
+        <div class="gap-card">
+          <p class="mark">재택 응시</p>
+          <p class="q">그 점수, 본인이 받은 게 맞습니까?</p>
+          <p class="a">인사평가나 승진에 반영하려면 신원과 응시 환경이 확인돼야 합니다.
+            감독 없는 온라인 시험 결과는 제도에 태울 수 없습니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 제품 ──────────────────────────────────────────── -->
+  <section id="product" style="padding-top:0;">
+    <div class="wrap">
+      <div class="sec-head" data-reveal>
+        <p class="overline-label">Product</p>
+        <h2 class="h-judge">진단 설계부터 인증서까지<br>한 흐름으로.</h2>
+        <p class="lede">네 개의 모듈이 하나의 응시 흐름 위에서 맞물립니다. 따로 도입하고 붙이는 통합 작업이 없습니다.</p>
+      </div>
+
+      <div class="features" data-stagger>
+        <article class="panel feature">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 17l5-5 3.5 3.5L21 5"/><path d="M21 10V5h-5"/>
+          </svg>
+          <h3>수행형 역량진단</h3>
+          <p>객관식·서술형·수행 과제를 한 세트로 구성합니다. 문항은 역량 체계에 매핑되어
+            점수가 아니라 <strong style="font-variation-settings:'wght' 600;color:var(--ink)">어느 역량이 약한지</strong>로 나옵니다.</p>
+          <ul class="meta">
+            <li class="chip chip-blue">생성형 AI 활용</li>
+            <li class="chip chip-blue">데이터 분석</li>
+            <li class="chip chip-blue">서비스 구현</li>
+          </ul>
+        </article>
+
+        <article class="panel feature">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.6"/>
+          </svg>
+          <h3>온라인 감독</h3>
+          <p>신분증과 얼굴을 대조해 본인을 확인하고, 응시 중 이상 상황을 자동으로 기록합니다.
+            화상 감독관 연결과 화면·웹캠 녹화를 함께 지원합니다.</p>
+          <ul class="meta">
+            <li class="chip chip-red">얼굴 이탈</li>
+            <li class="chip chip-red">다중 인원</li>
+            <li class="chip chip-red">탭 전환</li>
+            <li class="chip chip-red">화면공유 중단</li>
+          </ul>
+        </article>
+
+        <article class="panel feature">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3l2.2 4.8L19 10l-4.8 2.2L12 17l-2.2-4.8L5 10l4.8-2.2z"/><path d="M18.5 16.5l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z"/>
+          </svg>
+          <h3>AI 채점 + 사람 검수</h3>
+          <p>서술형과 산출물을 루브릭 기준으로 1차 채점하고, 채점 근거를 문장으로 남깁니다.
+            검수자는 전부가 아니라 <strong style="font-variation-settings:'wght' 600;color:var(--ink)">경계선 답안만</strong> 봅니다.</p>
+          <ul class="meta">
+            <li class="chip chip-green">루브릭 기반</li>
+            <li class="chip chip-green">채점 근거 기록</li>
+            <li class="chip chip-green">재채점 이력</li>
+          </ul>
+        </article>
+
+        <article class="panel feature">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="9" r="5.2"/><path d="M8.5 13.6L7 21l5-2.4L17 21l-1.5-7.4"/>
+          </svg>
+          <h3>조직 명의 인증서</h3>
+          <p>귀사 서식과 로고로 인증서를 발급하고, 발급번호는 조직별로 채번합니다.
+            외부 검증 링크로 진위를 확인할 수 있고, 필요하면 회수됩니다.</p>
+          <ul class="meta">
+            <li class="chip chip-gold">조직별 채번</li>
+            <li class="chip chip-gold">진위 확인</li>
+            <li class="chip chip-gold">유효/회수 관리</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 화이트라벨 강조 패널 ──────────────────────────── -->
+  <section id="brand" style="padding-top:0;">
+    <div class="wrap">
+      <div class="spotlight" data-reveal>
+        <div class="glow"></div>
+        <div class="inner">
+          <p class="overline-label">White Label</p>
+          <h2 class="h-judge" style="margin-top:8px">우리 회사 진단처럼<br>보이게, 실제로 그렇게.</h2>
+          <p class="lede center" style="max-width:560px">
+            응시자가 보는 화면 어디에도 저희 이름이 필요하지 않습니다.
+            도메인부터 인증서 서식까지 조직 단위로 갈아 끼웁니다.
+          </p>
+          <div class="brandbar">
+            <div class="brand-item">
+              <span class="num">01</span>
+              <div><p class="k">전용 도메인</p><p class="v"><code style="font-family:ui-monospace,Menlo,monospace">assess.yourcompany.co.kr</code> 형태의 자체 도메인 연결</p></div>
+            </div>
+            <div class="brand-item">
+              <span class="num">02</span>
+              <div><p class="k">로고 · 브랜드 컬러</p><p class="v">로그인 화면부터 결과 리포트까지 조직 아이덴티티 적용</p></div>
+            </div>
+            <div class="brand-item">
+              <span class="num">03</span>
+              <div><p class="k">자체 역량 체계</p><p class="v">저희 기본 3영역 대신 귀사의 직무역량 모델을 그대로 등록</p></div>
+            </div>
+            <div class="brand-item">
+              <span class="num">04</span>
+              <div><p class="k">등급 체계 · 인증서 서식</p><p class="v">합격선, 등급명, 인증서 레이아웃을 조직 기준으로 정의</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 보안 ──────────────────────────────────────────── -->
+  <section id="security" class="sec-security">
+    <div class="wrap">
+      <div class="sec-head" data-reveal>
+        <p class="overline-label">Security</p>
+        <h2 class="h-judge">조직 경계는 애플리케이션이 아니라<br>데이터베이스에서 지킵니다.</h2>
+        <p class="lede">
+          기업 보안심사에서 가장 많이 받는 질문이 "다른 고객사 데이터가 섞일 가능성"입니다.
+          그 방어선을 코드 위가 아니라 DB 커널에 두었습니다.
+        </p>
+      </div>
+
+      <dl class="sec-list" data-reveal>
+        <div class="sec-row">
+          <dt>행 수준 접근 통제</dt>
+          <dd>모든 테이블에 조직 식별자를 두고 Postgres Row Level Security로 격리합니다.
+            애플리케이션에 버그가 나도 조직 밖 데이터는 쿼리 결과에 나타나지 않습니다.
+            조직 식별자가 없는 테이블은 <code>CI 가드</code>가 배포 전에 막습니다.</dd>
+        </div>
+        <div class="sec-row">
+          <dt>권한 모델</dt>
+          <dd>권한은 사용자 속성이 아니라 <em style="font-style:normal;color:var(--body)">사용자 × 조직 × 역할</em>의 멤버십으로 판정합니다.
+            한 사람이 여러 조직에 속해도 조직 간 권한이 새지 않습니다.
+            소유자 권한은 조직 관리자가 스스로에게 부여할 수 없습니다.</dd>
+        </div>
+        <div class="sec-row">
+          <dt>데이터 주권</dt>
+          <dd>서울 리전(ap-northeast-2)에 저장하고, 시점 복구(PITR)와 스테이징 분리를 운영합니다.
+            데이터처리 위탁 계약은 저희와 직접 체결합니다.</dd>
+        </div>
+        <div class="sec-row">
+          <dt>감사 로그</dt>
+          <dd>시험 공개, 인증서 회수, 역할 변경 같은 민감 조작은 행위자·대상·변경 내역·IP와 함께
+            조직 단위로 남습니다. 보안심사 증빙으로 그대로 제출할 수 있습니다.</dd>
+        </div>
+        <div class="sec-row">
+          <dt>녹화 데이터</dt>
+          <dd>웹캠·화면 녹화는 별도 오브젝트 스토리지에 보관하고 만료 정책을 조직별로 설정합니다.
+            재생은 서명된 단기 링크로만 가능합니다.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ── 도입 절차 ─────────────────────────────────────── -->
+  <section id="how" style="padding-top:0;">
+    <div class="wrap">
+      <div class="sec-head" data-reveal>
+        <p class="overline-label">Onboarding</p>
+        <h2 class="h-judge">도입은 세 단계입니다.</h2>
+        <p class="lede">문항을 처음부터 만들 필요는 없습니다. 플랫폼 공용 문제은행에서 시작해 필요한 만큼 교체합니다.</p>
+      </div>
+      <div class="steps" data-stagger>
+        <div class="step">
+          <span class="n tabular">1</span><span class="arrow">→</span>
+          <h3>역량 체계 정의</h3>
+          <p>귀사 직무역량 모델을 등록하고 진단 영역과 합격 기준을 정합니다.
+            기준이 없다면 저희 기본 체계로 시작해 1회차 결과를 보고 조정합니다.</p>
+        </div>
+        <div class="step">
+          <span class="n tabular">2</span><span class="arrow">→</span>
+          <h3>진단 설계 · 응시</h3>
+          <p>문항을 골라 회차를 열고 응시자를 초대합니다. 감독 수준은 회차별로 정합니다 —
+            자가진단은 감독 없이, 인증평가는 전체 감독으로.</p>
+        </div>
+        <div class="step">
+          <span class="n tabular">3</span>
+          <h3>결과 · 인증서</h3>
+          <p>개인별 역량 프로파일과 조직 단위 분포를 확인하고, 합격자에게 조직 명의
+            인증서를 발급합니다. 결과는 HRIS로 내보낼 수 있습니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 요금제 ────────────────────────────────────────── -->
+  <section id="pricing" style="padding-top:0;">
+    <div class="wrap">
+      <div class="sec-head center" data-reveal>
+        <p class="overline-label">Pricing</p>
+        <h2 class="h-judge">규모에 맞춰 세 가지.</h2>
+        <p class="lede">파일럿 기간 중에는 가격을 확정하지 않았습니다. 조직 규모와 감독 수준에 따라 개별 산정합니다.</p>
+      </div>
+
+      <div class="plans" data-stagger>
+        <div class="plan">
+          <p class="name">Starter</p>
+          <p class="who">부서 단위 자가진단부터</p>
+          <p class="price">문의 <span>· 파일럿 가능</span></p>
+          <ul class="f">
+            <li><span class="tick">✓</span><span>수행형 역량진단 · 공용 문제은행</span></li>
+            <li><span class="tick">✓</span><span>AI 채점 (기본 루브릭)</span></li>
+            <li><span class="tick">✓</span><span>결과 리포트 · CSV 내보내기</span></li>
+            <li class="off"><span class="tick">—</span><span>온라인 감독</span></li>
+            <li class="off"><span class="tick">—</span><span>화이트라벨</span></li>
+          </ul>
+          <div class="foot"><a class="btn-ghost" href="#contact" style="display:flex">상담 요청</a></div>
+        </div>
+
+        <div class="plan featured">
+          <p class="name">Growth <span class="chip chip-blue" style="margin-inline-start:6px">추천</span></p>
+          <p class="who">전사 인증평가 운영</p>
+          <p class="price">문의 <span>· 좌석 기준</span></p>
+          <ul class="f">
+            <li><span class="tick">✓</span><span>Starter의 모든 기능</span></li>
+            <li><span class="tick">✓</span><span>온라인 감독 · 신원 확인 · 녹화</span></li>
+            <li><span class="tick">✓</span><span>조직 명의 인증서 발급 · 진위 확인</span></li>
+            <li><span class="tick">✓</span><span>화이트라벨 (로고 · 컬러 · 서식)</span></li>
+            <li><span class="tick">✓</span><span>자체 역량 체계 등록</span></li>
+          </ul>
+          <div class="foot"><a class="btn-pill" href="#contact" style="display:flex">파일럿 신청</a></div>
+        </div>
+
+        <div class="plan">
+          <p class="name">Enterprise</p>
+          <p class="who">그룹사 · 다계열 운영</p>
+          <p class="price">문의 <span>· 개별 계약</span></p>
+          <ul class="f">
+            <li><span class="tick">✓</span><span>Growth의 모든 기능</span></li>
+            <li><span class="tick">✓</span><span>전용 도메인 · 계열사별 조직 분리</span></li>
+            <li><span class="tick">✓</span><span>SSO 연동 · HRIS 연계</span></li>
+            <li><span class="tick">✓</span><span>감사 로그 반출 · 보안심사 대응</span></li>
+            <li><span class="tick">✓</span><span>전담 도입 지원</span></li>
+          </ul>
+          <div class="foot"><a class="btn-ghost" href="#contact" style="display:flex">문의하기</a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FAQ ───────────────────────────────────────────── -->
+  <section id="faq" style="padding-top:0;">
+    <div class="wrap narrow">
+      <div class="sec-head" data-reveal style="max-width:none">
+        <p class="overline-label">FAQ</p>
+        <h2 class="h-judge">자주 받는 질문</h2>
+      </div>
+      <div class="faq" data-reveal>
+        <details class="qa" open>
+          <summary><span class="t">공공기관도 도입할 수 있나요?</span><span class="cv">⌄</span></summary>
+          <p class="ans">지금은 민간 기업을 대상으로 합니다. 공공 조달에 필요한 클라우드 보안인증(CSAP) 취득은
+            현재 계획에 없습니다. 다만 특정 클라우드에 종속되지 않도록 설계해 두었기 때문에,
+            수요가 확인되면 국내 인증 환경으로 이전하는 데 구조적인 장애는 없습니다.</p>
+        </details>
+        <details class="qa">
+          <summary><span class="t">AI 채점 결과를 인사평가에 써도 됩니까?</span><span class="cv">⌄</span></summary>
+          <p class="ans">AI 채점은 1차 채점입니다. 모든 채점에 근거 문장이 남고, 합격선 부근 답안은
+            사람 검수를 거치도록 운영하시길 권합니다. 재채점 이력이 남기 때문에 이의제기 절차에도 대응됩니다.</p>
+        </details>
+        <details class="qa">
+          <summary><span class="t">응시자 얼굴과 화면을 녹화하는 게 부담스럽습니다.</span><span class="cv">⌄</span></summary>
+          <p class="ans">감독 수준은 회차별로 선택합니다. 자가진단은 감독 없이, 승진·인증에 반영되는
+            회차만 감독을 켜는 식으로 운영하는 고객사가 많을 것으로 봅니다. 녹화 보관 기간도 조직별로 설정합니다.</p>
+        </details>
+        <details class="qa">
+          <summary><span class="t">문항을 직접 만들어야 하나요?</span><span class="cv">⌄</span></summary>
+          <p class="ans">아닙니다. 플랫폼 공용 문제은행이 구독에 포함됩니다. 귀사가 만든 문항은
+            귀사 자산으로 분리 보관되며, 원하지 않으면 다른 조직에 공개되지 않습니다.</p>
+        </details>
+        <details class="qa">
+          <summary><span class="t">언제 쓸 수 있습니까?</span><span class="cv">⌄</span></summary>
+          <p class="ans">현재 멀티테넌트 기반 작업 중이며 2026년 하반기 오픈을 목표로 합니다.
+            파일럿 고객사에는 그 전에 개별 환경을 열어 드리고, 역량 체계 설계를 함께 진행합니다.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 최종 CTA ──────────────────────────────────────── -->
+  <section id="contact" class="final">
+    <div class="wrap narrow">
+      <div data-reveal>
+        <h2>1회차를 같이 설계해 드립니다.</h2>
+        <p>파일럿 고객사에는 역량 체계 정의부터 첫 진단 운영까지 동행합니다.
+          지금 필요한 건 완성된 문항이 아니라, 무엇을 측정할지에 대한 합의입니다.</p>
+        <div class="row">
+          <a class="btn-pill" href="mailto:hello@aicapa.io?subject=AICAPA%20for%20Business%20파일럿%20문의">파일럿 신청하기</a>
+          <a class="btn-ghost" href="#product">제품 다시 보기</a>
+        </div>
+        <p style="margin-top:22px;font-size:13px;color:var(--faint)">
+          문의 후 2영업일 내 회신합니다 · 도입 규모와 일정만 알려주시면 됩니다
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap cols">
+    <div>
+      <p style="color:var(--mut);font-variation-settings:'wght' 600">AICAPA for Business</p>
+      <p style="margin-top:6px">AI 활용 역량진단 · 인증평가 SaaS<br>
+        데이터 저장 리전: 서울(ap-northeast-2)</p>
+    </div>
+    <div class="links">
+      <a href="#product">제품</a>
+      <a href="#security">보안</a>
+      <a href="#pricing">요금제</a>
+      <a href="#faq">FAQ</a>
+      <a href="mailto:hello@aicapa.io">문의</a>
+    </div>
+  </div>
+  <div class="wrap" style="margin-top:26px">
+    <p style="font-size:12.5px;color:var(--faint)">
+      이 페이지는 제품 출시 준비 단계의 소개 페이지입니다. 기능 범위와 일정은 변경될 수 있습니다.
+    </p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ── Reveal: 페이지 전체가 옵저버 하나를 공유 ───────── */
+  var targets = document.querySelectorAll("[data-reveal],[data-stagger]");
+  if (reduce) {
+    targets.forEach(function (el) { el.classList.add("show"); });
+  } else {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("show"); io.unobserve(e.target); }
+      });
+    }, { threshold: 0, rootMargin: "0px 0px -10% 0px" });
+    targets.forEach(function (el) {
+      if (el.hasAttribute("data-stagger")) {
+        Array.prototype.forEach.call(el.children, function (c, i) {
+          c.style.transitionDelay = Math.min(i, 8) * 80 + "ms";
+        });
+      }
+      io.observe(el);
+    });
+  }
+
+  /* ── CountUp: ease-out cubic, 1.2s ──────────────────── */
+  document.querySelectorAll("[data-count]").forEach(function (el) {
+    var value = parseInt(el.getAttribute("data-count"), 10);
+    if (reduce) { el.textContent = String(value); return; }
+    var co = new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting) return;
+      co.disconnect();
+      var t0 = performance.now();
+      (function tick(n) {
+        var t = Math.min(1, (n - t0) / 1200);
+        el.textContent = String(Math.round(value * (1 - Math.pow(1 - t, 3))));
+        if (t < 1) requestAnimationFrame(tick);
+      })(t0);
+    }, { threshold: 0.4 });
+    co.observe(el);
+  });
+
+  /* ── 상단 진행바 ─────────────────────────────────────── */
+  var bar = document.getElementById("progress-bar");
+  var ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () {
+      var h = document.documentElement.scrollHeight - innerHeight;
+      bar.style.transform = "scaleX(" + (h > 0 ? Math.min(1, scrollY / h) : 0) + ")";
+      ticking = false;
+    });
+  }
+  addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  /* ── 히어로 배경: 응시 그리드가 천천히 채워지는 캔버스 ──
+     역량 매트릭스(응시자 × 문항)를 추상화한 점 격자.
+     장식이 아니라 이 제품이 다루는 대상 자체를 그린다.       */
+  var cv = document.getElementById("grid-canvas");
+  if (cv && !reduce) {
+    var ctx = cv.getContext("2d"), dots = [], raf = 0, dpr = Math.min(devicePixelRatio || 1, 2);
+    function build() {
+      var w = cv.clientWidth, h = cv.clientHeight;
+      cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var gap = w < 640 ? 34 : 44, cols = Math.ceil(w / gap) + 1, rows = Math.ceil(h / gap) + 1;
+      dots = [];
+      for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
+        dots.push({ x: c * gap + gap / 2, y: r * gap + gap / 2, p: Math.random() * Math.PI * 2,
+                    lit: Math.random() < 0.055 });
+      }
+    }
+    function frame(t) {
+      var w = cv.clientWidth, h = cv.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      for (var i = 0; i < dots.length; i++) {
+        var d = dots[i], a = 0.5 + 0.5 * Math.sin(t / 2600 + d.p);
+        if (d.lit) {
+          ctx.fillStyle = "rgba(64,156,255," + (0.16 + a * 0.5).toFixed(3) + ")";
+          ctx.beginPath(); ctx.arc(d.x, d.y, 1.9, 0, 6.284); ctx.fill();
+        } else {
+          ctx.fillStyle = "rgba(152,152,157," + (0.11 + a * 0.09).toFixed(3) + ")";
+          ctx.fillRect(d.x - 0.9, d.y - 0.9, 1.8, 1.8);
+        }
+      }
+      raf = requestAnimationFrame(frame);
+    }
+    build(); raf = requestAnimationFrame(frame);
+    var rt; addEventListener("resize", function () {
+      clearTimeout(rt); rt = setTimeout(build, 150);
+    }, { passive: true });
+  }
+})();
+</script>
+
+</body>
+</html>

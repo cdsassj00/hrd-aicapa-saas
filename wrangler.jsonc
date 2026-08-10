@@ -1,0 +1,19 @@
+{
+  // Cloudflare Workers (정적 자산) 배포 설정.
+  // 대시보드 Workers & Pages → Import a repository 로 연결하면 이 파일을 읽습니다.
+  //
+  // 주의: VITE_* 값은 런타임 변수가 아니라 **빌드 시점**에 번들에 박힙니다.
+  // 그래서 여기 vars 에 넣는 게 아니라 대시보드의 Build variables 에 등록해야 합니다.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hrd-aicapa-saas",
+  // 오늘 날짜로 두면 런타임이 아직 그 compat date 를 지원하지 않을 때
+  // wrangler deploy 가 API 에러로 죽는다. 여유 있게 과거로 잡는다.
+  // 정적 자산만 서빙하므로 이 값이 동작에 영향을 주지 않는다.
+  "compatibility_date": "2026-06-01",
+  "assets": {
+    "directory": "./dist",
+    // react-router SPA — 매칭되는 정적 파일이 없으면 index.html 로.
+    // 실제 파일(/landing.html, /assets/*)은 이 규칙보다 우선합니다.
+    "not_found_handling": "single-page-application"
+  }
+}

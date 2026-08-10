@@ -126,7 +126,7 @@ var get_session_result_default = defineTool4({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = "nchvgfgiahtrpuboxgrw";
+var projectRef = "eoeiqpgzoyltrawfflhj";
 var mcp_default = defineMcp({
   name: "aicapa-mcp",
   title: "AI CAPA MCP",
