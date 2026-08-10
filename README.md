@@ -18,8 +18,9 @@
 ## 스택
 
 Vite · React 18 · TypeScript · Tailwind · shadcn-ui(Radix) · TanStack Query
-Supabase(Postgres 15 / Auth / Storage / Realtime / Edge Functions)
-Cloudflare R2(녹화) · Daily.co(화상감독) · AWS Rekognition + Face++(신분증 대조) · Resend(메일)
+Supabase(Postgres 17 / Auth / Storage / Realtime / Edge Functions)
+Cloudflare R2(녹화) · Daily.co(화상감독) · AWS Rekognition + Face++(신분증 대조) · Resend(메일) · 네이버 클라우드 SENS(SMS)
+호스팅: Cloudflare Workers (정적 자산)
 
 ## 개발 환경
 
@@ -55,7 +56,7 @@ npx supabase db push                                   # 원격에 마이그레�
 | 검사 | 파일 | 내용 |
 |---|---|---|
 | 테넌시 가드 | `supabase/tests/tenancy_guard.sql` | `org_id` 누락 · RLS 미적용 · `org_id` 타입/FK · `search_path` 안 잠근 함수 · `anon`이 실행 가능한 SECURITY DEFINER 함수 |
-| RBAC 스모크 | `supabase/tests/rbac_smoke.sql` | 테넌트 격리, 권한 상승 차단, 마지막 `org_owner` 보호, 익명 브랜딩 읽기 |
+| RBAC 스모크 | `supabase/tests/rbac_smoke.sql` | 테넌트 격리, 권한 상승 차단, 마지막 `org_owner` 보호, 익명 브랜딩 읽기, 초대 토큰, 역량 체계 격리·복제 |
 
 가드에 걸린 테이블을 예외 목록에 넣는 것은 "이 테이블은 테넌트 경계 밖"이라는 보안 선언입니다. 사유 없이 추가하지 마세요.
 
@@ -64,7 +65,7 @@ npx supabase db push                                   # 원격에 마이그레�
 `docs/MULTITENANT_DESIGN.md` §7의 구성 중 **`0001`~`0005`(테넌시 코어 · RBAC · CI 가드 · 프로필/초대 · 역량 체계)** 가 원격 프로젝트에 적용되어 있습니다.
 
 동작하는 것: 회원가입 → 조직 생성(`/onboarding`) → 초대 발급·수락(`/admin/members`, `/invite/accept`) → 조직 전환.
-동작하지 않는 것: 시험·문항·감독·인증서 화면 — 해당 테이블이 `0005~` 에 있어 아직 없습니다.
+동작하지 않는 것: 시험·문항·감독·인증서 화면 — 해당 테이블이 `0006~` 에 있어 아직 없습니다.
 
 ### 남은 정리 작업
 
@@ -75,6 +76,6 @@ npx supabase db push                                   # 원격에 마이그레�
 - [ ] 시험 도메인 화면 이식 — `exams`·`questions`·`exam_sessions` 등을 쓰는 화면은 테이블이 아직 없어 동작하지 않습니다
 - [ ] `src/integrations/supabase/types.ts` 재생성 — 지금은 이행기 파일(실제 테넌시 테이블 + 미이식 도메인 테이블이 섞여 있음)
 - [ ] 초대 메일 발송(Resend) — 현재는 관리자가 초대 링크를 직접 전달합니다
-- [ ] `@lovable.dev/cloud-auth-js`, `@lovable.dev/mcp-js` 의존성 제거 — `src/lib/mcp/`가 참조 중이라 함께 정리 필요
+- [x] ~~탈-러버블~~ — SDK·MCP 플러그인·OAuth 동의 라우트·의존성 3개 제거, Edge Function 5개의 러버블 게이트웨이를 직접 호출로 교체
 - [x] ~~`supabase/config.toml`의 `project_id`를 신규 프로젝트 ID로 교체~~
-- [ ] Edge Function 19개의 비즈니스 로직을 순수 TS 모듈로 분리 (이식성 확보)
+- [ ] 나머지 Edge Function 의 비즈니스 로직을 순수 TS 모듈로 분리 (이식성 확보) — 메일·AI·SMS 는 `_shared/` 로 분리 완료
