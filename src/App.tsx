@@ -27,7 +27,6 @@ import FaceppTestPage from "@/pages/admin/FaceppTestPage";
 import RecordingReviewPage from "@/pages/admin/RecordingReviewPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/NotFound";
-import OAuthConsent from "@/pages/OAuthConsent";
 import OnboardingPage from "@/pages/OnboardingPage";
 import AcceptInvitePage from "@/pages/AcceptInvitePage";
 
@@ -63,7 +62,6 @@ function AuthGate() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
       <Route path="/invite/accept" element={<AcceptInvitePage />} />
-      <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
       <Route path="/" element={<HomeRedirect />} />
       <Route element={<DashboardLayout />}>
         {/* 응시자 */}

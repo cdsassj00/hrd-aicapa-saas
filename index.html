@@ -1,13 +1,20 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1280" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>AI챔피언 역량인증 시스템</title>
     <meta name="description" content="행정안전부 공공부문 AI챔피언 역량인증 CBT 시스템">
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+    <!-- 다크가 기본. 첫 페인트 전에 저장된 선호를 반영해 흰 화면 번쩍임을 막는다. -->
+    <script>
+      try {
+        var t = localStorage.getItem('aicapa.theme');
+        if (t === 'light') document.documentElement.classList.remove('dark');
+      } catch (e) {}
+    </script>
     
     
     <meta property="og:type" content="website" />
@@ -16,8 +23,6 @@
   <meta property="og:description" content="행정안전부 공공부문 AI챔피언 역량인증 CBT 시스템">
   <meta name="twitter:description" content="행정안전부 공공부문 AI챔피언 역량인증 CBT 시스템">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/358820aa-d463-455d-bc54-50aa086feba8/id-preview-75217d1e--be042b8f-1bac-4f37-b6fa-7b7f34ce1642.lovable.app-1773853575867.png">
-  <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/358820aa-d463-455d-bc54-50aa086feba8/id-preview-75217d1e--be042b8f-1bac-4f37-b6fa-7b7f34ce1642.lovable.app-1773853575867.png">
   <meta name="twitter:card" content="summary_large_image">
 </head>
   <body>

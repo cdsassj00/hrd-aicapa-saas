@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 
 const CHARS = '0123456789ABCDEFabcdef{}[]<>+=*/&@#%';
 
 export function AsciiMorphBackground() {
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef(0);
   const mouseRef = useRef({ x: -1, y: -1, vx: 0, vy: 0 });
@@ -69,7 +72,8 @@ export function AsciiMorphBackground() {
       // Fade old trail points
       while (trail.length > 0 && now - trail[0].t > 1200) trail.shift();
 
-      ctx.fillStyle = 'rgb(8, 10, 18)';
+      // 다크는 랜딩과 같은 거의-검정, 라이트는 애플 라이트의 종이색
+      ctx.fillStyle = isLight ? 'rgb(245, 245, 247)' : 'rgb(8, 10, 18)';
       ctx.fillRect(0, 0, W, H);
       ctx.font = `${CELL - 3}px monospace`;
       ctx.textBaseline = 'top';
@@ -136,9 +140,11 @@ export function AsciiMorphBackground() {
 
           const hue = 200 + Math.sin(nx * 2.5 + t * 0.3) * 25 - totalMouseEffect * 60;
           const sat = 35 + combined * 45 + totalMouseEffect * 30;
-          const light = 25 + brightness * 220;
+          // 라이트에서는 밝은 종이 위라 글리프를 어둡게 뒤집는다
+          const light = isLight ? 92 - brightness * 150 : 25 + brightness * 220;
 
-          ctx.fillStyle = `hsla(${hue}, ${sat}%, ${light}%, ${Math.min(brightness * 2.0 + 0.04, 1)})`;
+          const alpha = Math.min(brightness * 2.0 + 0.04, 1) * (isLight ? 0.55 : 1);
+          ctx.fillStyle = `hsla(${hue}, ${isLight ? sat * 0.6 : sat}%, ${light}%, ${alpha})`;
           ctx.fillText(cell.char, c * CELL, r * CELL);
         }
       }
@@ -156,13 +162,13 @@ export function AsciiMorphBackground() {
       canvas.removeEventListener('mousemove', handleMouse);
       canvas.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, []);
+  }, [isLight]);   // 테마가 바뀌면 캔버스를 다시 그린다
 
   return (
     <canvas
       ref={canvasRef}
       className="fixed inset-0 w-full h-full"
-      style={{ zIndex: 0, background: 'rgb(8, 10, 18)' }}
+      style={{ zIndex: 0, background: isLight ? 'rgb(245, 245, 247)' : 'rgb(8, 10, 18)' }}
     />
   );
 }

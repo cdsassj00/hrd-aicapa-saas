@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+import { sendEmail } from "../_shared/email.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,11 +14,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -153,28 +148,15 @@ Deno.serve(async (req) => {
       `;
 
       try {
-        const response = await fetch(`${GATEWAY_URL}/emails`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "X-Connection-Api-Key": RESEND_API_KEY,
-          },
-          body: JSON.stringify({
-            from: `${fromName} <${fromAddress}>`,
-            to: [inv.email],
-            subject: `${emailPrefix} ${exam.title} 응시 초대`,
-            html,
-          }),
+        await sendEmail({
+          from: `${fromName} <${fromAddress}>`,
+          to: inv.email,
+          subject: `${emailPrefix} ${exam.title} 응시 초대`,
+          html,
         });
-
-        if (!response.ok) {
-          const errData = await response.json();
-          results.push({ email: inv.email, success: false, error: JSON.stringify(errData) });
-        } else {
-          results.push({ email: inv.email, success: true });
-        }
+        results.push({ email: inv.email, success: true });
       } catch (e) {
+        // 한 통 실패가 나머지를 막지 않도록 건별로 모은다(원본 동작 유지)
         results.push({ email: inv.email, success: false, error: (e as Error).message });
       }
     }

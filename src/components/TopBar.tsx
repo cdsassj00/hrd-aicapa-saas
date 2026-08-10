@@ -1,10 +1,11 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LogOut, Shield } from 'lucide-react';
+import { LogOut, Moon, Shield, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
+import { useTheme } from '@/hooks/useTheme';
 
 const roleLabels: Record<UserRole, string> = {
   org_owner: '소유자',
@@ -18,6 +19,7 @@ export function TopBar() {
   const { user, role, activeOrg, activeOrgId, memberships, switchOrg, signOut } = useAuth();
   const navigate = useNavigate();
   const { settings } = useSiteSettings();
+  const { theme, toggle } = useTheme();
 
   // 조직 목록은 중복 제거 — 한 조직에서 복수 역할을 가지면 행이 여러 개다
   const orgs = Array.from(
@@ -64,7 +66,17 @@ export function TopBar() {
           {activeOrg ? ` · ${activeOrg.orgName}` : ''}
           {role ? ` · ${roleLabels[role]}` : ''}
         </span>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSignOut}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={toggle}
+          aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
+          title={theme === 'dark' ? '라이트 모드' : '다크 모드'}
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSignOut} aria-label="로그아웃">
           <LogOut className="h-4 w-4" />
         </Button>
       </div>

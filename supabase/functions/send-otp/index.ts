@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.99.1";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.99.1/cors";
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+import { sendEmail } from "../_shared/email.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -9,11 +9,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -107,26 +102,13 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    const response = await fetch(`${GATEWAY_URL}/emails`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": RESEND_API_KEY,
-      },
-      body: JSON.stringify({
-        from: "AI역량인증 시험 <noreply@aicapa.kr>",
-        to: [email],
-        subject: "[AI역량인증] 이메일 본인인증 코드",
-        html,
-      }),
+    // 발신 주소는 MAIL_FROM 환경변수로. 원본은 noreply@aicapa.kr 하드코딩이었는데
+    // 그건 원본 도메인이라 이 프로젝트에서 인증되지 않는다.
+    await sendEmail({
+      to: email,
+      subject: "[AI역량인증] 이메일 본인인증 코드",
+      html,
     });
-
-    if (!response.ok) {
-      const errData = await response.json();
-      console.error("Resend error:", errData);
-      throw new Error("Failed to send email");
-    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

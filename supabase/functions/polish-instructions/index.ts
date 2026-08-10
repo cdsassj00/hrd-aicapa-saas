@@ -1,3 +1,4 @@
+import { AiPaymentRequiredError, AiRateLimitError, chatCompletion } from "../_shared/ai.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -13,7 +14,6 @@ serve(async (req) => {
   try {
     const { instructions, examTitle, grade, durationMinutes } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const systemPrompt = `당신은 AI 역량 검정 시험의 유의사항을 전문적으로 정리하는 어시스턴트입니다.
@@ -33,49 +33,35 @@ serve(async (req) => {
 - 등급: ${grade || '미정'}
 - 시험 시간: ${durationMinutes || 90}분`;
 
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: instructions
-                ? `다음 유의사항을 정리해주세요:\n\n${instructions}`
-                : "기본 시험 유의사항을 생성해주세요.",
-            },
-          ],
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 429) {
+    let polished: string;
+    try {
+      polished = await chatCompletion({
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: instructions
+              ? `다음 유의사항을 정리해주세요:\n\n${instructions}`
+              : "기본 시험 유의사항을 생성해주세요.",
+          },
+        ],
+      });
+    } catch (e) {
+      if (e instanceof AiRateLimitError) {
         return new Response(
           JSON.stringify({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
+      if (e instanceof AiPaymentRequiredError) {
         return new Response(
           JSON.stringify({ error: "크레딧이 부족합니다." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      throw new Error("AI gateway error");
+      throw e;
     }
 
-    const data = await response.json();
-    const polished = data.choices?.[0]?.message?.content || "";
 
     return new Response(JSON.stringify({ polished }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

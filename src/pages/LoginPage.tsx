@@ -13,7 +13,6 @@ import { UserRole } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { FullscreenLoader } from '@/components/FullscreenLoader';
 import { useToast } from '@/hooks/use-toast';
-import { lovable } from '@/integrations/lovable/index';
 import { supabase } from '@/integrations/supabase/client';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { trackAction } from '@/lib/userActions';
@@ -338,11 +337,19 @@ export default function LoginPage() {
                   onClick={async () => {
                     const redirect = getSafeRedirect();
                     if (redirect) sessionStorage.setItem('post_login_redirect', redirect);
-                    const { error } = await lovable.auth.signInWithOAuth('google', {
-                      redirect_uri: `${window.location.origin}/auth/callback`,
+                    // 러버블 클라우드 SDK 가 아니라 Supabase Auth 를 쓴다.
+                    // 러버블 SDK 는 원본 프로젝트의 인증 서버를 가리켜서
+                    // 이 프로젝트에서는 절대 성공할 수 없었다.
+                    const { error } = await supabase.auth.signInWithOAuth({
+                      provider: 'google',
+                      options: { redirectTo: `${window.location.origin}/auth/callback` },
                     });
                     if (error) {
-                      toast({ title: 'Google 로그인 실패', description: String(error), variant: 'destructive' });
+                      toast({
+                        title: 'Google 로그인 실패',
+                        description: error.message,
+                        variant: 'destructive',
+                      });
                     }
                   }}
                 >
@@ -404,15 +411,15 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <footer className="fixed bottom-0 left-0 right-0 py-5 pb-6 text-center z-10">
-        <p className="text-[13px] text-white/70 font-medium drop-shadow-lg mb-1.5">
+        <p className="text-[13px] text-muted-foreground font-medium mb-1.5">
           {settings.footerOrg} &amp; 케이브레인의 교육과정을 수료하면 이런 프로그램을 만들 수 있습니다.
         </p>
-        <div className="flex items-center justify-center gap-2 text-[11px] text-white/40">
-          <a href="https://cdsa.kr/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-white/70 transition-colors">개인정보처리방침</a>
+        <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground/70">
+          <a href="https://cdsa.kr/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">개인정보처리방침</a>
           <span>·</span>
-          <a href="https://cdsa.kr/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-white/70 transition-colors">이용약관</a>
+          <a href="https://cdsa.kr/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">이용약관</a>
           <span>·</span>
-          <span>Made by <a href="https://cdsa.kr" target="_blank" rel="noopener noreferrer" className="underline hover:text-white/70 transition-colors">CDSA</a></span>
+          <span>Made by <a href="https://cdsa.kr" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">CDSA</a></span>
           <span>·</span>
           <span>© {new Date().getFullYear()}</span>
         </div>
