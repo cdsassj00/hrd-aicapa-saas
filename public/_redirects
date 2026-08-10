@@ -1,0 +1,5 @@
+# Cloudflare Pages — SPA 폴백
+# react-router 경로(/admin, /exam/:id 등)를 직접 열거나 새로고침할 때
+# 정적 파일이 없어 404 가 나는 것을 막습니다.
+# 실제 존재하는 정적 파일(/landing.html, /assets/*)은 이 규칙보다 우선합니다.
+/*    /index.html   200
