@@ -62,6 +62,21 @@ export default function LoginPage() {
     return '';
   };
 
+  /** 소셜 로그인 공통 진입점.
+   *  Google 이든 카카오든 인증 후 Supabase 의 콜백으로 갔다가 우리 앱으로
+   *  돌아온다. 그래서 프로바이더별로 다른 건 이름 하나뿐이다. */
+  const handleOAuth = async (provider: 'google' | 'kakao', label: string) => {
+    const redirect = getSafeRedirect();
+    if (redirect) sessionStorage.setItem('post_login_redirect', redirect);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      toast({ title: `${label} 로그인 실패`, description: error.message, variant: 'destructive' });
+    }
+  };
+
   // Auto-redirect if already logged in (handles OAuth callback)
   useEffect(() => {
     if (!loading && user) {
@@ -334,24 +349,7 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full gap-2"
                   disabled={isLoading}
-                  onClick={async () => {
-                    const redirect = getSafeRedirect();
-                    if (redirect) sessionStorage.setItem('post_login_redirect', redirect);
-                    // 러버블 클라우드 SDK 가 아니라 Supabase Auth 를 쓴다.
-                    // 러버블 SDK 는 원본 프로젝트의 인증 서버를 가리켜서
-                    // 이 프로젝트에서는 절대 성공할 수 없었다.
-                    const { error } = await supabase.auth.signInWithOAuth({
-                      provider: 'google',
-                      options: { redirectTo: `${window.location.origin}/auth/callback` },
-                    });
-                    if (error) {
-                      toast({
-                        title: 'Google 로그인 실패',
-                        description: error.message,
-                        variant: 'destructive',
-                      });
-                    }
-                  }}
+                  onClick={() => handleOAuth('google', 'Google')}
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -360,6 +358,21 @@ export default function LoginPage() {
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                   </svg>
                   Google로 로그인
+                </Button>
+                {/* 카카오 브랜드 가이드: 배경 #FEE500, 심볼·텍스트는 85% 불투명 검정 */}
+                <Button
+                  type="button"
+                  className="w-full gap-2 bg-[#FEE500] text-[rgba(0,0,0,0.85)] hover:bg-[#FADA0A]"
+                  disabled={isLoading}
+                  onClick={() => handleOAuth('kakao', '카카오')}
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      fill="currentColor"
+                      d="M12 3C6.99 3 3 6.2 3 10.14c0 2.52 1.68 4.73 4.2 6L6.3 19.5c-.09.33.27.59.55.4l3.98-2.63c.38.04.77.06 1.17.06 5.01 0 9-3.2 9-7.19S17.01 3 12 3z"
+                    />
+                  </svg>
+                  카카오로 로그인
                 </Button>
               </form>
             </TabsContent>
