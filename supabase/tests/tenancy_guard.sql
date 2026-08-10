@@ -28,6 +28,11 @@ declare
 
   -- RLS 를 켜지 않아도 되는 테이블. 원칙적으로 비어 있어야 합니다.
   _exempt_rls text[] := array[]::text[];
+
+  -- 미인증(anon)에게 실행을 열어도 되는 SECURITY DEFINER 함수.
+  -- 현재 없음 — 로그인 화면이 필요로 하는 건 org_branding 읽기뿐이고
+  -- 그건 함수가 아니라 RLS 정책으로 처리합니다.
+  _exempt_anon_exec text[] := array[]::text[];
 begin
   ----------------------------------------------------------------------------
   -- 1. org_id 없는 public 테이블
@@ -112,16 +117,18 @@ begin
   end loop;
 
   ----------------------------------------------------------------------------
-  -- 4. search_path 를 고정하지 않은 SECURITY DEFINER 함수
-  --    RLS 우회 권한을 가진 함수가 search_path 를 열어두면
-  --    호출자가 심어둔 동명 객체로 함수 본문을 갈아끼울 수 있습니다.
+  -- 4. search_path 를 고정하지 않은 함수
+  --    RLS 우회 권한을 가진 함수가 search_path 를 열어두면 호출자가 심어둔
+  --    동명 객체로 함수 본문을 갈아끼울 수 있습니다. SECURITY DEFINER 가
+  --    아니어도(트리거 함수 등) 같은 습관을 강제합니다 — Supabase 린터
+  --    0011_function_search_path_mutable 과 같은 기준.
   ----------------------------------------------------------------------------
   for _r in
-    select p.proname, pg_get_function_identity_arguments(p.oid) as args
+    select p.proname, pg_get_function_identity_arguments(p.oid) as args, p.prosecdef
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.prosecdef
+      and p.prokind = 'f'
       and not exists (
         select 1 from unnest(coalesce(p.proconfig, '{}')) cfg
         where cfg like 'search_path=%'
@@ -131,7 +138,32 @@ begin
       )
     order by 1
   loop
-    _v := _v || format('[search_path 미고정] public.%I(%s) — SECURITY DEFINER 함수는 set search_path 필수', _r.proname, _r.args);
+    _v := _v || format('[search_path 미고정] public.%I(%s)%s — set search_path 필수',
+                       _r.proname, _r.args,
+                       case when _r.prosecdef then ' [SECURITY DEFINER]' else '' end);
+  end loop;
+
+  ----------------------------------------------------------------------------
+  -- 4b. anon 이 실행할 수 있는 SECURITY DEFINER 함수
+  --     Supabase 는 public 스키마 함수의 EXECUTE 를 anon 에도 기본 부여합니다.
+  --     `revoke ... from public` 만 하면 anon 권한이 남아, 로그인 없이
+  --     /rest/v1/rpc/<함수> 로 호출됩니다. 미인증자에게 열어야 할 이유가
+  --     있는 함수는 아래 예외 목록에 사유와 함께 등록하세요.
+  ----------------------------------------------------------------------------
+  for _r in
+    select p.proname, pg_get_function_identity_arguments(p.oid) as args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.prosecdef
+      and p.proname <> all (_exempt_anon_exec)
+      and has_function_privilege('anon', p.oid, 'execute')
+      and not exists (
+        select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e'
+      )
+    order by 1
+  loop
+    _v := _v || format('[anon 실행 가능] public.%I(%s) — revoke all on function ... from anon', _r.proname, _r.args);
   end loop;
 
   ----------------------------------------------------------------------------

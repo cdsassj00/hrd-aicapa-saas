@@ -158,6 +158,15 @@ exception
   when insufficient_privilege then null;   -- GRANT 단계에서 차단 = 기대 동작
 end $$;
 
+-- SECURITY DEFINER 헬퍼는 미인증자에게 열려 있으면 안 된다
+do $$
+begin
+  perform public.user_org_ids();
+  raise exception 'RBAC 검증 실패: 익명 사용자가 user_org_ids() 를 호출함';
+exception
+  when insufficient_privilege then null;
+end $$;
+
 -- ---------------------------------------------------------------------------
 -- 5. 플랫폼 운영자는 전 조직을 본다
 -- ---------------------------------------------------------------------------

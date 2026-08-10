@@ -12,6 +12,7 @@
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = public, pg_temp
 as $$
 begin
   new.updated_at := now();
@@ -20,6 +21,10 @@ end $$;
 
 comment on function public.set_updated_at() is
   'updated_at 자동 갱신 트리거. SECURITY INVOKER — 권한 상승 없음';
+
+-- 트리거 전용 함수는 PostgREST 의 /rpc 로 노출될 이유가 없습니다.
+-- 트리거 발화에는 호출자의 EXECUTE 권한이 필요하지 않으므로 전부 회수합니다.
+revoke all on function public.set_updated_at() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- organizations — 고객사. 모든 테넌시의 루트

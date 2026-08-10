@@ -110,13 +110,17 @@ comment on function public.is_org_admin(uuid) is
   '조직 관리 권한(org_owner ⊇ org_admin). 관리자 판정은 항상 이 함수로';
 
 -- ---------------------------------------------------------------------------
--- 실행 권한: PUBLIC 회수 후 필요한 롤에만 부여
+-- 실행 권한: PUBLIC/anon 회수 후 필요한 롤에만 부여
 -- ---------------------------------------------------------------------------
-revoke all on function public.user_org_ids()                       from public;
-revoke all on function public.has_org_role(uuid, public.app_role)  from public;
-revoke all on function public.is_platform_admin()                  from public;
-revoke all on function public.is_org_member(uuid)                  from public;
-revoke all on function public.is_org_admin(uuid)                   from public;
+-- `from public` 만으로는 부족합니다. Supabase 는 public 스키마 함수의 EXECUTE 를
+-- anon 에도 기본 부여하므로, anon 을 명시적으로 회수하지 않으면 로그인 없이
+-- /rest/v1/rpc/user_org_ids 같은 경로로 호출됩니다. (권한 상승은 아니지만
+-- SECURITY DEFINER 함수를 미인증자에게 노출할 이유가 없습니다.)
+revoke all on function public.user_org_ids()                       from public, anon;
+revoke all on function public.has_org_role(uuid, public.app_role)  from public, anon;
+revoke all on function public.is_platform_admin()                  from public, anon;
+revoke all on function public.is_org_member(uuid)                  from public, anon;
+revoke all on function public.is_org_admin(uuid)                   from public, anon;
 
 grant execute on function public.user_org_ids()                      to authenticated, service_role;
 grant execute on function public.has_org_role(uuid, public.app_role) to authenticated, service_role;
@@ -174,6 +178,9 @@ create trigger org_members_last_owner_guard
   before update or delete on public.org_members
   for each row execute function public.enforce_last_org_owner();
 
+-- 트리거 전용 — /rpc 노출 차단 (0002 의 set_updated_at 과 동일한 이유)
+revoke all on function public.enforce_last_org_owner() from public, anon, authenticated;
+
 -- ===========================================================================
 -- 3. 조직 생성 부트스트랩
 -- ===========================================================================
@@ -209,7 +216,7 @@ end $$;
 comment on function public.create_organization(text, text) is
   '조직 + 소유자 멤버십 + 브랜딩 행을 원자적으로 생성. 조직 생성의 유일한 통로';
 
-revoke all on function public.create_organization(text, text) from public;
+revoke all on function public.create_organization(text, text) from public, anon;
 grant execute on function public.create_organization(text, text) to authenticated, service_role;
 
 -- ===========================================================================
