@@ -10,7 +10,7 @@
 //
 // 필요한 시크릿
 //   SEND_SMS_HOOK_SECRET   훅 등록 시 Supabase 가 발급 (v1,whsec_... 형식)
-//   NHN_SMS_*              _shared/sms.ts 참고
+//   NCP_*                  _shared/sms.ts 참고 (네이버 클라우드 SENS)
 
 import { Webhook } from "npm:standardwebhooks@1.0.0";
 import { sendSms, SmsConfigError } from "../_shared/sms.ts";
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
   try {
     // EUC-KR 90바이트 안에 들어가야 SMS 단가로 나간다.
-    await sendSms({ to: phone, body: `[AI CAPA] 인증번호 ${otp} (3분 내 입력)` });
+    await sendSms({ to: phone, content: `[AI CAPA] 인증번호 ${otp} (3분 내 입력)` });
   } catch (e) {
     const message = e instanceof Error ? e.message : "문자 발송에 실패했습니다";
     console.error("SMS 발송 실패:", message);

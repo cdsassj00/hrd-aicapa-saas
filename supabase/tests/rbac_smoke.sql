@@ -302,6 +302,68 @@ select pg_temp.assert(
   not exists (select 1 from public.profiles where id = '33333333-3333-3333-3333-333333333333'),
   '다른 조직 사용자 프로필이 보이면 안 됨');
 
+-- ---------------------------------------------------------------------------
+-- 8. 역량 체계 (0005)
+-- ---------------------------------------------------------------------------
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+
+-- 플랫폼 기본 체계는 모든 조직에 보여야 한다.
+-- org_id = any(user_org_ids()) 는 NULL 에 false 라서, IS NULL 을 빠뜨리면
+-- 기본 체계가 아무에게도 안 보인다.
+select pg_temp.assert(
+  exists (select 1 from public.competency_frameworks where org_id is null and code = 'ai-utilization'),
+  '플랫폼 기본 역량 체계가 보여야 함');
+select pg_temp.assert(
+  (select count(*) from public.competencies where org_id is null) = 9,
+  '기본 역량 9개가 보여야 함');
+select pg_temp.assert(
+  (select count(*) from public.grade_levels where org_id is null) = 4,
+  '기본 등급 4단계가 보여야 함');
+
+-- 조직 관리자는 플랫폼 기본을 고칠 수 없다(전 고객사에 영향 가는 경로)
+with u as (
+  update public.competency_frameworks set name = '탈취됨' where org_id is null returning 1
+)
+select pg_temp.assert((select count(*) from u) = 0, '플랫폼 기본 체계가 조직 관리자에게 수정됨');
+
+-- 복제: 플랫폼 기본 → 조직 전용. 계층이 보존돼야 한다.
+create temp table _fw as
+select public.clone_framework_to_org(
+  (select id from public.competency_frameworks where org_id is null and code = 'ai-utilization'),
+  'aaaaaaaa-0000-0000-0000-000000000001', 'acme-model', '에이스엠 직무역량') as id;
+
+select pg_temp.assert(
+  (select count(*) from public.competencies c, _fw where c.framework_id = _fw.id) = 9,
+  '복제본 역량 9개');
+select pg_temp.assert(
+  (select count(*) from public.competencies c, _fw
+    where c.framework_id = _fw.id and c.parent_id is not null) = 6,
+  '복제본에서 계층(부모 연결) 6개가 보존돼야 함');
+select pg_temp.assert(
+  (select bool_and(c.org_id = 'aaaaaaaa-0000-0000-0000-000000000001')
+     from public.competencies c, _fw where c.framework_id = _fw.id),
+  '복제본 역량의 org_id 가 트리거로 상속돼야 함');
+
+-- 다른 조직에는 복제본이 보이지 않는다
+set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
+select pg_temp.assert(
+  not exists (select 1 from public.competency_frameworks where code = 'acme-model'),
+  '타 조직의 역량 체계가 보이면 안 됨');
+select pg_temp.assert(
+  exists (select 1 from public.competency_frameworks where org_id is null),
+  '플랫폼 기본은 타 조직에도 보여야 함');
+
+-- 남의 조직으로는 복제할 수 없다
+do $$
+begin
+  perform public.clone_framework_to_org(
+    (select id from public.competency_frameworks where org_id is null limit 1),
+    'aaaaaaaa-0000-0000-0000-000000000001', 'steal', '탈취');
+  raise exception 'RBAC 검증 실패: 남의 조직으로 복제가 허용됨';
+exception
+  when insufficient_privilege then null;
+end $$;
+
 reset role;
 select '✅ RBAC 스모크 테스트 통과' as result;
 

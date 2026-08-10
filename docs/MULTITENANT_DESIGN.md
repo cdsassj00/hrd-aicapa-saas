@@ -358,7 +358,7 @@ supabase/migrations/
   0002_tenancy_core.sql              -- organizations, org_members, platform_admins, org_branding [적용됨]
   0003_identity_and_rbac.sql         -- user_org_ids(), has_org_role(), is_platform_admin()       [적용됨]
   0004_profiles_and_invitations.sql  -- profiles, org_invitations, 초대 함수      [적용됨]
-  0005_competency_model.sql          -- frameworks, competencies, grade_scales
+  0005_competency_model.sql          -- frameworks, competencies, grade_scales + 플랫폼 기본 시드 [적용됨]
   0006_question_bank.sql             -- questions, question_sets, 소유권/라이선스
   0007_assessment_core.sql           -- exams, exam_sessions, answers, grading_jobs
   0008_proctoring.sql                -- monitoring_events, recording_chunks, diagnostics
@@ -366,7 +366,7 @@ supabase/migrations/
   0010_billing_usage.sql             -- plans, subscriptions, usage_events
   0011_audit.sql                     -- audit_logs
   0012_rls_policies.sql              -- 도메인 테이블 정책 (한 곳에 모아야 리뷰 가능)
-  0013_seed_platform_defaults.sql    -- NIA 체계를 플랫폼 기본 프레임워크로 시드
+  (0013 시드는 0005 에 통합 — 데이터 없는 역량 모델은 검증이 안 된다)
 ```
 
 **RLS 정책을 한 파일에 몰아두는 것**이 핵심입니다. 테이블별로 흩으면 보안 리뷰가 불가능해집니다.

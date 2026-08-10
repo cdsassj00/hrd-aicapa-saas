@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 // Edge Function 의 순수 헬퍼. Deno API 를 top-level 에서 쓰지 않으므로
 // 여기서 그대로 불러 검증할 수 있다 — 설계문서 §8 이 노린 이점.
-import { euckrBytes, normalizeKrPhone } from '../../supabase/functions/_shared/sms';
+import { euckrBytes, ncpSignature, normalizeKrPhone } from '../../supabase/functions/_shared/sms';
 
 describe('normalizeKrPhone', () => {
   it('하이픈과 공백을 제거한다', () => {
@@ -32,5 +32,22 @@ describe('euckrBytes', () => {
     // 이 문구가 90바이트를 넘으면 LMS 단가로 넘어간다
     const body = '[AI CAPA] 인증번호 123456 (3분 내 입력)';
     expect(euckrBytes(body)).toBeLessThanOrEqual(90);
+  });
+});
+
+describe('ncpSignature', () => {
+  // NCP 서명은 개행·공백 하나만 틀려도 401 이 나고 원인이 안 보인다.
+  // 알려진 입력에 대해 결정적으로 같은 값이 나오는지 고정해 둔다.
+  it('같은 입력에 항상 같은 서명을 만든다', async () => {
+    const a = await ncpSignature('POST', '/sms/v2/services/svc/messages', '1700000000000', 'AK', 'SK');
+    const b = await ncpSignature('POST', '/sms/v2/services/svc/messages', '1700000000000', 'AK', 'SK');
+    expect(a).toBe(b);
+    expect(a).toMatch(/^[A-Za-z0-9+/]+=*$/); // base64
+  });
+
+  it('타임스탬프가 다르면 서명도 다르다', async () => {
+    const a = await ncpSignature('POST', '/p', '1700000000000', 'AK', 'SK');
+    const b = await ncpSignature('POST', '/p', '1700000000001', 'AK', 'SK');
+    expect(a).not.toBe(b);
   });
 });

@@ -61,7 +61,7 @@ npx supabase db push                                   # 원격에 마이그레�
 
 ## 현재 상태
 
-`docs/MULTITENANT_DESIGN.md` §7의 구성 중 **`0001`~`0004`(테넌시 코어 · RBAC · CI 가드 · 프로필/초대)** 가 원격 프로젝트에 적용되어 있습니다.
+`docs/MULTITENANT_DESIGN.md` §7의 구성 중 **`0001`~`0005`(테넌시 코어 · RBAC · CI 가드 · 프로필/초대 · 역량 체계)** 가 원격 프로젝트에 적용되어 있습니다.
 
 동작하는 것: 회원가입 → 조직 생성(`/onboarding`) → 초대 발급·수락(`/admin/members`, `/invite/accept`) → 조직 전환.
 동작하지 않는 것: 시험·문항·감독·인증서 화면 — 해당 테이블이 `0005~` 에 있어 아직 없습니다.
@@ -70,7 +70,8 @@ npx supabase db push                                   # 원격에 마이그레�
 
 - [x] ~~조직 가입·초대·역할 전환 온보딩~~ — `0004` + `/onboarding` · `/invite/accept` · `/admin/members`
 - [x] ~~프런트엔드 `user_roles` 참조 제거~~ — `AuthContext`가 `org_members` 기반으로 교체됨
-- [ ] `0005`~`0013` 마이그레이션 (역량모델 → 문제은행 → 시험 도메인 → 감독 → 인증서 → 과금 → 감사 → RLS 정책 → 시드)
+- [x] ~~`0005` 역량 체계~~ — `competency_frameworks`/`competencies`/`grade_scales`/`grade_levels` + 플랫폼 기본 시드
+- [ ] `0006`~`0012` (문제은행 → 시험 도메인 → 감독 → 인증서 → 과금 → 감사 → RLS 정책)
 - [ ] 시험 도메인 화면 이식 — `exams`·`questions`·`exam_sessions` 등을 쓰는 화면은 테이블이 아직 없어 동작하지 않습니다
 - [ ] `src/integrations/supabase/types.ts` 재생성 — 지금은 이행기 파일(실제 테넌시 테이블 + 미이식 도메인 테이블이 섞여 있음)
 - [ ] 초대 메일 발송(Resend) — 현재는 관리자가 초대 링크를 직접 전달합니다
