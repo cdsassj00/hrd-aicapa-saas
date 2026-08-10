@@ -12,6 +12,12 @@
 //
 // 설계문서 §8: 로직은 순수 모듈로, Edge Function 은 HTTP 껍데기만.
 
+// Edge Function 런타임(Deno)이 제공하는 전역. 이 파일의 순수 헬퍼
+// (normalizeKrPhone·euckrBytes)는 프런트엔드 테스트에서도 불러 쓰므로,
+// 앱의 tsconfig 로 타입체크될 때 Deno 타입이 없어 깨진다. 모듈 스코프
+// 선언으로 최소한만 알려 준다 — 컴파일 시 지워지고 런타임 동작은 그대로다.
+declare const Deno: { env: { get(key: string): string | undefined } };
+
 const API_BASE = "https://api-sms.cloud.toast.com/sms/v3.0";
 
 /** SMS 는 EUC-KR 기준 90바이트(한글 45자)를 넘으면 LMS 로 넘어간다.
