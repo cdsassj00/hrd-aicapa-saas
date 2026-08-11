@@ -438,12 +438,11 @@ export default function LoginPage() {
               <span>·</span>
             </>
           )}
-          {LEGAL.operator && (
-            <>
-              <span>{LEGAL.operator}</span>
-              <span>·</span>
-            </>
-          )}
+          <span>
+            Made by{' '}
+            <a href={LEGAL.operatorUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">{LEGAL.operator}</a>
+          </span>
+          <span>·</span>
           <span>© {new Date().getFullYear()}</span>
         </div>
       </footer>

@@ -56,7 +56,9 @@ export function DashboardLayout() {
                   {' · '}
                 </>
               )}
-              {LEGAL.operator && `${LEGAL.operator} · `}© {new Date().getFullYear()}
+              Made by{' '}
+              <a href={LEGAL.operatorUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">{LEGAL.operator}</a>
+              {' · '}© {new Date().getFullYear()}
             </span>
           </footer>
         </div>

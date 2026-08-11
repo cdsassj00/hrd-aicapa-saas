@@ -30,16 +30,19 @@ export const storageKey = (name: string) => `${STORAGE_PREFIX}.${name}`;
 export const ORG_DOMAIN_SUFFIX = import.meta.env.VITE_ORG_DOMAIN_SUFFIX?.trim() ?? '';
 
 /**
- * 법적 고지 링크. **비어 있으면 렌더링하지 않습니다.**
+ * 법적 고지. 운영 주체는 원본과 같은 **한국데이터사이언티스트협회(CDSA)** 입니다.
+ * 제품이 둘로 갈린 것이지 사업자가 갈린 것이 아니므로 표기를 유지합니다.
  *
- * 원본은 `cdsa.kr/privacy`·`cdsa.kr/terms` 를 걸고 있었는데, 그건 다른 법인이
- * 다른 서비스에 대해 게시한 방침입니다. 이 SaaS 는 개인정보 처리자가 다르므로
- * 그 링크를 재사용하는 것은 표시광고·개인정보보호법상 문제가 됩니다.
- * 자체 방침을 게시하기 전까지는 아무것도 걸지 않는 편이 맞습니다.
+ * 다만 개인정보처리방침 본문은 확인이 필요합니다. 이 서비스는 원본과 달리
+ * 고객사 지원자·재직자의 데이터를 처리하고, 원격 감독 녹화까지 수집합니다.
+ * 방침에 그 처리 목적·보관 기간·수탁자(R2·Daily·Rekognition 등)가 들어가
+ * 있지 않으면 링크만으로는 고지 의무가 충족되지 않습니다.
+ *
+ * 빈 문자열이면 해당 항목은 렌더링하지 않습니다.
  */
 export const LEGAL = {
-  privacyUrl: '',
-  termsUrl: '',
-  /** 사업자명. 확정 전까지 비워 둡니다. */
-  operator: '',
+  privacyUrl: 'https://cdsa.kr/privacy',
+  termsUrl: 'https://cdsa.kr/terms',
+  operator: '한국데이터사이언티스트협회(CDSA)',
+  operatorUrl: 'https://cdsa.kr',
 } as const;
