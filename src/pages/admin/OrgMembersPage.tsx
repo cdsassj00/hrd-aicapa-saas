@@ -12,6 +12,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { siteLink } from '@/lib/siteUrl';
 
 // org_owner 는 초대로 부여하지 않는다 — DB 제약과 같은 규칙(§0004).
 const INVITABLE_ROLES: { value: UserRole; label: string }[] = [
@@ -96,7 +97,7 @@ export default function OrgMembersPage() {
 
       // 원문 토큰은 이 응답에서만 얻을 수 있다. DB 에는 해시만 남는다.
       // 메일 발송(Resend)이 붙기 전까지는 링크를 직접 전달한다.
-      setLastLink(`${window.location.origin}/invite/accept?token=${data}`);
+      setLastLink(siteLink(`/invite/accept?token=${data}`));
       setEmail('');
       toast.success('초대를 발급했습니다.');
       void load();

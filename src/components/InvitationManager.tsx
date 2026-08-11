@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { UserPlus, Copy, Trash2, Upload, Send, Loader2, RefreshCw, RotateCcw, Camera, Monitor } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { siteUrl, siteLink } from '@/lib/siteUrl';
 
 interface Props {
   examId: string;
@@ -165,8 +166,7 @@ export function InvitationManager({ examId, examTitle, open, onOpenChange }: Pro
   };
 
   const copySignupLink = () => {
-    const siteUrl = import.meta.env.PROD ? 'https://aicapa.kr' : window.location.origin;
-    navigator.clipboard.writeText(`${siteUrl}/login`);
+    navigator.clipboard.writeText(siteLink('/login'));
     toast({ title: '회원가입 링크가 복사되었습니다', description: '미가입 사용자에게 이 링크를 공유해주세요.' });
   };
 
@@ -195,9 +195,8 @@ export function InvitationManager({ examId, examTitle, open, onOpenChange }: Pro
 
     setSending(true);
     try {
-      const siteUrl = import.meta.env.PROD ? 'https://aicapa.kr' : window.location.origin.replace(/\/$/, '');
       const { data, error } = await supabase.functions.invoke('send-exam-invitation', {
-        body: { examId, invitationIds: ids, siteUrl },
+        body: { examId, invitationIds: ids, siteUrl: siteUrl() },
       });
 
       if (error) {
