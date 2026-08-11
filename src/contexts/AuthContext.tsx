@@ -2,13 +2,14 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, Re
 import type { AuthError, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { User, UserRole, OrgMembership } from '@/types';
+import { storageKey } from '@/lib/brand';
 
 const PROTECTED_SESSION_RETRY_DELAYS_MS = [250, 500, 1000, 1500, 2500];
 const LOGIN_SESSION_RETRY_DELAYS_MS = [150, 350, 700, 1200];
 
 /** 마지막으로 보던 조직. UI 필터일 뿐 보안 경계가 아니다 —
  *  실제 권한은 매 쿼리마다 DB 의 RLS 가 org_members 를 조회해 판정한다. */
-const ACTIVE_ORG_KEY = 'aicapa.activeOrgId';
+const ACTIVE_ORG_KEY = storageKey('activeOrgId');
 
 /** 역할 우선순위 — 한 조직에서 복수 역할을 가질 수 있으므로
  *  화면 라우팅에 쓸 대표 역할 하나를 고른다. */
@@ -78,6 +79,7 @@ interface LoadedIdentity {
   memberships: OrgMembership[];
   activeOrgId: string | null;
   role: UserRole;
+  isPlatformAdmin: boolean;
 }
 
 interface AuthContextType {
@@ -91,6 +93,9 @@ interface AuthContextType {
   activeOrg: OrgMembership | null;
   /** 소속 조직이 하나도 없는 상태 — /onboarding 으로 보낸다 */
   needsOnboarding: boolean;
+  /** 플랫폼 운영자. 원본은 UUID 하드코딩이었고, 이제 platform_admins 테이블이
+   *  판정한다. 이 값은 UI 표시용일 뿐 보안 경계가 아니다 — 실제 차단은 RLS 가 한다. */
+  isPlatformAdmin: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | Error | null }>;
   signUp: (email: string, password: string, profileData: { name: string; phone?: string }) => Promise<{ error: AuthError | Error | null }>;
@@ -106,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [memberships, setMemberships] = useState<OrgMembership[]>([]);
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const hydratedUserIdRef = useRef<string | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
@@ -119,17 +125,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    *  역할을 계산한다. profiles 행은 auth.users 트리거가 만들어 주므로
    *  여기서 만들지 않는다. */
   const loadIdentity = useCallback(async (userId: string, email: string): Promise<LoadedIdentity> => {
-    const [profileRes, memberRes] = await Promise.all([
+    const [profileRes, memberRes, platformRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
       supabase
         .from('org_members')
         .select('org_id, role, status, department, position, organizations(id, slug, name, status)')
         .eq('user_id', userId)
         .eq('status', 'active'),
+      supabase.rpc('is_platform_admin'),
     ]);
 
     if (profileRes.error) console.warn('[auth] profile select failed:', profileRes.error);
     if (memberRes.error) console.warn('[auth] membership select failed:', memberRes.error);
+    // 실패하면 관리자가 아닌 것으로 떨어뜨린다 — 권한은 열리는 쪽이 아니라 닫히는 쪽으로.
+    if (platformRes.error) console.warn('[auth] is_platform_admin failed:', platformRes.error);
 
     const profile = profileRes.data as { name?: string; phone?: string } | null;
 
@@ -167,6 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {
       memberships,
       activeOrgId,
+      isPlatformAdmin: platformRes.data === true,
       role: pickRole(memberships, activeOrgId),
       user: {
         id: userId,
@@ -181,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(loaded.user);
     setMemberships(loaded.memberships);
     setActiveOrgId(loaded.activeOrgId);
+    setIsPlatformAdmin(loaded.isPlatformAdmin);
     storeOrgId(loaded.activeOrgId);
     hydratedUserIdRef.current = loaded.user.id;
     currentUserIdRef.current = loaded.user.id;
@@ -190,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setMemberships([]);
     setActiveOrgId(null);
+    setIsPlatformAdmin(false);
     storeOrgId(null);
     hydratedUserIdRef.current = null;
     currentUserIdRef.current = null;
@@ -354,6 +366,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         activeOrgId,
         activeOrg,
         needsOnboarding: Boolean(user) && memberships.length === 0,
+        isPlatformAdmin,
         loading,
         signIn,
         signUp,

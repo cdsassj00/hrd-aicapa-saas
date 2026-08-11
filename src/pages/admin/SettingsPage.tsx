@@ -58,7 +58,7 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label className="text-[12px]">시스템 제목</Label>
-            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="AX역량 인증평가 CBT" />
+            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="예: 2026 상반기 AI 역량평가" />
           </div>
           <div className="space-y-2">
             <Label className="text-[12px]">부제</Label>
@@ -66,12 +66,12 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2">
             <Label className="text-[12px]">푸터 조직명</Label>
-            <Input value={footerOrg} onChange={e => setFooterOrg(e.target.value)} placeholder="한국데이터사이언티스트협회" />
+            <Input value={footerOrg} onChange={e => setFooterOrg(e.target.value)} placeholder="예: 주식회사 마루" />
           </div>
           <div className="space-y-2">
             <Label className="text-[12px]">이메일 제목 접두어</Label>
-            <Input value={emailSubjectPrefix} onChange={e => setEmailSubjectPrefix(e.target.value)} placeholder="[행정안전부·NIA]" />
-            <p className="text-[11px] text-muted-foreground">초대 메일 제목 앞에 붙는 접두어입니다. 예: [행정안전부·NIA] 평가명 응시 초대</p>
+            <Input value={emailSubjectPrefix} onChange={e => setEmailSubjectPrefix(e.target.value)} placeholder="예: [마루 인재개발원]" />
+            <p className="text-[11px] text-muted-foreground">초대 메일 제목 앞에 붙는 접두어입니다. 예: [마루 인재개발원] 평가명 응시 초대</p>
           </div>
           <div className="space-y-2">
             <Label className="text-[12px]">발신자 이름</Label>
@@ -80,7 +80,7 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2">
             <Label className="text-[12px]">발신 이메일 주소</Label>
-            <Input value={emailFromAddress} onChange={e => setEmailFromAddress(e.target.value)} placeholder="noreply@aicapa.kr" />
+            <Input value={emailFromAddress} onChange={e => setEmailFromAddress(e.target.value)} placeholder="예: noreply@example.com" />
             <p className="text-[11px] text-muted-foreground">초대 메일의 발신 이메일 주소입니다. Resend에서 인증된 도메인이어야 합니다.</p>
           </div>
           <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-2">

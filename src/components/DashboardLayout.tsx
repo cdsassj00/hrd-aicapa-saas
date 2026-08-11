@@ -4,6 +4,7 @@ import { TopBar } from '@/components/TopBar';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { FullscreenLoader } from '@/components/FullscreenLoader';
+import { LEGAL } from '@/lib/brand';
 
 export function DashboardLayout() {
   const { user, loading } = useAuth();
@@ -43,11 +44,19 @@ export function DashboardLayout() {
           </main>
           <footer className="py-2 px-6 text-center border-t bg-muted/20">
             <span className="text-[10px] text-muted-foreground">
-              <a href="https://cdsa.kr/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">개인정보처리방침</a>
-              {' · '}
-              <a href="https://cdsa.kr/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">이용약관</a>
-              {' · '}
-              Made by <a href="https://cdsa.kr" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">CDSA</a> (한국데이터사이언티스트협회) · © {new Date().getFullYear()}
+              {LEGAL.privacyUrl && (
+                <>
+                  <a href={LEGAL.privacyUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">개인정보처리방침</a>
+                  {' · '}
+                </>
+              )}
+              {LEGAL.termsUrl && (
+                <>
+                  <a href={LEGAL.termsUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">이용약관</a>
+                  {' · '}
+                </>
+              )}
+              {LEGAL.operator && `${LEGAL.operator} · `}© {new Date().getFullYear()}
             </span>
           </footer>
         </div>

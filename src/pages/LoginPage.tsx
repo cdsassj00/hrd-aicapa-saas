@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { trackAction } from '@/lib/userActions';
+import { LEGAL } from '@/lib/brand';
 
 export default function LoginPage() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -424,16 +425,25 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <footer className="fixed bottom-0 left-0 right-0 py-5 pb-6 text-center z-10">
-        <p className="text-[13px] text-muted-foreground font-medium mb-1.5">
-          {settings.footerOrg} &amp; 케이브레인의 교육과정을 수료하면 이런 프로그램을 만들 수 있습니다.
-        </p>
         <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground/70">
-          <a href="https://cdsa.kr/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">개인정보처리방침</a>
-          <span>·</span>
-          <a href="https://cdsa.kr/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">이용약관</a>
-          <span>·</span>
-          <span>Made by <a href="https://cdsa.kr" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">CDSA</a></span>
-          <span>·</span>
+          {LEGAL.privacyUrl && (
+            <>
+              <a href={LEGAL.privacyUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">개인정보처리방침</a>
+              <span>·</span>
+            </>
+          )}
+          {LEGAL.termsUrl && (
+            <>
+              <a href={LEGAL.termsUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">이용약관</a>
+              <span>·</span>
+            </>
+          )}
+          {LEGAL.operator && (
+            <>
+              <span>{LEGAL.operator}</span>
+              <span>·</span>
+            </>
+          )}
           <span>© {new Date().getFullYear()}</span>
         </div>
       </footer>

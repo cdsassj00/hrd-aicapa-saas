@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { storageKey } from '@/lib/brand';
 
 export type Theme = 'dark' | 'light';
 
-const KEY = 'aicapa.theme';
+/** index.html 의 인라인 FOUC 스크립트와 반드시 같은 키여야 한다. */
+const KEY = storageKey('theme');
 
 /** 다크가 기본이다(랜딩과 같은 톤). 다만 응시 화면처럼 30~90분을 들여다보는
  *  곳은 밝기 선호가 갈리므로 사용자가 직접 고를 수 있어야 한다.

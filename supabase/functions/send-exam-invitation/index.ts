@@ -87,15 +87,29 @@ Deno.serve(async (req) => {
       .select("key, value")
       .in("key", ["email_subject_prefix", "email_from_name", "email_from_address"]);
 
-    let emailPrefix = "[행정안전부·NIA]";
-    let fromName = "AI역량인증 평가";
-    let fromAddress = "noreply@aicapa.kr";
+    // 원본은 발신자를 "[행정안전부·NIA] / noreply@aicapa.kr" 로 하드코딩하고 있었다.
+    // 그 주소는 다른 서비스의 운영 도메인이라 여기서 쓰면 안 되고, 애초에 Resend 에
+    // 검증되지 않은 도메인으로 보내면 발송 자체가 거절된다.
+    // 조직이 설정하지 않았으면 MAIL_FROM 환경변수를 쓴다.
+    let emailPrefix = "";
+    let fromName = "";
+    let fromAddress = "";
     if (emailSettings) {
       for (const row of emailSettings) {
-        if (row.key === "email_subject_prefix") emailPrefix = row.value;
-        if (row.key === "email_from_name") fromName = row.value;
-        if (row.key === "email_from_address") fromAddress = row.value;
+        if (row.key === "email_subject_prefix") emailPrefix = row.value ?? "";
+        if (row.key === "email_from_name") fromName = row.value ?? "";
+        if (row.key === "email_from_address") fromAddress = row.value ?? "";
       }
+    }
+
+    // 발신 주소가 없으면 MAIL_FROM 으로 떨어진다. 그것도 없으면 보내지 않는다 —
+    // 잘못된 발신자로 나가는 것보다 실패하는 편이 낫다.
+    const fallbackFrom = Deno.env.get("MAIL_FROM") ?? "";
+    if (!fromAddress && !fallbackFrom) {
+      return new Response(
+        JSON.stringify({ error: "발신 주소가 설정되지 않았습니다. 관리자 설정의 발신 이메일 또는 MAIL_FROM 을 지정하세요." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const examDate = new Date(exam.exam_date).toLocaleString("ko-KR", {
@@ -149,9 +163,15 @@ Deno.serve(async (req) => {
 
       try {
         await sendEmail({
-          from: `${fromName} <${fromAddress}>`,
+          // 조직이 발신 주소를 정했으면 그걸, 아니면 MAIL_FROM 을 그대로 쓴다.
+          // MAIL_FROM 은 이미 "이름 <주소>" 형태이므로 다시 감싸지 않는다.
+          from: fromAddress
+            ? (fromName ? `${fromName} <${fromAddress}>` : fromAddress)
+            : fallbackFrom,
           to: inv.email,
-          subject: `${emailPrefix} ${exam.title} 응시 초대`,
+          subject: emailPrefix
+            ? `${emailPrefix} ${exam.title} 응시 초대`
+            : `${exam.title} 응시 초대`,
           html,
         });
         results.push({ email: inv.email, success: true });

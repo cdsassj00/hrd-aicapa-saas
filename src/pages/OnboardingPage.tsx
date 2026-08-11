@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FullscreenLoader } from '@/components/FullscreenLoader';
 import { toast } from 'sonner';
+import { ORG_DOMAIN_SUFFIX } from '@/lib/brand';
 
 /** 서브도메인으로 그대로 쓰이므로 DB 의 organizations_slug_format 과
  *  같은 규칙을 화면에서도 미리 걸러 준다. 최종 판정은 DB 가 한다. */
@@ -134,10 +135,12 @@ export default function OnboardingPage() {
                   required
                   maxLength={63}
                 />
-                <span className="whitespace-nowrap text-sm text-muted-foreground">.aicapa.io</span>
+                {ORG_DOMAIN_SUFFIX && (
+                  <span className="whitespace-nowrap text-sm text-muted-foreground">{ORG_DOMAIN_SUFFIX}</span>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
-                영문 소문자·숫자·하이픈만. 나중에 자체 도메인을 연결할 수 있습니다.
+                영문 소문자·숫자·하이픈만. 조직을 식별하는 고유 주소이며, 나중에 자체 도메인을 연결할 수 있습니다.
               </p>
               {effectiveSlug && !slugValid && (
                 <p className="text-xs text-destructive">

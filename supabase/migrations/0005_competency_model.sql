@@ -400,17 +400,22 @@ update public.competencies c
    and c.code like p.code || '.%'
    and c.code <> p.code;
 
--- NIA 등급 체계를 플랫폼 기본으로
+-- 플랫폼 기본 등급 체계.
+--
+-- 원본은 'nia-3tier'(그린/블루/블랙, "AI 챔피언 등급")를 썼습니다. 그건 특정
+-- 공공사업의 고유 등급명이라 여기서 쓰지 않습니다. 채용 전형 결과로도 읽히는
+-- 값이므로, 어느 고객사에서나 뜻이 통하는 4단계 중립 등급을 기본으로 둡니다.
+-- 고객사 고유 등급명이 있으면 조직 등급 체계를 따로 만들어 씁니다.
 insert into public.grade_scales (org_id, code, name, description, is_default)
-values (null, 'nia-3tier', 'AI 챔피언 등급 (기본)',
-        '그린 / 블루 / 블랙 3단계. 고객사 등급명이 따로 있으면 자체 체계를 만들어 쓰세요.', true);
+values (null, 'standard-4tier', '표준 4단계 (기본)',
+        '우수 / 양호 / 보통 / 미흡 4단계. 고객사 등급명이 따로 있으면 자체 체계를 만들어 쓰세요.', true);
 
-with gs as (select id from public.grade_scales where org_id is null and code = 'nia-3tier')
+with gs as (select id from public.grade_scales where org_id is null and code = 'standard-4tier')
 insert into public.grade_levels (scale_id, code, name, min_percent, is_passing, color, sort_order)
 select gs.id, v.code, v.name, v.min_percent, v.is_passing, v.color, v.sort_order
 from gs, (values
-  ('black', '블랙', 90.00, true,  '#1d1d1f', 30),
-  ('blue',  '블루', 75.00, true,  '#0a84ff', 20),
-  ('green', '그린', 60.00, true,  '#30d158', 10),
-  ('none',  '미달',  0.00, false, '#98989d',  0)
+  ('l4', '우수', 90.00, true,  '#30d158', 40),
+  ('l3', '양호', 75.00, true,  '#0a84ff', 30),
+  ('l2', '보통', 60.00, true,  '#ff9f0a', 20),
+  ('l1', '미흡',  0.00, false, '#98989d', 10)
 ) as v(code, name, min_percent, is_passing, color, sort_order);
