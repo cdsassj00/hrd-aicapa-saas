@@ -14,6 +14,7 @@
 | **`docs/MULTITENANT_DESIGN.md`** | 멀티테넌트 스키마 설계, RLS 재설계, 마이그레이션 구성 |
 | `docs/ORIGIN_SPEC.md` | 원본 시스템의 최초 빌드 사양 (도메인 참조용) |
 | `docs/INFRA_CAPACITY.md` | 원본 인프라 용량 산정 (동시 응시 규모 근거) |
+| **`docs/SECRETS.md`** | 외부 서비스 키 목록 · 원본과 분리해야 하는 이유와 단위 |
 
 ## 스택
 
