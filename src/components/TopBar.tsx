@@ -1,11 +1,13 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LogOut, Moon, Shield, Sun } from 'lucide-react';
+import { LogOut, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { useTheme } from '@/hooks/useTheme';
+import { BrandMark } from '@/components/BrandMark';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 const roleLabels: Record<UserRole, string> = {
   org_owner: '소유자',
@@ -39,45 +41,45 @@ export function TopBar() {
   };
 
   return (
-    <header className="h-14 border-b bg-card flex items-center justify-between px-6 shrink-0">
-      <div className="flex items-center gap-3">
-        <Shield className="h-5 w-5 text-foreground" />
-        <h1 className="text-[15px] font-bold tracking-tight">{settings.title}</h1>
+    <header className="h-16 border-b border-border/60 bg-background/80 backdrop-blur-xl flex items-center justify-between px-6 shrink-0 sticky top-0 z-30">
+      <div className="flex items-center gap-2.5">
+        <SidebarTrigger className="h-9 w-9 rounded-full -ml-1" />
+        <BrandMark size={26} />
+        <h1 className="text-[15px] font-semibold tracking-[-0.02em]">{settings.title}</h1>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {orgs.length > 1 && (
-          <div className="flex items-center gap-2 text-[12px]">
-            <span className="text-muted-foreground">조직:</span>
-            <Select value={activeOrgId ?? undefined} onValueChange={handleOrgChange}>
-              <SelectTrigger className="h-8 w-[180px] text-[12px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {orgs.map(o => (
-                  <SelectItem key={o.orgId} value={o.orgId}>{o.orgName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={activeOrgId ?? undefined} onValueChange={handleOrgChange}>
+            <SelectTrigger className="h-9 w-[184px] text-[12.5px] rounded-full border-border/70">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {orgs.map(o => (
+                <SelectItem key={o.orgId} value={o.orgId}>{o.orgName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
-        <div className="h-4 w-px bg-border" />
-        <span className="text-[12px] text-muted-foreground">
-          {user?.name || '사용자'}
-          {activeOrg ? ` · ${activeOrg.orgName}` : ''}
-          {role ? ` · ${roleLabels[role]}` : ''}
-        </span>
+        <div className="hidden sm:flex flex-col items-end leading-tight mr-1">
+          <span className="text-[12.5px] font-medium tracking-[-0.01em]">{user?.name || '사용자'}</span>
+          <span className="text-[11px] text-muted-foreground">
+            {activeOrg ? activeOrg.orgName : ''}
+            {activeOrg && role ? ' · ' : ''}
+            {role ? roleLabels[role] : ''}
+          </span>
+        </div>
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-9 w-9 rounded-full"
           onClick={toggle}
           aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
           title={theme === 'dark' ? '라이트 모드' : '다크 모드'}
         >
-          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSignOut} aria-label="로그아웃">
-          <LogOut className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleSignOut} aria-label="로그아웃">
+          <LogOut className="h-[18px] w-[18px]" />
         </Button>
       </div>
     </header>
