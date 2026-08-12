@@ -47,12 +47,15 @@
 | 키 | 발급처 | 분리 단위 | 비고 |
 |---|---|---|---|
 | `RESEND_API_KEY` | Resend → API Keys | **키를 새로 발급** | 원본과 다른 키. 권한은 `Sending access` 만 |
-| `MAIL_FROM` | 직접 지정 | **발신 도메인 분리** | 예: `AI CAPA <noreply@aicapa.io>` |
+| `MAIL_FROM` | 직접 지정 | **발신 도메인 분리** | 예: `AI 역량평가 <noreply@aihrd.co>` |
 
-**추가로 필요한 것: 발신 도메인 인증.** Resend 에 도메인을 등록하고 SPF·DKIM·DMARC
-DNS 레코드를 넣어야 합니다. 원본이 쓰는 `aicapa.kr` 을 그대로 쓰면 두 시스템이
-같은 발신자로 메일을 보내게 되므로, 별도 도메인이나 서브도메인(`mail.aicapa.io`)을
-권합니다. DNS 반영에 시간이 걸리니 미리 걸어두세요.
+**서비스 도메인: `aihrd.co`** (확정). 원본이 쓰는 `aicapa.kr` 과 완전히 분리된
+별도 도메인이라 발신자·평판·DKIM 이 섞이지 않습니다.
+
+**추가로 필요한 것: 발신 도메인 인증.** Resend 에 `aihrd.co`(또는 서브도메인
+`mail.aihrd.co`)를 등록하고 SPF·DKIM·DMARC DNS 레코드를 넣어야 합니다.
+DNS 반영에 시간이 걸리니 미리 걸어두세요. 네임서버를 Cloudflare 로 두면
+이 레코드와 Supabase `auth.aihrd.co` CNAME 을 한 화면에서 관리합니다.
 
 ## 3. SMS 본인확인 — 네이버 클라우드 SENS
 
