@@ -15,6 +15,17 @@
         if (t === 'light') document.documentElement.classList.remove('dark');
       } catch (e) {}
     </script>
+    <!-- 첫 화면 분기: 마케팅 도메인(ai-hrd.com / www) 루트는 소개 페이지로,
+         제품 도메인(app.ai-hrd.com)은 그대로 앱으로. React 마운트 전에 실행돼 깜빡임이 없다.
+         /landing 자체(path !== "/")에는 적용되지 않아 무한 루프가 없다. -->
+    <script>
+      try {
+        var host = location.hostname;
+        var isMarketing = (host === 'ai-hrd.com' || host === 'www.ai-hrd.com');
+        var atRoot = (location.pathname === '/' || location.pathname === '');
+        if (isMarketing && atRoot) location.replace('/landing');
+      } catch (e) {}
+    </script>
     
     
     <meta property="og:type" content="website" />

@@ -142,7 +142,7 @@ header.site .bar { display: flex; align-items: center; gap: 28px; height: 52px; 
 header.site nav { display:none; gap: 26px; margin-inline-start: auto; }
 header.site nav a { font-size: 13.5px; color: var(--mut); transition: color .2s; }
 header.site nav a:hover { color: var(--ink); }
-header.site .cta-slot { margin-inline-start: auto; }
+header.site .cta-slot { margin-inline-start: auto; display:flex; align-items:center; gap:8px; }
 @media (min-width: 900px) {
   header.site nav { display: flex; }
   header.site .cta-slot { margin-inline-start: 0; }
@@ -150,6 +150,8 @@ header.site .cta-slot { margin-inline-start: auto; }
 .btn-sm { border-radius:999px; background: var(--accent); color:#fff; padding:7px 15px;
   font-size:13.5px; font-variation-settings:"wght" 550; transition: background .2s; }
 .btn-sm:hover { background: var(--accent-hi); }
+.btn-sm.ghost { background: transparent; color: var(--ink); border:1px solid var(--hair2); }
+.btn-sm.ghost:hover { background: var(--tint); border-color: var(--accent); color: var(--accent-hi); }
 
 /* ─── 히어로 ────────────────────────────────────────────── */
 .hero {
@@ -334,7 +336,10 @@ footer.site .links a:hover { color: var(--ink); }
       <a href="#security">보안</a>
       <a href="#pricing">요금제</a>
     </nav>
-    <div class="cta-slot"><a class="btn-sm" href="#contact">파일럿 신청</a></div>
+    <div class="cta-slot">
+      <a class="btn-sm ghost" href="https://app.ai-hrd.com/login">로그인</a>
+      <a class="btn-sm" href="#contact">파일럿 신청</a>
+    </div>
   </div>
 </header>
 
@@ -359,8 +364,8 @@ footer.site .links a:hover { color: var(--ink); }
         사내 인증제로. 문항 출제부터 원격 감독, 채점, 보고서까지 한 곳에서 돌립니다.
       </p>
       <div class="hero-cta">
-        <a class="btn-pill" href="#contact">파일럿 신청하기</a>
-        <a class="btn-link" href="#product">기능 살펴보기 ›</a>
+        <a class="btn-pill" href="https://app.ai-hrd.com/login">역량평가 시스템 진입 →</a>
+        <a class="btn-link" href="#contact">파일럿 신청 ›</a>
       </div>
       <p class="hero-note">서술형·실무형 문항을 원격 감독 환경에서 출제하고, 근거가 남는 AI 1차 채점으로 처리합니다.</p>
     </div>
