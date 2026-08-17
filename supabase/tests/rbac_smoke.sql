@@ -547,6 +547,34 @@ select pg_temp.assert(
     = 'aaaaaaaa-0000-0000-0000-000000000001',
   '답안 org_id 가 세션에서 상속돼야 함');
 
+-- 응시자는 자기 세션의 점수·등급을 조작할 수 없다 (0014 트리거가 막는다)
+do $$
+begin
+  update public.exam_sessions set score = 100
+   where id = 'ee000000-0000-0000-0000-000000000001';
+  raise exception 'RBAC 검증 실패: 응시자가 자기 점수를 조작함';
+exception
+  when check_violation then null;   -- 트리거가 막음 = 기대 동작
+end $$;
+
+-- 응시자는 자기 답안의 채점 결과(점수)를 조작할 수 없다
+do $$
+begin
+  update public.answers set score = 100
+   where session_id = 'ee000000-0000-0000-0000-000000000001';
+  raise exception 'RBAC 검증 실패: 응시자가 자기 답안 점수를 조작함';
+exception
+  when check_violation then null;
+end $$;
+
+-- 그러나 상태 전이(제출)와 답안 내용 수정은 여전히 가능해야 한다
+update public.exam_sessions set status = 'submitted', submitted_at = now()
+ where id = 'ee000000-0000-0000-0000-000000000001';
+select pg_temp.assert(
+  (select status from public.exam_sessions where id = 'ee000000-0000-0000-0000-000000000001')
+    = 'submitted',
+  '응시자가 세션을 제출 상태로 바꿀 수 있어야 함');
+
 -- 응시자는 채점 잡을 만들 수 없다
 do $$
 begin
@@ -556,6 +584,14 @@ begin
 exception
   when insufficient_privilege then null;
 end $$;
+
+-- 감독관(스태프)은 채점 결과를 매길 수 있다 (0014 트리거가 채점 주체는 통과시킨다)
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+update public.exam_sessions set score = 88, max_score = 100
+ where id = 'ee000000-0000-0000-0000-000000000001';
+select pg_temp.assert(
+  (select score from public.exam_sessions where id = 'ee000000-0000-0000-0000-000000000001') = 88,
+  '감독관은 점수를 매길 수 있어야 함');
 
 -- 다른 조직 사람에게는 회차도 답안도 보이지 않는다
 set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
