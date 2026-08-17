@@ -280,10 +280,16 @@ export async function commitPayload(
     allow_file_upload: q.allow_file_upload ?? true,
   });
 
-  const slugify = (s: string) =>
-    s.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'set';
-  const rand = () =>
-    (crypto as any)?.randomUUID?.().slice(0, 6) ?? Math.random().toString(36).slice(2, 8);
+  // question_sets.code 는 CHECK 제약 ^[a-z0-9][a-z0-9_-]{1,48}$ 을 만족해야 한다
+  // (ASCII 소문자·숫자·-·_ 만; 한글·대문자·공백 불가). 제목(한글)에서 만들 수 없으므로
+  // 항상 형식을 만족하는 랜덤 코드를 생성한다.
+  const genCode = () => {
+    const rnd = ((crypto as any)?.randomUUID?.() ?? Math.random().toString(36).slice(2))
+      .replace(/[^a-z0-9]/gi, '')
+      .toLowerCase()
+      .slice(0, 10);
+    return `set-${Date.now().toString(36)}-${rnd || 'x'}`;
+  };
 
   // 문항 insert + (세트 소속이면) question_set_items 연결
   const insertQuestions = async (qs: any[], setId: string | null): Promise<string[]> => {
@@ -326,7 +332,7 @@ export async function commitPayload(
         .insert({
           org_id: orgId,
           visibility: 'org',
-          code: `${slugify(set.title)}-${rand()}`,
+          code: genCode(),
           name: set.title,
           description: set.scenario || null,
           is_active: true,
