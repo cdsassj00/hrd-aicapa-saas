@@ -224,17 +224,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
       <AsciiMorphBackground />
-      <Card className="w-full max-w-[420px] shadow-2xl relative z-10 bg-card/90 backdrop-blur-md border-border/50">
-        <CardHeader className="text-center pb-2">
-          <div className="flex justify-center mb-3">
-            <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
-              <Shield className="h-6 w-6 text-primary-foreground" />
+      {/* 애플풍: 배경을 차분하게 눌러주는 소프트 그라디언트 + 블러 */}
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-background/30 via-background/65 to-background backdrop-blur-2xl" />
+      <Card className="w-full max-w-[400px] relative z-10 rounded-[28px] border-border/40 bg-card/70 backdrop-blur-2xl shadow-[0_24px_70px_-20px_rgba(0,0,0,0.45)]">
+        <CardHeader className="text-center pt-9 pb-3">
+          <div className="flex justify-center mb-4">
+            <div className="h-14 w-14 rounded-[18px] bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
+              <Shield className="h-7 w-7 text-primary-foreground" strokeWidth={2.2} />
             </div>
           </div>
-          <CardTitle className="text-[18px]">{settings.title}</CardTitle>
-          <p className="text-[12px] text-muted-foreground mt-1">{settings.subtitle}</p>
+          <CardTitle className="text-[22px] font-semibold tracking-tight">{settings.title}</CardTitle>
+          <p className="text-[13px] text-muted-foreground mt-1.5">{settings.subtitle}</p>
         </CardHeader>
         <CardContent>
           {/* Guest invite flow */}
@@ -259,8 +261,8 @@ export default function LoginPage() {
                     <Input value={name} onChange={e => setName(e.target.value)} placeholder="이름을 입력하세요" className="h-8 text-[12px]" />
                   </div>
                   {signupError && <p className="text-[13px] text-destructive font-medium">{signupError}</p>}
-                  <Button type="button" className="w-full" disabled={otpSending} onClick={handleSendGuestOtp}>
-                    {otpSending ? '발송 중...' : '📧 인증코드 발송'}
+                  <Button type="button" className="w-full h-11 rounded-full text-[14px] font-medium" disabled={otpSending} onClick={handleSendGuestOtp}>
+                    {otpSending ? '발송 중...' : '인증코드 발송'}
                   </Button>
                 </div>
               ) : (
@@ -281,8 +283,8 @@ export default function LoginPage() {
                     />
                   </div>
                   {signupError && <p className="text-[13px] text-destructive font-medium">{signupError}</p>}
-                  <Button type="submit" className="w-full" disabled={isLoading || otpCode.length !== 6}>
-                    {isLoading ? '인증 중...' : '✅ 인증 완료 & 시험 입장'}
+                  <Button type="submit" className="w-full h-11 rounded-full text-[14px] font-medium" disabled={isLoading || otpCode.length !== 6}>
+                    {isLoading ? '인증 중...' : '인증 완료 · 시험 입장'}
                   </Button>
                   <button type="button" className="w-full text-[11px] text-muted-foreground hover:text-primary" onClick={() => { setOtpStep('info'); setOtpCode(''); setSignupError(''); }}>
                     인증코드 다시 받기
@@ -297,25 +299,25 @@ export default function LoginPage() {
             </div>
           ) : (
           <Tabs defaultValue="login">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="login">로그인</TabsTrigger>
-              <TabsTrigger value="signup">회원가입</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-5 h-10 rounded-full bg-muted/60 p-1">
+              <TabsTrigger value="login" className="rounded-full text-[13px]">로그인</TabsTrigger>
+              <TabsTrigger value="signup" className="rounded-full text-[13px]">회원가입</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-[12px]">이메일</Label>
-                  <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="이메일을 입력하세요" type="email" />
+                  <Label className="text-[12px] text-muted-foreground">이메일</Label>
+                  <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="이메일을 입력하세요" type="email" className="h-11 rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[12px]">비밀번호</Label>
-                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="비밀번호를 입력하세요" />
+                  <Label className="text-[12px] text-muted-foreground">비밀번호</Label>
+                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="비밀번호를 입력하세요" className="h-11 rounded-xl" />
                 </div>
                 {loginError && (
                   <p className="text-[13px] text-destructive font-medium">{loginError}</p>
                 )}
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full h-11 rounded-full text-[14px] font-medium" disabled={isLoading}>
                   {isLoading ? '로그인 중...' : '로그인'}
                 </Button>
                 <button
@@ -348,7 +350,7 @@ export default function LoginPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full gap-2"
+                  className="w-full gap-2 h-11 rounded-full"
                   disabled={isLoading}
                   onClick={() => handleOAuth('google', 'Google')}
                 >
@@ -363,7 +365,7 @@ export default function LoginPage() {
                 {/* 카카오 브랜드 가이드: 배경 #FEE500, 심볼·텍스트는 85% 불투명 검정 */}
                 <Button
                   type="button"
-                  className="w-full gap-2 bg-[#FEE500] text-[rgba(0,0,0,0.85)] hover:bg-[#FADA0A]"
+                  className="w-full gap-2 h-11 rounded-full bg-[#FEE500] text-[rgba(0,0,0,0.85)] hover:bg-[#FADA0A]"
                   disabled={isLoading}
                   onClick={() => handleOAuth('kakao', '카카오')}
                 >
@@ -415,7 +417,7 @@ export default function LoginPage() {
                 {signupError && (
                   <p className="text-[13px] text-destructive font-medium">{signupError}</p>
                 )}
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full h-11 rounded-full text-[14px] font-medium" disabled={isLoading}>
                   {isLoading ? '가입 중...' : '회원가입'}
                 </Button>
               </form>
@@ -439,11 +441,9 @@ export default function LoginPage() {
             </>
           )}
           <span>
-            Made by{' '}
-            <a href={LEGAL.operatorUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">{LEGAL.operator}</a>
+            © {new Date().getFullYear()}{' '}
+            <a href={LEGAL.operatorUrl} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{LEGAL.operator}</a>
           </span>
-          <span>·</span>
-          <span>© {new Date().getFullYear()}</span>
         </div>
       </footer>
     </div>
