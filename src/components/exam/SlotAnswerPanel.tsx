@@ -53,7 +53,8 @@ export default function SlotAnswerPanel({ questionId, sessionId, slots, values, 
     const ext = (extMatch?.[1] || 'bin').toLowerCase();
     // 원본 이름을 base64url로 인코딩해 경로에 보존 → 다운로드/표시 시 디코딩
     const encoded = encodeName(file.name).slice(0, 180);
-    const path = `slots/${sessionId}/${questionId}/${slot.id}_${Date.now()}_n-${encoded}.${ext}`;
+    // 경로 첫 폴더 = session_id (스토리지 RLS answerfiles_* 가 이 규약에 의존, 0017)
+    const path = `${sessionId}/slots/${questionId}/${slot.id}_${Date.now()}_n-${encoded}.${ext}`;
     let lastErr: any = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
       const { error } = await anonStorage.storage.from('answer-files').upload(path, file, {

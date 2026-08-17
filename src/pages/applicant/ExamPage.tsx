@@ -1513,7 +1513,8 @@ export default function ExamPage() {
                           return;
                         }
                         const ext = file.name.split('.').pop();
-                        const path = `answers/${sessionId}/${question.id}_${Date.now()}.${ext}`;
+                        // 경로 첫 폴더 = session_id (스토리지 RLS answerfiles_* 규약, 0017)
+                        const path = `${sessionId}/answers/${question.id}_${Date.now()}.${ext}`;
 
                         // [6] 재시도 3회 + 지수백오프 (네트워크 일시 장애 대응)
                         toast({ title: '업로드 중...', description: file.name });
