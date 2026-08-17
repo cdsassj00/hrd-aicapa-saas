@@ -172,7 +172,7 @@
     background:rgba(4,6,10,.72);backdrop-filter:blur(6px)}
   .modal.open{display:flex;animation:mfade .2s ease}
   @keyframes mfade{from{opacity:0}to{opacity:1}}
-  .modal-panel{width:min(560px,100%);height:min(840px,92vh);background:var(--card);border:1px solid var(--line2);
+  .modal-panel{width:min(540px,100%);height:auto;max-height:92vh;background:var(--card);border:1px solid var(--line2);
     border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 80px -20px #000c;
     animation:mrise .24s cubic-bezier(.2,.7,.2,1)}
   @keyframes mrise{from{transform:translateY(16px) scale(.98);opacity:.5}to{transform:none;opacity:1}}
@@ -181,7 +181,28 @@
   .modal-x{background:transparent;border:0;color:var(--mut);font-size:16px;cursor:pointer;
     width:32px;height:32px;border-radius:8px;line-height:1;transition:background .15s,color .15s}
   .modal-x:hover{background:var(--bg2);color:var(--ink)}
-  #inquiryFrame{flex:1;width:100%;border:0;background:#fff}
+  .inq-form{padding:20px 22px 22px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+  .inq-intro{font-size:13px;color:var(--mut);line-height:1.55}
+  .fld{display:flex;flex-direction:column;gap:6px}
+  .fld > span{font-size:12px;color:var(--mut)}
+  .fld > span b{color:var(--accent-hi)}
+  .fld input,.fld select,.fld textarea{width:100%;background:var(--bg2);border:1px solid var(--line2);
+    border-radius:11px;padding:11px 13px;font-size:14px;color:var(--ink);font-family:inherit;transition:border-color .15s}
+  .fld input::placeholder,.fld textarea::placeholder{color:var(--faint)}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--accent)}
+  .fld textarea{resize:vertical;min-height:66px}
+  .fld2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){.fld2{grid-template-columns:1fr}}
+  .hp{position:absolute!important;left:-9999px;width:1px;height:1px;opacity:0}
+  .inq-submit{justify-content:center;width:100%;margin-top:2px}
+  .inq-submit[disabled]{opacity:.6;cursor:default}
+  .inq-msg{font-size:13px}
+  .inq-msg.err{color:#ff6b6b}
+  .inq-msg.ok{color:var(--good)}
+  .inq-note{font-size:11px;color:var(--faint);line-height:1.5}
+  .inq-done{padding:44px 24px;text-align:center}
+  .inq-done .big{font-size:20px;font-variation-settings:"wght" 720}
+  .inq-done p{color:var(--mut);font-size:14px;margin-top:8px;line-height:1.6}
   @media(prefers-reduced-motion:reduce){.modal.open,.modal-panel{animation:none}}
 </style>
 </head>
@@ -485,17 +506,47 @@
       <span>AI 역량평가 도입 문의</span>
       <button class="modal-x" id="inquiryClose" type="button" aria-label="닫기">✕</button>
     </div>
-    <iframe id="inquiryFrame" title="도입 문의 폼" loading="lazy" data-src="https://cdsapaper.lovable.app/inquiry/ai-hrd"></iframe>
+    <form class="inq-form" id="inquiryForm" novalidate>
+      <p class="inq-intro">파일럿 고객사를 모집합니다. 아래를 남겨주시면 대상 인원·시기에 맞춰 제안드립니다.</p>
+      <label class="fld"><span>기업/기관명 <b>*</b></span><input name="company" required autocomplete="organization"></label>
+      <div class="fld2">
+        <label class="fld"><span>담당자명</span><input name="contact_name" autocomplete="name"></label>
+        <label class="fld"><span>유형</span>
+          <select name="inquiry_type">
+            <option value="채용">채용 (지원자 평가)</option>
+            <option value="재직자 진단">재직자 진단</option>
+            <option value="기타">기타</option>
+          </select>
+        </label>
+      </div>
+      <div class="fld2">
+        <label class="fld"><span>이메일</span><input name="email" type="email" autocomplete="email" placeholder="name@company.com"></label>
+        <label class="fld"><span>연락처</span><input name="phone" type="tel" autocomplete="tel" placeholder="010-0000-0000"></label>
+      </div>
+      <div class="fld2">
+        <label class="fld"><span>예상 인원</span><input name="headcount" placeholder="예: 30~50명"></label>
+        <label class="fld"><span>희망 시기</span><input name="timeframe" placeholder="예: 2026년 1분기"></label>
+      </div>
+      <label class="fld"><span>문의 내용</span><textarea name="message" rows="3" placeholder="채용 직무, 궁금한 점 등"></textarea></label>
+      <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="inq-msg" id="inqMsg" role="status" aria-live="polite"></div>
+      <button type="submit" class="btn btn-p inq-submit" id="inqSubmit">문의 보내기</button>
+      <p class="inq-note">* 이메일 또는 연락처 중 하나는 남겨주세요. 접수 후 영업일 기준 1~2일 내 연락드립니다.</p>
+    </form>
   </div>
 </div>
 
 <script>
 (function(){
+  var SB_URL = 'https://eoeiqpgzoyltrawfflhj.supabase.co';
+  var SB_KEY = 'sb_publishable_p8XCKzW4NU66Grl_AcCwMw__e20TiiF'; // publishable(공개) 키 — 노출 안전
   var modal = document.getElementById('inquiryModal');
-  var frame = document.getElementById('inquiryFrame');
   var closeBtn = document.getElementById('inquiryClose');
+  var form = document.getElementById('inquiryForm');
+  var submitBtn = document.getElementById('inqSubmit');
+  var msg = document.getElementById('inqMsg');
+
   function open(){
-    if(!frame.src) frame.src = frame.getAttribute('data-src'); // 최초 열 때만 로드
     modal.classList.add('open');
     modal.setAttribute('aria-hidden','false');
     document.body.style.overflow = 'hidden';
@@ -511,6 +562,36 @@
   closeBtn.addEventListener('click', close);
   modal.addEventListener('click', function(e){ if(e.target === modal) close(); });
   addEventListener('keydown', function(e){ if(e.key === 'Escape' && modal.classList.contains('open')) close(); });
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    msg.className = 'inq-msg'; msg.textContent = '';
+    var data = {};
+    new FormData(form).forEach(function(v,k){ data[k] = v; });
+    if(!data.company || !data.company.trim()){ msg.className='inq-msg err'; msg.textContent='기업/기관명을 입력해주세요.'; return; }
+    if((!data.email || !data.email.trim()) && (!data.phone || !data.phone.trim())){
+      msg.className='inq-msg err'; msg.textContent='이메일 또는 연락처 중 하나는 입력해주세요.'; return;
+    }
+    submitBtn.disabled = true; submitBtn.textContent = '보내는 중...';
+    try{
+      var r = await fetch(SB_URL + '/functions/v1/submit-inquiry', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SB_KEY},
+        body: JSON.stringify(data)
+      });
+      var j = await r.json().catch(function(){ return {}; });
+      if(r.ok && j.ok){
+        form.innerHTML = '<div class="inq-done"><div class="big">문의가 접수되었습니다 ✓</div>'
+          + '<p>영업일 기준 1~2일 내에 연락드리겠습니다.<br>감사합니다.</p></div>';
+      }else{
+        msg.className='inq-msg err'; msg.textContent = (j && j.error) || '전송에 실패했습니다. 잠시 후 다시 시도해주세요.';
+        submitBtn.disabled = false; submitBtn.textContent = '문의 보내기';
+      }
+    }catch(err){
+      msg.className='inq-msg err'; msg.textContent='네트워크 오류입니다. 잠시 후 다시 시도해주세요.';
+      submitBtn.disabled = false; submitBtn.textContent = '문의 보내기';
+    }
+  });
 })();
 </script>
 </body>
