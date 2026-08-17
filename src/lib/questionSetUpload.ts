@@ -54,7 +54,7 @@ const questionSchema = z.object({
   options: z.array(mcOptionSchema).max(10).nullable().optional(),
   correct_answer: z.string().max(20000).nullable().optional(),
   submission_slots: z.array(slotSchema).max(20).optional(),
-  attachment_refs: z.array(z.string().max(200)).max(20).optional(), // 첨부 파일명 참조
+  attachment_refs: z.array(z.string().max(200)).max(50).optional(), // 첨부 파일명 참조
 });
 
 const setSchema = z.object({
@@ -65,7 +65,7 @@ const setSchema = z.object({
   difficulty: difficultySchema.default('medium'),
   tags: z.array(z.string().max(40)).max(20).default([]),
   order_num: z.number().int().min(1).default(1),
-  attachment_refs: z.array(z.string().max(200)).max(20).default([]),
+  attachment_refs: z.array(z.string().max(200)).max(100).default([]),
   questions: z.array(questionSchema).min(1).max(50),
 });
 
