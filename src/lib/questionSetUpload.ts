@@ -222,13 +222,17 @@ function safeStoragePath(name: string): string {
 
 export async function uploadAttachments(
   files: File[],
+  orgId: string,
   onProgress?: (done: number, total: number) => void,
 ): Promise<Record<string, { name: string; url: string; size: number; mime: string }>> {
+  // 경로 첫 폴더를 org_id 로 둔다 — 스토리지 RLS(qattach_org_*)가 그 org 의
+  // 관리자만 쓰도록 막는다(0015). org 없이 업로드하면 정책이 거부한다.
+  if (!orgId) throw new Error('활성 조직이 없습니다. 조직을 선택한 뒤 다시 시도하세요.');
   const out: Record<string, { name: string; url: string; size: number; mime: string }> = {};
   const ts = Date.now();
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
-    const path = `sets/${ts}/${i}_${safeStoragePath(f.name)}`;
+    const path = `${orgId}/sets/${ts}/${i}_${safeStoragePath(f.name)}`;
     const { error } = await supabase.storage.from(BUCKET).upload(path, f, {
       contentType: f.type || 'application/octet-stream',
       upsert: false,
