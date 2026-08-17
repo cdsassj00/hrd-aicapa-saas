@@ -89,21 +89,53 @@ export function SetManageSection({ refreshKey }: { refreshKey: number }) {
       .from('question_sets')
       .select('*')
       .order('created_at', { ascending: false });
-    const setList = setsData || [];
+    // 새 스키마(name/description) → 화면이 기대하는 옛 필드(title/scenario)로 어댑트
+    const setList = (setsData || []).map((s: any) => ({
+      ...s,
+      title: s.name,
+      scenario: s.description ?? '',
+    }));
     setSets(setList);
 
     if (setList.length > 0) {
       const ids = setList.map((s: any) => s.id);
-      const { data: qs } = await supabase
-        .from('questions')
-        .select('*')
-        .in('set_id', ids)
-        .order('set_order', { ascending: true });
+      // 세트↔문항 연결은 이제 question_set_items 조인으로 가져온다
+      const { data: items } = await supabase
+        .from('question_set_items')
+        .select('set_id, question_id, sort_order')
+        .in('set_id', ids);
+      const itemList = items || [];
+      const qids = itemList.map((it: any) => it.question_id);
+      const qById: Record<string, any> = {};
+      if (qids.length > 0) {
+        const { data: qs } = await supabase.from('questions').select('*').in('id', qids);
+        (qs || []).forEach((q: any) => { qById[q.id] = q; });
+      }
+      // answer_key(jsonb) 에 담아둔 슬롯·정답·메타를 옛 필드명으로 펼쳐 화면에 공급
       const grouped: Record<string, any[]> = {};
-      (qs || []).forEach((q: any) => {
-        if (!grouped[q.set_id]) grouped[q.set_id] = [];
-        grouped[q.set_id].push(q);
-      });
+      itemList
+        .slice()
+        .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        .forEach((it: any) => {
+          const q = qById[it.question_id];
+          if (!q) return;
+          const ak = (q.answer_key || {}) as any;
+          const mapped = {
+            ...q,
+            set_id: it.set_id,
+            set_order: it.sort_order,
+            order_num: it.sort_order,
+            max_score: q.points,
+            submission_slots: ak.submission_slots ?? null,
+            correct_answer: ak.correct_answer ?? null,
+            options: ak.options ?? null,
+            category: ak.category ?? null,
+            grade: ak.grade ?? null,
+            tags: ak.tags ?? [],
+          };
+          if (!grouped[it.set_id]) grouped[it.set_id] = [];
+          grouped[it.set_id].push(mapped);
+        });
       setQuestionsBySet(grouped);
     } else {
       setQuestionsBySet({});

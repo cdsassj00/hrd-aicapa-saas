@@ -12,6 +12,7 @@ import {
   parseJson, dryRun, uploadAttachments, commitPayload,
   SAMPLE_PAYLOAD, type UploadPayload, type DryRunReport,
 } from '@/lib/questionSetUpload';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
   open: boolean;
@@ -21,6 +22,7 @@ interface Props {
 
 export function QuestionSetUploadDialog({ open, onOpenChange, onCommitted }: Props) {
   const { toast } = useToast();
+  const { activeOrgId } = useAuth();
   const [tab, setTab] = useState('json');
   const [jsonText, setJsonText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -104,12 +106,16 @@ export function QuestionSetUploadDialog({ open, onOpenChange, onCommitted }: Pro
       );
       if (!ok) return;
     }
+    if (!activeOrgId) {
+      toast({ title: '조직 미선택', description: '상단에서 조직을 선택한 뒤 다시 시도하세요.', variant: 'destructive' });
+      return;
+    }
     setCommitting(true);
     try {
       setProgress(files.length > 0 ? `첨부 업로드 중... 0/${files.length}` : 'DB 적재 중...');
       const map = await uploadAttachments(files, (d, t) => setProgress(`첨부 업로드 중... ${d}/${t}`));
       setProgress('DB 적재 중...');
-      const res = await commitPayload(payload, map);
+      const res = await commitPayload(payload, map, activeOrgId);
       toast({
         title: '등록 완료',
         description: `세트 ${res.set_ids.length}개 · 문항 ${res.question_ids.length}개`,
