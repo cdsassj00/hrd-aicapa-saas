@@ -253,95 +253,103 @@ export interface CommitResult {
 export async function commitPayload(
   payload: UploadPayload,
   attachmentMap: Record<string, { name: string; url: string; size: number; mime: string }>,
+  orgId: string,
 ): Promise<CommitResult> {
+  // 새 스키마는 org 스코프다. RLS(question write)가 is_org_admin(org_id) 를 요구하므로
+  // 활성 조직 없이는 저장 자체가 불가능하다.
+  if (!orgId) throw new Error('활성 조직이 없습니다. 상단에서 조직을 선택한 뒤 다시 시도하세요.');
+
+  const { data: userData } = await supabase.auth.getUser();
+  const createdBy = userData?.user?.id ?? null;
+
   const createdSetIds: string[] = [];
   const createdQuestionIds: string[] = [];
 
   const resolveRefs = (refs?: string[]) =>
     (refs || []).map(n => attachmentMap[n]).filter(Boolean);
 
+  // JSON 의 세부 채점정보(슬롯·정답·보기)와 새 스키마에 컬럼이 없는 메타는
+  // questions.answer_key(jsonb) 에 담는다. 채점·응시 화면(2단계 이식)이 여기서 읽는다.
+  const buildAnswerKey = (q: any) => ({
+    correct_answer: q.correct_answer ?? null,
+    submission_slots: q.submission_slots ?? null,
+    options: q.options ?? null,
+    tags: q.tags ?? [],
+    category: q.category ?? null,
+    grade: q.grade ?? null,
+    allow_file_upload: q.allow_file_upload ?? true,
+  });
+
+  const slugify = (s: string) =>
+    s.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'set';
+  const rand = () =>
+    (crypto as any)?.randomUUID?.().slice(0, 6) ?? Math.random().toString(36).slice(2, 8);
+
+  // 문항 insert + (세트 소속이면) question_set_items 연결
+  const insertQuestions = async (qs: any[], setId: string | null): Promise<string[]> => {
+    if (!qs || qs.length === 0) return [];
+    const rows = qs.map((q: any) => ({
+      org_id: orgId,
+      visibility: 'org',
+      type: q.type,
+      content: q.content,
+      difficulty: q.difficulty,
+      points: q.max_score,
+      answer_key: buildAnswerKey(q) as any,
+      rubric: null,
+      attachments: resolveRefs(q.attachment_refs) as any,
+      created_by: createdBy,
+    }));
+    const { data, error } = await supabase.from('questions').insert(rows).select('id');
+    if (error) throw new Error(`문항 등록 실패: ${error.message}`);
+    const ids = (data || []).map((r: any) => r.id);
+    createdQuestionIds.push(...ids);
+    if (setId) {
+      const items = ids.map((qid: string, i: number) => ({
+        set_id: setId,
+        question_id: qid,
+        org_id: orgId,
+        sort_order: qs[i].set_order ?? i + 1,
+        points_override: null,
+      }));
+      const { error: linkErr } = await supabase.from('question_set_items').insert(items);
+      if (linkErr) throw new Error(`세트-문항 연결 실패: ${linkErr.message}`);
+    }
+    return ids;
+  };
+
   try {
     // 1) 세트 + 세트 소속 문항
     for (const set of payload.sets) {
-      const setAttachments = resolveRefs(set.attachment_refs);
-      const slotSum = set.questions.reduce((s, q) => s + q.max_score, 0);
       const { data: insertedSet, error: setErr } = await supabase
         .from('question_sets')
         .insert({
-          title: set.title,
-          scenario: set.scenario,
-          category: set.category ?? null,
-          grade: set.grade ?? null,
-          difficulty: set.difficulty,
-          tags: set.tags,
-          order_num: set.order_num,
-          total_score: slotSum,
-          attachments: setAttachments as any,
+          org_id: orgId,
+          visibility: 'org',
+          code: `${slugify(set.title)}-${rand()}`,
+          name: set.title,
+          description: set.scenario || null,
+          is_active: true,
         })
         .select('id')
         .single();
       if (setErr || !insertedSet) throw new Error(`세트 등록 실패: ${setErr?.message}`);
       createdSetIds.push(insertedSet.id);
-
-      const qRows = set.questions.map((q, idx) => ({
-        category: q.category ?? set.category ?? '생성형AI활용',
-        grade: q.grade ?? set.grade ?? null,
-        difficulty: q.difficulty,
-        type: q.type,
-        content: q.content,
-        max_score: q.max_score,
-        tags: q.tags,
-        allow_file_upload: q.allow_file_upload,
-        options: (q.options ?? null) as any,
-        correct_answer: q.correct_answer ?? null,
-        attachments: resolveRefs(q.attachment_refs) as any,
-        submission_slots: (q.submission_slots ?? null) as any,
-        set_id: insertedSet.id,
-        set_order: q.set_order ?? idx + 1,
-        order_num: idx + 1,
-      }));
-      const { data: insertedQs, error: qErr } = await supabase
-        .from('questions')
-        .insert(qRows)
-        .select('id');
-      if (qErr) throw new Error(`세트 문항 등록 실패: ${qErr.message}`);
-      createdQuestionIds.push(...(insertedQs || []).map(r => r.id));
+      await insertQuestions(set.questions, insertedSet.id);
     }
 
     // 2) 독립 문항
-    if (payload.standalone.length > 0) {
-      const rows = payload.standalone.map((q, idx) => ({
-        category: q.category!,
-        grade: q.grade ?? null,
-        difficulty: q.difficulty,
-        type: q.type,
-        content: q.content,
-        max_score: q.max_score,
-        tags: q.tags,
-        allow_file_upload: q.allow_file_upload,
-        options: (q.options ?? null) as any,
-        correct_answer: q.correct_answer ?? null,
-        attachments: resolveRefs(q.attachment_refs) as any,
-        submission_slots: (q.submission_slots ?? null) as any,
-        set_id: null,
-        set_order: null,
-        order_num: idx + 1,
-      }));
-      const { data: insertedQs, error: qErr } = await supabase
-        .from('questions')
-        .insert(rows)
-        .select('id');
-      if (qErr) throw new Error(`독립 문항 등록 실패: ${qErr.message}`);
-      createdQuestionIds.push(...(insertedQs || []).map(r => r.id));
-    }
+    await insertQuestions(payload.standalone, null);
 
     return { set_ids: createdSetIds, question_ids: createdQuestionIds };
   } catch (err) {
-    // best-effort rollback
+    // best-effort rollback (연결 → 문항 → 세트 순)
     if (createdQuestionIds.length > 0) {
+      await supabase.from('question_set_items').delete().in('question_id', createdQuestionIds);
       await supabase.from('questions').delete().in('id', createdQuestionIds);
     }
     if (createdSetIds.length > 0) {
+      await supabase.from('question_set_items').delete().in('set_id', createdSetIds);
       await supabase.from('question_sets').delete().in('id', createdSetIds);
     }
     throw err;
