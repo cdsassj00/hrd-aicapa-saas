@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { GradeBadge } from '@/components/GradeBadge';
 import { QuestionDifficulty, QuestionType } from '@/types';
-import { Plus, Pencil, Trash2, Search, Paperclip, Upload, Download, Loader2, FileDown, Info, Copy, Check, FileJson, Eye, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Paperclip, Upload, Download, Loader2, FileDown, Info, Copy, Check, FileJson, Eye, ArrowUp, ArrowDown, ArrowUpDown, Sparkles } from 'lucide-react';
 import SingleQuestionPreviewDialog from '@/components/question-bank/SingleQuestionPreviewDialog';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -20,6 +20,7 @@ import { logQuestionChange, logQuestionChanges } from '@/lib/questionLog';
 import { useToast } from '@/hooks/use-toast';
 import { QuestionEditDialog } from '@/components/question-bank/QuestionEditDialog';
 import { QuestionSetUploadDialog } from '@/components/question-bank/QuestionSetUploadDialog';
+import { AiGenerateDialog } from '@/components/question-bank/AiGenerateDialog';
 import { SetManageSection } from '@/components/question-bank/SetManageSection';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { downloadTemplate, parseFile } from '@/lib/questionBulkUpload';
@@ -73,6 +74,7 @@ export default function QuestionBankPage() {
   const [editQ, setEditQ] = useState<any>({});
   const [bulkUploading, setBulkUploading] = useState(false);
   const [setUploadOpen, setSetUploadOpen] = useState(false);
+  const [aiGenOpen, setAiGenOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingBulk, setDeletingBulk] = useState(false);
@@ -401,6 +403,9 @@ export default function QuestionBankPage() {
               {bulkUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
               일괄 등록
             </Button>
+            <Button variant="outline" size="sm" className="text-[12px] gap-1" onClick={() => setAiGenOpen(true)}>
+              <Sparkles className="h-3.5 w-3.5" />AI 생성
+            </Button>
             <Button size="sm" className="text-[12px] gap-1" onClick={() => {
               setEditQ({ ...defaultNewQuestion });
               setEditOpen(true);
@@ -605,6 +610,12 @@ export default function QuestionBankPage() {
         open={setUploadOpen}
         onOpenChange={setSetUploadOpen}
         onCommitted={() => { fetchQuestions(); setSetRefreshKey(k => k + 1); setTab('sets'); }}
+      />
+
+      <AiGenerateDialog
+        open={aiGenOpen}
+        onOpenChange={setAiGenOpen}
+        onGenerated={fetchQuestions}
       />
 
       <SingleQuestionPreviewDialog
