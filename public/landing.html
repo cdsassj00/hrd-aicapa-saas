@@ -146,6 +146,26 @@
 
   footer{border-top:1px solid var(--line);padding:34px 0;color:var(--faint);font-size:13px}
   footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center}
+
+  /* ── 애니메이션 ─────────────────────────────────────── */
+  /* 등장 리빌 (fade-up) — JS 가 대상에 .rv 부여, 뷰포트 진입 시 .show */
+  .rv{opacity:0;transform:translateY(28px);
+    transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  .rv.show{opacity:1;transform:none}
+  /* 3D 틸트 카드는 translate 대신 opacity 만 리빌(틸트와 충돌 방지) */
+  .grid.g3{perspective:900px}
+  .grid.g3 .card{transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .18s ease-out;transform-style:preserve-3d;will-change:transform}
+  .grid.g3 .card.rv{transform:none}
+  /* 호버 리프트 (hover lift) */
+  .role,.comp .c,.why-list .w{transition:transform .3s cubic-bezier(.34,1.56,.64,1),border-color .3s,background .3s}
+  .role:hover,.comp .c:hover,.why-list .w:hover{transform:translateY(-6px);border-color:var(--line2)}
+  .btn-v,.btn-p,.btn-g{transition:transform .25s cubic-bezier(.34,1.56,.64,1),background .18s,border-color .18s,color .18s}
+  .btn-p:hover,.btn-g:hover,.btn-v:hover{transform:translateY(-2px)}
+  @media(prefers-reduced-motion:reduce){
+    .rv{opacity:1!important;transform:none!important;transition:none}
+    .grid.g3 .card{transition:none}
+    .role,.comp .c,.why-list .w,.btn-v,.btn-p,.btn-g{transition:none}
+  }
 </style>
 </head>
 <body>
@@ -358,5 +378,87 @@
   </div>
 </footer>
 
+<script>
+(function(){
+  var REDUCE = matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  /* ── 등장 리빌 (fade-up) + 스태거 그리드 ── */
+  var RV = '.card,.role,.comp .c,.why-list .w,.stat,.cred-card,.punch,.quote,'
+         + '.band > .wrap > .eyebrow,.band > .wrap > h2.sec,.band > .wrap > .lead';
+  document.querySelectorAll(RV).forEach(function(el){ el.classList.add('rv'); });
+  // 그리드 자식은 순차 지연(stagger)
+  document.querySelectorAll('.grid.g3,.roles,.comp,.why-list,.proof .wrap,.chips').forEach(function(g){
+    Array.prototype.forEach.call(g.children, function(c,i){
+      if(c.classList.contains('rv')) c.style.transitionDelay = (i*70)+'ms';
+    });
+  });
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting) return;
+      e.target.classList.add('show');
+      io.unobserve(e.target);
+    });
+  }, {threshold:0.15});
+  document.querySelectorAll('.rv').forEach(function(el){ io.observe(el); });
+
+  /* ── 카운트업 (count-up) — 숫자 스탯 ── */
+  function countUp(el){
+    var txt = el.textContent, m = txt.match(/\d+/);
+    if(!m) return;
+    if(/\d\s*[–-]\s*\d/.test(txt)) return;           // 2023–2026 같은 범위는 제외
+    var target = +m[0], pre = txt.slice(0,m.index), suf = txt.slice(m.index+m[0].length);
+    if(REDUCE){ return; }
+    var t0 = performance.now(), dur = 1200;
+    (function step(now){
+      var t = Math.min(1,(now-t0)/dur), v = Math.round(target*(1-Math.pow(1-t,3)));
+      el.textContent = pre + v + suf;
+      if(t<1) requestAnimationFrame(step);
+    })(t0);
+  }
+  var proof = document.querySelector('.proof');
+  if(proof){
+    var pio = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(!e.isIntersecting) return;
+        document.querySelectorAll('.proof .stat .n').forEach(function(n){
+          countUp(n.querySelector('b') || n);
+        });
+        pio.disconnect();
+      });
+    }, {threshold:0.4});
+    pio.observe(proof);
+  }
+
+  /* ── 3D 틸트 (tilt-3d) — 평가영역 카드 마우스 추적 ── */
+  if(!REDUCE){
+    document.querySelectorAll('.grid.g3 .card').forEach(function(card){
+      card.addEventListener('mousemove', function(e){
+        var r = card.getBoundingClientRect();
+        var rx = ((e.clientY-r.top)/r.height - .5) * -9;
+        var ry = ((e.clientX-r.left)/r.width - .5) * 9;
+        card.style.transform = 'rotateX('+rx+'deg) rotateY('+ry+'deg) translateZ(0)';
+      });
+      card.addEventListener('mouseleave', function(){ card.style.transform = ''; });
+    });
+  }
+
+  /* ── 히어로 패럴랙스 (parallax) — 스크롤 스크럽 ── */
+  var hero = document.querySelector('.hero .wrap');
+  if(hero && !REDUCE){
+    var ticking = false;
+    addEventListener('scroll', function(){
+      if(ticking) return; ticking = true;
+      requestAnimationFrame(function(){
+        var y = pageYOffset;
+        if(y < 760){
+          hero.style.transform = 'translateY('+(y*0.16)+'px)';
+          hero.style.opacity = String(Math.max(0, 1 - y/620));
+        }
+        ticking = false;
+      });
+    }, {passive:true});
+  }
+})();
+</script>
 </body>
 </html>
