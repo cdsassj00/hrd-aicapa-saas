@@ -122,6 +122,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
 
+  if (!ACCOUNT_ID || !ACCESS_KEY || !SECRET_KEY || !BUCKET) {
+    return json({ error: '녹화 저장소(R2)가 구성되지 않았습니다.' }, 503);
+  }
+
   const adminClient = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -172,7 +176,7 @@ Deno.serve(async (req) => {
 
     const { data: sess, error: sErr } = await userClient
       .from('exam_sessions')
-      .select('id, applicant_id, exam_id')
+      .select('id, applicant_id, exam_id, org_id')
       .eq('id', sessionId)
       .maybeSingle();
     if (sErr || !sess || sess.applicant_id !== user.id) {
@@ -181,7 +185,8 @@ Deno.serve(async (req) => {
     }
 
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    const objectKey = `recordings/${sess.exam_id}/${sessionId}/${kind}/${String(chunkIndex).padStart(5, '0')}_${ts}.webm`;
+    // 키를 org_id 로 프리픽스한다 — 테넌트별 프리픽스/보존정책/스코프 토큰이 가능해진다(설계문서 §6).
+    const objectKey = `recordings/${sess.org_id}/${sess.exam_id}/${sessionId}/${kind}/${String(chunkIndex).padStart(5, '0')}_${ts}.webm`;
     const body = await file.arrayBuffer();
     let r2LastErr: any = null;
     let r2Success = false;
