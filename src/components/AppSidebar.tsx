@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/sidebar';
 import {
   BookOpen, ClipboardList, Monitor, Users, BarChart3,
-  AlertTriangle, Home, CheckSquare, UserCog, Settings, ScanFace, Video,
+  AlertTriangle, Home, CheckSquare, UserCog, Settings, ScanFace, Video, Shield,
 } from 'lucide-react';
 
 const menuConfig = {
@@ -39,7 +39,7 @@ const menuConfig = {
 const roleLabels = { applicant: '응시자', examiner: '감독관', org_owner: '소유자', org_admin: '관리자', viewer: '조회자' };
 
 export function AppSidebar() {
-  const { role } = useAuth();
+  const { role, isPlatformAdmin } = useAuth();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   // org_owner 는 org_admin 의 메뉴를 그대로 쓴다(권한도 포함 관계).
@@ -72,6 +72,30 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isPlatformAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground/70 px-3 mb-1">
+              {!collapsed && '플랫폼'}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0.5">
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild className="h-9 rounded-xl px-3 transition-colors">
+                    <NavLink
+                      to="/platform"
+                      className="text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+                      activeClassName="bg-sidebar-accent text-foreground font-medium shadow-sm"
+                    >
+                      <Shield className="mr-2.5 h-[17px] w-[17px] shrink-0" />
+                      {!collapsed && <span className="text-[13px] tracking-[-0.01em]">플랫폼 관리</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );

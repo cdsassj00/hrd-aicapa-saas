@@ -24,6 +24,8 @@ import StatsPage from "@/pages/admin/StatsPage";
 import OrgMembersPage from "@/pages/admin/OrgMembersPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
 import FaceCompareTestPage from "@/pages/admin/FaceCompareTestPage";
+import PlatformDashboard from "@/pages/platform/PlatformDashboard";
+import { PlatformRoute } from "@/components/PlatformRoute";
 import RecordingReviewPage from "@/pages/admin/RecordingReviewPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/NotFound";
@@ -61,6 +63,7 @@ function AuthGate() {
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
+      <Route path="/platform" element={<PlatformRoute><PlatformDashboard /></PlatformRoute>} />
       <Route path="/invite/accept" element={<AcceptInvitePage />} />
       <Route path="/" element={<HomeRedirect />} />
       <Route element={<DashboardLayout />}>
