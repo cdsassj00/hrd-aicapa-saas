@@ -12,7 +12,6 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { siteLink } from '@/lib/siteUrl';
 
 // org_owner 는 초대로 부여하지 않는다 — DB 제약과 같은 규칙(§0004).
 const INVITABLE_ROLES: { value: UserRole; label: string }[] = [
@@ -87,19 +86,23 @@ export default function OrgMembersPage() {
 
     setIssuing(true);
     try {
-      const { data, error } = await supabase.rpc('create_org_invitation', {
-        _org_id: activeOrgId,
-        _email: email.trim().toLowerCase(),
-        _role: inviteRole,
+      // 초대 발급 + 이메일 발송을 엣지 함수에서 처리한다. 함수가 호출자 JWT 로
+      // create_org_invitation 을 실행하므로 조직 관리자 권한은 그대로 강제된다.
+      const { data, error } = await supabase.functions.invoke('send-org-invitation', {
+        body: {
+          org_id: activeOrgId,
+          email: email.trim().toLowerCase(),
+          role: inviteRole,
+          origin: window.location.origin,
+        },
       });
 
-      if (error) { toast.error(error.message); return; }
+      if (error || data?.error) { toast.error(data?.error || error?.message || '초대 발급 실패'); return; }
 
-      // 원문 토큰은 이 응답에서만 얻을 수 있다. DB 에는 해시만 남는다.
-      // 메일 발송(Resend)이 붙기 전까지는 링크를 직접 전달한다.
-      setLastLink(siteLink(`/invite/accept?token=${data}`));
+      // 원문 토큰은 이 응답에서만 나온다(DB 에는 해시). 링크는 백업용으로 노출한다.
+      setLastLink(data.link as string);
       setEmail('');
-      toast.success('초대를 발급했습니다.');
+      toast.success(data.emailed ? '초대 메일을 보냈습니다.' : '초대를 발급했습니다. (메일 발송 실패 — 아래 링크를 전달하세요)');
       void load();
     } finally {
       setIssuing(false);
