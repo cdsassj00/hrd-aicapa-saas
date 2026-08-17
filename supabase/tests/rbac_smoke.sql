@@ -512,7 +512,7 @@ exception
 end $$;
 
 -- org_id 는 트리거가 덮어쓴다. 앱이 남의 org_id 를 박아도 무시돼야 한다.
-insert into public.exam_sessions (id, exam_id, org_id, user_id, status)
+insert into public.exam_sessions (id, exam_id, org_id, applicant_id, status)
 values ('ee000000-0000-0000-0000-000000000001', (select id from _ex),
         'bbbbbbbb-0000-0000-0000-000000000002',  -- 일부러 B조직으로 박음
         '66666666-6666-6666-6666-666666666666', 'in_progress');
