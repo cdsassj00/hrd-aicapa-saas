@@ -23,7 +23,7 @@ import CertificationsPage from "@/pages/admin/CertificationsPage";
 import StatsPage from "@/pages/admin/StatsPage";
 import OrgMembersPage from "@/pages/admin/OrgMembersPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
-import FaceppTestPage from "@/pages/admin/FaceppTestPage";
+import FaceCompareTestPage from "@/pages/admin/FaceCompareTestPage";
 import RecordingReviewPage from "@/pages/admin/RecordingReviewPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/NotFound";
@@ -82,9 +82,7 @@ function AuthGate() {
         <Route path="/admin/members" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><OrgMembersPage /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><SettingsPage /></ProtectedRoute>} />
         <Route path="/admin/recordings" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><RecordingReviewPage /></ProtectedRoute>} />
-        <Route path="/admin/facepp-test" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><FaceppTestPage /></ProtectedRoute>} />
-        <Route path="/admin/facepptest" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><FaceppTestPage /></ProtectedRoute>} />
-        <Route path="/admin/faceapptest" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><FaceppTestPage /></ProtectedRoute>} />
+        <Route path="/admin/face-compare-test" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><FaceCompareTestPage /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
