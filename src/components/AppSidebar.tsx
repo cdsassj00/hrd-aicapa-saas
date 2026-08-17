@@ -28,7 +28,7 @@ const menuConfig = {
     { title: '인증자 DB', url: '/admin/certifications', icon: Users },
     { title: '통계', url: '/admin/stats', icon: BarChart3 },
     { title: '시스템 설정', url: '/admin/settings', icon: Settings },
-    { title: 'Face++ 테스트', url: '/admin/facepp-test', icon: ScanFace },
+    { title: '얼굴 대조 테스트', url: '/admin/face-compare-test', icon: ScanFace },
   ],
   viewer: [
     { title: '인증자 조회', url: '/admin/certifications', icon: Users },

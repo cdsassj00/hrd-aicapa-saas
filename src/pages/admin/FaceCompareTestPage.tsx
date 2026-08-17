@@ -5,11 +5,8 @@ import { Camera, Upload, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-type Provider = 'facepp' | 'aws';
-
 type Result = {
   confidence?: number;
-  thresholds?: Record<string, number>;
   passLevel?: 'high' | 'medium' | 'low' | 'fail';
   match?: boolean;
   faces1?: number;
@@ -20,9 +17,8 @@ type Result = {
   raw?: any;
 };
 
-export default function FaceppTestPage() {
+export default function FaceCompareTestPage() {
   const { toast } = useToast();
-  const [provider, setProvider] = useState<Provider>('aws');
   const [selfie, setSelfie] = useState<string | null>(null);
   const [idPhoto, setIdPhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,7 +27,6 @@ export default function FaceppTestPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const idInputRef = useRef<HTMLInputElement>(null);
-
 
   const startCamera = async () => {
     try {
@@ -64,8 +59,7 @@ export default function FaceppTestPage() {
     if (!selfie || !idPhoto) return;
     setLoading(true); setResult(null);
     try {
-      const fn = provider === 'aws' ? 'aws-rekognition-compare-test' : 'facepp-compare-test';
-      const { data, error } = await supabase.functions.invoke(fn, {
+      const { data, error } = await supabase.functions.invoke('aws-rekognition-compare-test', {
         body: { selfie_base64: selfie, id_photo_base64: idPhoto },
       });
       if (error) throw error;
@@ -75,8 +69,7 @@ export default function FaceppTestPage() {
     } finally {
       setLoading(false);
     }
-  }, [selfie, idPhoto, provider]);
-
+  }, [selfie, idPhoto]);
 
   const reset = () => { setSelfie(null); setIdPhoto(null); setResult(null); stream?.getTracks().forEach(t => t.stop()); setStream(null); };
 
@@ -85,33 +78,17 @@ export default function FaceppTestPage() {
       <div>
         <h1 className="text-2xl font-bold">얼굴 대조 테스트</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          기존 본인 확인(verify-identity) 기능과 독립된 테스트 페이지입니다. 운영 흐름에 영향을 주지 않습니다.
+          AWS Rekognition(서울 리전) 본인 확인 엔진 점검용 페이지입니다. 운영 흐름(verify-identity)과 독립적으로 동작합니다.
         </p>
       </div>
 
       <Card>
         <CardContent className="py-3 flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium mr-2">엔진:</span>
-          <Button
-            size="sm"
-            variant={provider === 'aws' ? 'default' : 'outline'}
-            onClick={() => { setProvider('aws'); setResult(null); }}
-          >
-            AWS Rekognition (서울)
-          </Button>
-          <Button
-            size="sm"
-            variant={provider === 'facepp' ? 'default' : 'outline'}
-            onClick={() => { setProvider('facepp'); setResult(null); }}
-          >
-            Face++ (중국)
-          </Button>
-          <span className="text-xs text-muted-foreground ml-auto">
-            {provider === 'aws' ? '국내 리전 처리 · 임계값 80/90/95' : '중국 서버 · 임계값 1e-3/1e-4/1e-5'}
-          </span>
+          <span className="text-sm font-medium">엔진:</span>
+          <span className="text-sm">AWS Rekognition (ap-northeast-2 · 서울)</span>
+          <span className="text-xs text-muted-foreground ml-auto">임계값 — 70%(low) / 90%(pass) / 95%(high)</span>
         </CardContent>
       </Card>
-
 
       <div className="grid grid-cols-2 gap-4">
         {/* Selfie */}
@@ -154,7 +131,7 @@ export default function FaceppTestPage() {
       <div className="flex gap-2">
         <Button onClick={runCompare} disabled={!selfie || !idPhoto || loading}>
           {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-          {provider === 'aws' ? 'AWS Rekognition' : 'Face++'} Compare 실행
+          AWS Rekognition Compare 실행
         </Button>
         <Button variant="outline" onClick={reset}>초기화</Button>
       </div>
@@ -166,7 +143,7 @@ export default function FaceppTestPage() {
               {result.error ? <XCircle className="h-4 w-4 text-destructive" /> :
                 result.match ? <CheckCircle2 className="h-4 w-4 text-green-600" /> :
                 <XCircle className="h-4 w-4 text-yellow-600" />}
-              결과 ({provider === 'aws' ? 'AWS Rekognition' : 'Face++'})
+              결과 (AWS Rekognition)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
@@ -174,18 +151,12 @@ export default function FaceppTestPage() {
               <p className="text-destructive">{result.error}</p>
             ) : (
               <>
-                <p><span className="font-medium">{provider === 'aws' ? 'Similarity' : 'Confidence'}:</span> {result.confidence?.toFixed(2)} / 100</p>
+                <p><span className="font-medium">Similarity:</span> {result.confidence?.toFixed(2)} / 100</p>
                 <p><span className="font-medium">판정 등급:</span> {result.passLevel}</p>
                 <p><span className="font-medium">검출된 얼굴:</span> 신분증 {result.faces1}, 셀카 {result.faces2}</p>
-                {provider === 'aws' ? (
-                  <p className="text-xs text-muted-foreground">
-                    Thresholds — 80%(low) / 90%(medium) / 95%(high) · 매칭 {result.matchedFaces ?? 0} / 비매칭 {result.unmatchedFaces ?? 0}
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Thresholds — 1e-3: {result.thresholds?.['1e-3']?.toFixed(2)} / 1e-4: {result.thresholds?.['1e-4']?.toFixed(2)} / 1e-5: {result.thresholds?.['1e-5']?.toFixed(2)}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  Thresholds — 70%(low) / 90%(pass) / 95%(high) · 매칭 {result.matchedFaces ?? 0} / 비매칭 {result.unmatchedFaces ?? 0}
+                </p>
 
                 <details className="mt-2">
                   <summary className="text-xs cursor-pointer text-muted-foreground">원본 응답</summary>
