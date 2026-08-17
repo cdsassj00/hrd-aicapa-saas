@@ -184,7 +184,8 @@ export default function IdentityVerification({ sessionId, verified, onVerified }
     // Also upload to storage for record
     if (sessionId) {
       const ext = file.name.split('.').pop();
-      const path = `id-photos/${sessionId}_${Date.now()}.${ext}`;
+      // 경로 첫 폴더 = session_id (스토리지 RLS answerfiles_* 규약, 0017)
+      const path = `${sessionId}/id-photos/${Date.now()}.${ext}`;
       await supabase.storage.from('answer-files').upload(path, file);
     }
 

@@ -30,9 +30,13 @@ declare
   _exempt_rls text[] := array[]::text[];
 
   -- 미인증(anon)에게 실행을 열어도 되는 SECURITY DEFINER 함수.
-  -- 현재 없음 — 로그인 화면이 필요로 하는 건 org_branding 읽기뿐이고
-  -- 그건 함수가 아니라 RLS 정책으로 처리합니다.
-  _exempt_anon_exec text[] := array[]::text[];
+  -- storage_session_writable: 게스트(anon) 응시자가 answer-files 에 답안 파일을
+  --   업로드할 때 storage.objects INSERT 정책이 이 함수를 호출한다. RLS 정책은
+  --   호출 롤로 평가되므로 anon EXECUTE 가 필요하다. 반환값은 "그 세션이 진행 중인가"
+  --   불리언뿐이라 정보 노출이 없다(설계문서 §6, 0017).
+  _exempt_anon_exec text[] := array[
+    'storage_session_writable'
+  ];
 
   -- public=true 여도 되는 Storage 버킷. public 버킷은 URL 만 알면 누구나 읽으므로
   -- 민감정보(신분증·답안·녹화)는 절대 여기 두면 안 됩니다. 공개 첨부처럼 의도적으로
