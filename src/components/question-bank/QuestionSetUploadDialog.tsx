@@ -113,7 +113,7 @@ export function QuestionSetUploadDialog({ open, onOpenChange, onCommitted }: Pro
     setCommitting(true);
     try {
       setProgress(files.length > 0 ? `첨부 업로드 중... 0/${files.length}` : 'DB 적재 중...');
-      const map = await uploadAttachments(files, (d, t) => setProgress(`첨부 업로드 중... ${d}/${t}`));
+      const map = await uploadAttachments(files, activeOrgId, (d, t) => setProgress(`첨부 업로드 중... ${d}/${t}`));
       setProgress('DB 적재 중...');
       const res = await commitPayload(payload, map, activeOrgId);
       toast({

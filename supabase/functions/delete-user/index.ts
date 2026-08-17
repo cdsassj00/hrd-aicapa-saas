@@ -39,14 +39,13 @@ Deno.serve(async (req) => {
 
     const callerUserId = claims.claims.sub as string;
 
-    // Check caller is admin
-    const { data: isAdmin } = await anonClient.rpc("has_role", {
-      _user_id: callerUserId,
-      _role: "admin",
-    });
+    // 계정 완전 삭제는 전 조직에서 사용자를 없애는 플랫폼 레벨 작업이므로
+    // 플랫폼 운영자만 허용한다. (조직 멤버 제거는 org_members RLS 로 별도 처리)
+    // 옛 전역 has_role('admin') 은 squash 재설계에서 제거됨 → is_platform_admin() 로 대체.
+    const { data: isPlatformAdmin } = await anonClient.rpc("is_platform_admin");
 
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Admin only" }), {
+    if (!isPlatformAdmin) {
+      return new Response(JSON.stringify({ error: "Platform admin only" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -80,10 +79,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Delete profile & roles (cascade from auth.users won't cover public tables without FK)
-    await serviceClient.from("user_roles").delete().eq("user_id", user_id);
-    await serviceClient.from("profiles").delete().eq("id", user_id);
-
+    // profiles·org_members·platform_admins 는 auth.users(id) 에 on delete cascade 로
+    // 묶여 있어 아래 auth 삭제가 알아서 정리한다. (옛 user_roles 테이블은 존재하지 않음)
     // Delete auth user
     const { error: deleteError } =
       await serviceClient.auth.admin.deleteUser(user_id);

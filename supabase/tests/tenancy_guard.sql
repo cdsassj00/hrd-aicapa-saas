@@ -33,6 +33,13 @@ declare
   -- 현재 없음 — 로그인 화면이 필요로 하는 건 org_branding 읽기뿐이고
   -- 그건 함수가 아니라 RLS 정책으로 처리합니다.
   _exempt_anon_exec text[] := array[]::text[];
+
+  -- public=true 여도 되는 Storage 버킷. public 버킷은 URL 만 알면 누구나 읽으므로
+  -- 민감정보(신분증·답안·녹화)는 절대 여기 두면 안 됩니다. 공개 첨부처럼 의도적으로
+  -- 공개해야 하는 버킷만, 사유와 함께 등록하세요.
+  _exempt_public_buckets text[] := array[
+    'question-attachments'   -- 시험 중 응시자·게스트가 받는 문제 첨부. 경로는 무작위 UUID
+  ];
 begin
   ----------------------------------------------------------------------------
   -- 1. org_id 없는 public 테이블
@@ -182,6 +189,27 @@ begin
   loop
     raise notice '[알림] public.% 은 RLS 가 켜져 있으나 정책이 없습니다 (service_role 외 전면 거부)', _r.relname;
   end loop;
+
+  ----------------------------------------------------------------------------
+  -- 6. 공개(public) Storage 버킷 — 의도적 공개만 허용
+  --    public 버킷은 RLS 를 우회해 URL 만으로 읽힙니다. 새 버킷을 실수로 public 으로
+  --    만들면 민감정보가 통째로 노출되는데, tenancy_guard 는 public 스키마만 보므로
+  --    storage 는 사각지대였습니다(감사 P0-4). 여기서 함께 잠급니다.
+  ----------------------------------------------------------------------------
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'storage' and table_name = 'buckets'
+  ) then
+    for _r in
+      execute $q$
+        select id from storage.buckets
+        where public and id <> all ($1)
+        order by 1
+      $q$ using _exempt_public_buckets
+    loop
+      _v := _v || format('[공개 버킷] storage.buckets.%I 이 public=true — 비공개로 바꾸거나 가드 예외 목록에 사유와 함께 등록하세요', _r.id);
+    end loop;
+  end if;
 
   ----------------------------------------------------------------------------
   -- 판정
