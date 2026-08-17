@@ -25,6 +25,11 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
+        env:
+          # setup-cli 가 릴리스를 조회할 때 GitHub API 를 쓰는데, 비인증이면
+          # 러너 공용 IP 의 60req/h 한도에 걸려 "resolve latest ... rate limit exceeded"
+          # 로 CLI 설치 자체가 실패한다. 토큰을 주면 5000req/h 로 올라가 해소된다.
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: 빈 DB 기동 + 마이그레이션 0001부터 전부 적용
         run: supabase db start
