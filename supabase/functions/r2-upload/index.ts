@@ -174,15 +174,14 @@ Deno.serve(async (req) => {
       return json({ error: 'chunk too large' }, 413);
     }
 
-    // exam_sessions 의 응시자 식별 컬럼은 user_id 다(squash 스키마). 이식된 코드가
-    // 쓰던 applicant_id 는 이 테이블에 없어 조회가 깨졌었다 — recording_chunks 쪽만
-    // applicant_id 를 갖는다. 세션 소유권은 user_id 로 검증한다.
+    // 세션 소유권은 applicant_id 로 검증한다(0016 에서 exam_sessions 응시자 컬럼을
+    // user_id → applicant_id 로 통일 — proctoring 테이블·이식 코드와 정합).
     const { data: sess, error: sErr } = await userClient
       .from('exam_sessions')
-      .select('id, user_id, exam_id, org_id')
+      .select('id, applicant_id, exam_id, org_id')
       .eq('id', sessionId)
       .maybeSingle();
-    if (sErr || !sess || sess.user_id !== user.id) {
+    if (sErr || !sess || sess.applicant_id !== user.id) {
       await logDiag(adminClient, sessionId, diagApplicant, diagKind, 'presign', 'error', `세션 권한 검증 실패: ${sErr?.message || 'forbidden'}`, { idx: chunkIndex });
       return json({ error: 'forbidden' }, 403);
     }
