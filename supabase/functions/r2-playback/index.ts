@@ -92,27 +92,25 @@ async function presignGet(objectKey: string, expiresSec = 900): Promise<string> 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  if (!ACCOUNT_ID || !ACCESS_KEY || !SECRET_KEY || !BUCKET) {
+    return json({ error: '녹화 저장소(R2)가 구성되지 않았습니다.' }, 503);
+  }
+
   try {
     const auth = req.headers.get('Authorization');
     if (!auth) return json({ error: 'unauthorized' }, 401);
 
+    // 호출자 JWT 로 도는 클라이언트. 권한은 RLS 로 강제한다:
+    // recording_chunks 의 'staff' 정책이 is_org_examiner(org_id) or is_platform_admin() 인
+    // 행만 노출하므로, 아래 조회는 호출자 org 의 녹화만 본다(교차테넌트 IDOR 차단).
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: auth } } },
     );
-    const adminClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
 
     const { data: { user } } = await userClient.auth.getUser();
     if (!user) return json({ error: 'unauthorized' }, 401);
-
-    // admin role required
-    const { data: roleRow } = await adminClient
-      .from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').maybeSingle();
-    if (!roleRow) return json({ error: 'forbidden' }, 403);
 
     const body = await req.json().catch(() => ({}));
     const mode: string | undefined = body.mode;
@@ -125,7 +123,7 @@ Deno.serve(async (req) => {
 
     if (mode === 'object') {
       if (!objectKey) return json({ error: 'object_key required' }, 400);
-      let q = adminClient
+      let q = userClient
         .from('recording_chunks')
         .select('object_key,mime_type,session_id')
         .eq('object_key', objectKey);
@@ -152,7 +150,7 @@ Deno.serve(async (req) => {
     let allowedKeys: string[] = [];
     if (sessionId) {
       // 세션 기반: 해당 세션의 모든 청크 키를 신뢰
-      const { data: rows, error } = await adminClient
+      const { data: rows, error } = await userClient
         .from('recording_chunks').select('object_key').eq('session_id', sessionId);
       if (error) throw error;
       allowedKeys = (rows || []).map(r => r.object_key);
@@ -162,7 +160,7 @@ Deno.serve(async (req) => {
       const BATCH = 20;
       for (let i = 0; i < requestedKeys.length; i += BATCH) {
         const slice = requestedKeys.slice(i, i + BATCH);
-        const { data: rows, error } = await adminClient
+        const { data: rows, error } = await userClient
           .from('recording_chunks').select('object_key').in('object_key', slice);
         if (error) throw error;
         (rows || []).forEach(r => verified.add(r.object_key));
