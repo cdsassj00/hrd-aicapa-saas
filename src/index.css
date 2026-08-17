@@ -2,114 +2,140 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   ssjsite 디자인 언어 — 애플 다크 / 애플 라이트
+   랜딩(public/landing.html)과 같은 팔레트·타이포를 앱에 적용한다.
+   .dark  = 순수 블랙 + iOS 시스템 그레이 계단 (기본)
+   :root  = 애플 라이트 (흰 종이 + 같은 액센트)
+   ============================================================ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
+    /* --- 애플 라이트 --- */
+    --background: 0 0% 100%;          /* #ffffff */
+    --foreground: 240 3% 12%;         /* #1d1d1f */
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 240 3% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
-    --primary: 0 0% 23%;
-    --primary-foreground: 0 0% 96%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 23%;
-    --muted: 0 0% 93%;
-    --muted-foreground: 0 0% 33%;
-    --accent: 0 0% 93%;
-    --accent-foreground: 0 0% 23%;
-    --destructive: 0 72% 39%;
+    --popover-foreground: 240 3% 12%;
+
+    /* primary 는 액센트(iOS 블루). 라이트에서는 한 단계 어두운 값으로
+       흰 배경 대비를 확보한다 — 애플도 라이트에서 #0071e3 을 쓴다. */
+    --primary: 210 100% 45%;          /* #0071e3 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 11% 96%;         /* #f5f5f7 */
+    --secondary-foreground: 240 3% 12%;
+    --muted: 240 11% 96%;
+    --muted-foreground: 240 2% 44%;   /* #6e6e73 */
+    --accent: 240 14% 93%;            /* #ebebf0 — 호버 */
+    --accent-foreground: 240 3% 12%;
+
+    --destructive: 354 100% 42%;      /* #d70015 */
     --destructive-foreground: 0 0% 100%;
-    --success: 130 55% 33%;
+    --success: 135 59% 34%;           /* #248a3d */
     --success-foreground: 0 0% 100%;
-    --warning: 24 100% 45%;
+    --warning: 27 100% 35%;           /* #b25000 */
     --warning-foreground: 0 0% 100%;
-    --border: 0 0% 85%;
-    --input: 0 0% 85%;
-    --ring: 0 0% 23%;
-    --radius: 0.375rem;
-    --sidebar-background: 0 0% 18%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 0 0% 18%;
-    --sidebar-accent: 0 0% 25%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 0 0% 28%;
-    --sidebar-ring: 0 0% 50%;
 
-    --grade-green: 150 63% 32%;
-    --grade-green-bg: 140 39% 93%;
-    --grade-blue: 213 73% 38%;
-    --grade-blue-bg: 210 65% 95%;
-    --grade-black: 0 0% 13%;
-    --grade-black-bg: 0 0% 96%;
+    --border: 240 6% 83%;             /* #d2d2d7 */
+    --input: 240 6% 83%;
+    --ring: 210 100% 45%;
+    --radius: 0.875rem;               /* 14px — 랜딩의 panel 16px 과 같은 계열 */
 
-    /* Semantic action colors */
-    --info: 213 73% 42%;
+    --sidebar-background: 240 11% 96%;
+    --sidebar-foreground: 240 3% 12%;
+    --sidebar-primary: 210 100% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 14% 93%;
+    --sidebar-accent-foreground: 240 3% 12%;
+    --sidebar-border: 240 6% 83%;
+    --sidebar-ring: 210 100% 45%;
+
+    /* 등급 — 원본의 green/blue/black. 채도를 낮춰 톤에 맞춘다.
+       (0005 에서 org_grade_scales 로 옮기면 이 토큰은 기본값이 된다) */
+    --grade-green: 135 59% 34%;
+    --grade-green-bg: 135 40% 94%;
+    --grade-blue: 210 100% 45%;
+    --grade-blue-bg: 210 100% 96%;
+    --grade-black: 240 3% 12%;
+    --grade-black-bg: 240 11% 96%;
+
+    --info: 210 100% 45%;
     --info-foreground: 0 0% 100%;
-    --info-bg: 210 65% 95%;
+    --info-bg: 210 100% 96%;
 
-    /* Status colors */
-    --status-open: 150 60% 36%;
-    --status-open-bg: 140 40% 94%;
-    --status-draft: 35 80% 46%;
-    --status-draft-bg: 38 80% 95%;
-    --status-closed: 0 0% 50%;
-    --status-closed-bg: 0 0% 95%;
+    --status-open: 135 59% 34%;
+    --status-open-bg: 135 40% 94%;
+    --status-draft: 27 100% 35%;
+    --status-draft-bg: 36 90% 94%;
+    --status-closed: 240 2% 54%;
+    --status-closed-bg: 240 11% 96%;
 
-    /* Interactive accent for management buttons */
-    --action: 213 65% 45%;
+    --action: 210 100% 45%;
     --action-foreground: 0 0% 100%;
-    --action-muted: 213 40% 94%;
+    --action-muted: 210 100% 96%;
   }
 
   .dark {
-    --background: 0 0% 10%;
-    --foreground: 0 0% 96%;
-    --card: 0 0% 13%;
-    --card-foreground: 0 0% 96%;
-    --popover: 0 0% 13%;
-    --popover-foreground: 0 0% 96%;
-    --primary: 0 0% 96%;
-    --primary-foreground: 0 0% 13%;
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 96%;
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 0 0% 20%;
-    --accent-foreground: 0 0% 96%;
-    --destructive: 0 72% 39%;
+    /* --- 애플 다크 (랜딩과 동일) --- */
+    --background: 0 0% 0%;            /* #000000 — 회색 아닌 진짜 검정 */
+    --foreground: 240 11% 96%;        /* #f5f5f7 */
+    --card: 240 3% 11%;               /* #1c1c1e */
+    --card-foreground: 240 11% 96%;
+    --popover: 240 3% 11%;
+    --popover-foreground: 240 11% 96%;
+
+    --primary: 210 100% 52%;          /* #0a84ff */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 2% 18%;          /* #2c2c2e */
+    --secondary-foreground: 240 11% 96%;
+    --muted: 240 2% 18%;
+    --muted-foreground: 240 2% 61%;   /* #98989d */
+    --accent: 240 2% 23%;             /* #3a3a3c — 호버 */
+    --accent-foreground: 240 11% 96%;
+
+    --destructive: 3 100% 61%;        /* #ff453a */
     --destructive-foreground: 0 0% 100%;
-    --success: 130 55% 33%;
-    --success-foreground: 0 0% 100%;
-    --warning: 24 100% 45%;
-    --warning-foreground: 0 0% 100%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 0% 80%;
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 0 0% 96%;
-    --sidebar-primary-foreground: 0 0% 8%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 0 0% 50%;
+    --success: 135 64% 50%;           /* #30d158 */
+    --success-foreground: 0 0% 0%;
+    --warning: 50 100% 52%;           /* #ffd60a */
+    --warning-foreground: 0 0% 0%;
 
-    --info: 213 73% 55%;
-    --info-foreground: 0 0% 100%;
-    --info-bg: 213 50% 20%;
+    --border: 240 2% 22%;             /* #38383a */
+    --input: 240 2% 22%;
+    --ring: 211 100% 63%;             /* #409cff */
 
-    --status-open: 150 55% 45%;
-    --status-open-bg: 150 30% 18%;
-    --status-draft: 35 75% 55%;
-    --status-draft-bg: 35 40% 18%;
-    --status-closed: 0 0% 55%;
-    --status-closed-bg: 0 0% 18%;
+    --sidebar-background: 240 5% 4%;  /* #0a0a0b — 본문 검정보다 살짝 뜬 층 */
+    --sidebar-foreground: 240 6% 83%;
+    --sidebar-primary: 210 100% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 2% 18%;
+    --sidebar-accent-foreground: 240 11% 96%;
+    --sidebar-border: 240 2% 22%;
+    --sidebar-ring: 211 100% 63%;
 
-    --action: 213 65% 60%;
+    --grade-green: 135 64% 50%;
+    --grade-green-bg: 135 40% 14%;
+    --grade-blue: 211 100% 63%;
+    --grade-blue-bg: 211 60% 16%;
+    --grade-black: 240 11% 96%;
+    --grade-black-bg: 240 2% 18%;
+
+    --info: 211 100% 63%;
+    --info-foreground: 0 0% 0%;
+    --info-bg: 211 60% 16%;
+
+    --status-open: 135 64% 50%;
+    --status-open-bg: 135 40% 14%;
+    --status-draft: 36 100% 52%;
+    --status-draft-bg: 36 50% 15%;
+    --status-closed: 240 2% 61%;
+    --status-closed-bg: 240 2% 18%;
+
+    --action: 210 100% 52%;
     --action-foreground: 0 0% 100%;
-    --action-muted: 213 30% 20%;
+    --action-muted: 211 60% 16%;
   }
 }
 
@@ -117,23 +143,51 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Noto Sans KR', sans-serif;
-    font-size: 13px;
-    line-height: 1.6;
-  }
-  h1 {
-    font-size: 20px;
-    font-weight: 800;
-  }
-  h2 {
-    font-size: 16px;
-    font-weight: 700;
-  }
-  h3 {
+    /* Pretendard — 한글 웹폰트 기준점. 없으면 시스템 한글 폰트로 폴백 */
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+      'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
     font-size: 14px;
-    font-weight: 700;
+    line-height: 1.6;
+    /* 한글 단어 단위 줄바꿈 — 이거 하나로 레이아웃 완성도가 갈린다 */
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    letter-spacing: -0.01em;
+    font-feature-settings: 'ss05';
+    -webkit-font-smoothing: antialiased;
+  }
+  /* 제목은 자간을 더 조이고 두께를 명시 — 애플 헤드라인의 핵심 */
+  h1, h2, h3, h4 {
+    letter-spacing: -0.028em;
+    font-variation-settings: 'wght' 600;
+    text-wrap: balance;
+  }
+  h1 { font-size: 22px; font-variation-settings: 'wght' 650; }
+  h2 { font-size: 17px; }
+  h3 { font-size: 15px; }
+  /* 숫자 정렬 흔들림 방지 — 점수·통계·타임스탬프 */
+  .tabular, table, [data-slot='table'] { font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+}
+
+@layer components {
+  /* 랜딩의 시그니처 요소를 앱에서도 쓸 수 있게 — 섹션 머리말 */
+  .overline-label {
+    @apply text-[13px] font-semibold text-muted-foreground;
+  }
+  .h-judge {
+    font-size: clamp(22px, 3vw, 30px);
+    line-height: 1.15;
+    letter-spacing: -0.024em;
+    font-variation-settings: 'wght' 600;
+  }
+  /* 상태 칩 — 반투명 틴트 + 채도 낮춘 텍스트 (랜딩과 같은 규칙) */
+  .chip-tint {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12.5px] font-semibold;
   }
 }
 

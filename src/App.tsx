@@ -21,28 +21,32 @@ import QuestionBankPage from "@/pages/admin/QuestionBankPage";
 import GradingPage from "@/pages/admin/GradingPage";
 import CertificationsPage from "@/pages/admin/CertificationsPage";
 import StatsPage from "@/pages/admin/StatsPage";
-import UserManagePage from "@/pages/admin/UserManagePage";
+import OrgMembersPage from "@/pages/admin/OrgMembersPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
 import FaceppTestPage from "@/pages/admin/FaceppTestPage";
 import RecordingReviewPage from "@/pages/admin/RecordingReviewPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/NotFound";
-import OAuthConsent from "@/pages/OAuthConsent";
+import OnboardingPage from "@/pages/OnboardingPage";
+import AcceptInvitePage from "@/pages/AcceptInvitePage";
 
 const queryClient = new QueryClient();
 
 const routes = {
   applicant: '/applicant',
   examiner: '/examiner/monitor',
-  admin: '/admin/exams',
+  org_owner: '/admin/exams',
+  org_admin: '/admin/exams',
   viewer: '/admin/certifications',
 } as const;
 
 function HomeRedirect() {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, needsOnboarding } = useAuth();
 
   if (loading) return <FullscreenLoader message="세션 확인 중..." />;
   if (!user) return <Navigate to="/login" replace />;
+  // 소속 조직이 없으면 볼 수 있는 데이터가 하나도 없다 — 온보딩으로.
+  if (needsOnboarding) return <Navigate to="/onboarding" replace />;
 
   return <Navigate to={routes[role] || '/applicant'} replace />;
 }
@@ -56,30 +60,31 @@ function AuthGate() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
+      <Route path="/invite/accept" element={<AcceptInvitePage />} />
       <Route path="/" element={<HomeRedirect />} />
       <Route element={<DashboardLayout />}>
         {/* 응시자 */}
-        <Route path="/applicant" element={<ProtectedRoute allowedRoles={['applicant', 'admin']}><ApplicantMyPage /></ProtectedRoute>} />
-        <Route path="/applicant/waiting-room/:sessionId" element={<ProtectedRoute allowedRoles={['applicant', 'admin']}><WaitingRoom /></ProtectedRoute>} />
-        <Route path="/applicant/exam/:sessionId" element={<ProtectedRoute allowedRoles={['applicant', 'admin']}><ExamPage /></ProtectedRoute>} />
-        <Route path="/applicant/submitted/:sessionId?" element={<ProtectedRoute allowedRoles={['applicant', 'admin']}><SubmittedPage /></ProtectedRoute>} />
-        <Route path="/applicant/results/:sessionId" element={<ProtectedRoute allowedRoles={['applicant', 'admin']}><ResultsPage /></ProtectedRoute>} />
+        <Route path="/applicant" element={<ProtectedRoute allowedRoles={['applicant', 'org_admin', 'org_owner']}><ApplicantMyPage /></ProtectedRoute>} />
+        <Route path="/applicant/waiting-room/:sessionId" element={<ProtectedRoute allowedRoles={['applicant', 'org_admin', 'org_owner']}><WaitingRoom /></ProtectedRoute>} />
+        <Route path="/applicant/exam/:sessionId" element={<ProtectedRoute allowedRoles={['applicant', 'org_admin', 'org_owner']}><ExamPage /></ProtectedRoute>} />
+        <Route path="/applicant/submitted/:sessionId?" element={<ProtectedRoute allowedRoles={['applicant', 'org_admin', 'org_owner']}><SubmittedPage /></ProtectedRoute>} />
+        <Route path="/applicant/results/:sessionId" element={<ProtectedRoute allowedRoles={['applicant', 'org_admin', 'org_owner']}><ResultsPage /></ProtectedRoute>} />
         {/* 감독관 */}
-        <Route path="/examiner/monitor" element={<ProtectedRoute allowedRoles={['examiner', 'admin']}><MonitorDashboard /></ProtectedRoute>} />
-        <Route path="/examiner/events" element={<ProtectedRoute allowedRoles={['examiner', 'admin']}><EventLogPage /></ProtectedRoute>} />
+        <Route path="/examiner/monitor" element={<ProtectedRoute allowedRoles={['examiner', 'org_admin', 'org_owner']}><MonitorDashboard /></ProtectedRoute>} />
+        <Route path="/examiner/events" element={<ProtectedRoute allowedRoles={['examiner', 'org_admin', 'org_owner']}><EventLogPage /></ProtectedRoute>} />
         {/* 관리자 */}
-        <Route path="/admin/exams" element={<ProtectedRoute allowedRoles={['admin']}><ExamManagePage /></ProtectedRoute>} />
-        <Route path="/admin/questions" element={<ProtectedRoute allowedRoles={['admin']}><QuestionBankPage /></ProtectedRoute>} />
-        <Route path="/admin/grading" element={<ProtectedRoute allowedRoles={['admin']}><GradingPage /></ProtectedRoute>} />
-        <Route path="/admin/certifications" element={<ProtectedRoute allowedRoles={['admin', 'viewer']}><CertificationsPage /></ProtectedRoute>} />
-        <Route path="/admin/stats" element={<ProtectedRoute allowedRoles={['admin', 'viewer']}><StatsPage /></ProtectedRoute>} />
-        <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagePage /></ProtectedRoute>} />
-        <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><SettingsPage /></ProtectedRoute>} />
-        <Route path="/admin/recordings" element={<ProtectedRoute allowedRoles={['admin']}><RecordingReviewPage /></ProtectedRoute>} />
-        <Route path="/admin/facepp-test" element={<ProtectedRoute allowedRoles={['admin']}><FaceppTestPage /></ProtectedRoute>} />
-        <Route path="/admin/facepptest" element={<ProtectedRoute allowedRoles={['admin']}><FaceppTestPage /></ProtectedRoute>} />
-        <Route path="/admin/faceapptest" element={<ProtectedRoute allowedRoles={['admin']}><FaceppTestPage /></ProtectedRoute>} />
+        <Route path="/admin/exams" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><ExamManagePage /></ProtectedRoute>} />
+        <Route path="/admin/questions" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><QuestionBankPage /></ProtectedRoute>} />
+        <Route path="/admin/grading" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><GradingPage /></ProtectedRoute>} />
+        <Route path="/admin/certifications" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner', 'viewer']}><CertificationsPage /></ProtectedRoute>} />
+        <Route path="/admin/stats" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner', 'viewer']}><StatsPage /></ProtectedRoute>} />
+        <Route path="/admin/members" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><OrgMembersPage /></ProtectedRoute>} />
+        <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><SettingsPage /></ProtectedRoute>} />
+        <Route path="/admin/recordings" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><RecordingReviewPage /></ProtectedRoute>} />
+        <Route path="/admin/facepp-test" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><FaceppTestPage /></ProtectedRoute>} />
+        <Route path="/admin/facepptest" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><FaceppTestPage /></ProtectedRoute>} />
+        <Route path="/admin/faceapptest" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><FaceppTestPage /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

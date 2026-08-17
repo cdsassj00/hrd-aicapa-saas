@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { AiPaymentRequiredError, AiRateLimitError, chatCompletion } from "../_shared/ai.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -9,7 +10,6 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 function getClient() {
   return createClient(supabaseUrl, supabaseKey);
@@ -29,7 +29,6 @@ async function updateJob(
 async function performGrading(jobId: string, session_id: string) {
   const supabase = getClient();
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     await updateJob(jobId, { status: "processing", progress: 5 });
 
@@ -214,35 +213,24 @@ ${val}
 피드백: [간단한 채점 사유 1~2문장]`;
 
         try {
-          const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
-              messages: [
-                { role: "system", content: "시험 답안을 정확하고 공정하게 채점하는 전문 채점관입니다. 반드시 '점수: N' 형식으로 시작하세요." },
-                { role: "user", content: prompt },
-              ],
-            }),
+          const aiText = await chatCompletion({
+            messages: [
+              { role: "system", content: "시험 답안을 정확하고 공정하게 채점하는 전문 채점관입니다. 반드시 '점수: N' 형식으로 시작하세요." },
+              { role: "user", content: prompt },
+            ],
           });
-          if (!aiResp.ok) {
-            slot_scores[slot.id] = 0;
-            const reason = aiResp.status === 429 ? "요청 한도 초과"
-              : aiResp.status === 402 ? "크레딧 부족" : `HTTP ${aiResp.status}`;
-            perSlotFeedback.push(`[${slot.label}] AI 채점 실패: ${reason}`);
-            continue;
-          }
-          const aiData = await aiResp.json();
-          const aiText = aiData.choices?.[0]?.message?.content || "";
           const scoreMatch = aiText.match(/점수:\s*(\d+)/);
           const feedbackMatch = aiText.match(/피드백:\s*([\s\S]*)/);
           const aiScore = scoreMatch ? Math.min(parseInt(scoreMatch[1]), slot.max_score) : 0;
           const aiFeedback = feedbackMatch ? feedbackMatch[1].trim() : aiText;
           slot_scores[slot.id] = aiScore;
           perSlotFeedback.push(`[${slot.label}] ${aiScore}/${slot.max_score} — ${aiFeedback}`);
-        } catch (aiErr: any) {
+        } catch (aiErr: unknown) {
           slot_scores[slot.id] = 0;
-          perSlotFeedback.push(`[${slot.label}] AI 채점 실패: ${aiErr.message}`);
+          const reason = aiErr instanceof AiRateLimitError ? "요청 한도 초과"
+            : aiErr instanceof AiPaymentRequiredError ? "크레딧 부족"
+            : aiErr instanceof Error ? aiErr.message : "알 수 없는 오류";
+          perSlotFeedback.push(`[${slot.label}] AI 채점 실패: ${reason}`);
         }
       }
 

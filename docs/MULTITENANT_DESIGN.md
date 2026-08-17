@@ -253,7 +253,9 @@ CREATE POLICY "question read" ON public.questions FOR SELECT USING (
 );
 ```
 
-쓰기는 `owner_org_id`가 자기 조직일 때만. 플랫폼 공용 문항은 `platform_admins`만.
+쓰기는 소유 조직일 때만. 플랫폼 공용 문항은 `platform_admins`만.
+
+> 구현에서는 컬럼명을 `owner_org_id` 대신 **`org_id`** 로 통일했습니다. 0002~0005 가 전부 `org_id` 이고 CI 가드가 그 이름을 봅니다. 이름 하나 때문에 가드 예외를 파면 그 예외가 나중에 진짜 누락을 가려 줍니다. 의미는 동일 — `NULL` 이면 플랫폼 소유.
 
 동시에 `question_category` enum(한글 3종 고정)은 테이블로 풀어야 합니다:
 
@@ -354,21 +356,24 @@ WHERE n.nspname='public' AND c.relkind='r' AND NOT c.relrowsecurity;
 
 ```
 supabase/migrations/
-  0001_extensions_and_types.sql      -- enum, 확장
-  0002_tenancy_core.sql              -- organizations, org_members, platform_admins, org_branding
-  0003_identity_and_rbac.sql         -- user_org_ids(), has_org_role(), is_platform_admin()
-  0004_competency_model.sql          -- frameworks, competencies, grade_scales
-  0005_question_bank.sql             -- questions, question_sets, 소유권/라이선스
-  0006_assessment_core.sql           -- exams, exam_sessions, answers, grading_jobs
-  0007_proctoring.sql                -- monitoring_events, recording_chunks, diagnostics
-  0008_certification.sql             -- certifications (org 스코프 채번)
-  0009_billing_usage.sql             -- plans, subscriptions, usage_events
-  0010_audit.sql                     -- audit_logs
-  0011_rls_policies.sql              -- 전 테이블 정책 (한 곳에 모아야 리뷰 가능)
-  0012_seed_platform_defaults.sql    -- NIA 체계를 플랫폼 기본 프레임워크로 시드
+  0001_extensions_and_types.sql      -- enum, 확장                              [적용됨]
+  0002_tenancy_core.sql              -- organizations, org_members, platform_admins, org_branding [적용됨]
+  0003_identity_and_rbac.sql         -- user_org_ids(), has_org_role(), is_platform_admin()       [적용됨]
+  0004_profiles_and_invitations.sql  -- profiles, org_invitations, 초대 함수      [적용됨]
+  0005_competency_model.sql          -- frameworks, competencies, grade_scales + 플랫폼 기본 시드 [적용됨]
+  0006_question_bank.sql             -- questions, question_sets, 소유권/라이선스 [적용됨]
+  0007_assessment_core.sql           -- exams, exam_sessions, answers, grading_jobs
+  0008_proctoring.sql                -- monitoring_events, recording_chunks, diagnostics
+  0009_certification.sql             -- certifications (org 스코프 채번)
+  0010_billing_usage.sql             -- plans, subscriptions, usage_events
+  0011_audit.sql                     -- audit_logs
+  0012_rls_policies.sql              -- 도메인 테이블 정책 (한 곳에 모아야 리뷰 가능)
+  (0013 시드는 0005 에 통합 — 데이터 없는 역량 모델은 검증이 안 된다)
 ```
 
 **RLS 정책을 한 파일에 몰아두는 것**이 핵심입니다. 테이블별로 흩으면 보안 리뷰가 불가능해집니다.
+
+> 예외: 아이덴티티 계층 4+2개 테이블(organizations·org_branding·org_members·platform_admins·profiles·org_invitations)의 정책은 `0003`/`0004` 안에 있습니다. 이 정책들은 `user_org_ids()` 같은 기반 함수가 의존하는 대상이라 `0012` 로 미루면 "함수는 있는데 멤버십을 못 읽어 부팅이 안 되는" 순환이 생깁니다. 도메인 테이블 정책은 예정대로 전부 `0012` 한 곳입니다.
 
 ---
 
@@ -435,6 +440,7 @@ git push -u origin main
 읽기 전용 분석만 수행했으므로 아래는 실제 컬럼 확인이 필요합니다.
 
 - `user_actions` 실제 스키마 — `audit_logs`로 승격 가능한지
+- ~~미가입자 초대 표현~~ — `0004` 의 `org_invitations` 로 해결(토큰 해시 저장 + 이메일 일치 요구)
 - `question_sets` ↔ `questions` 관계 (세트 문항이 AI채점 제외 대상이라는 언급이 인프라 문서에 있음)
 - `active_sessions` 용도 (동시 로그인 차단인지 감독용인지)
 - Edge Function 19개 중 비즈니스 로직이 인라인인 비율 → §8 이식성 작업량 산정에 필요

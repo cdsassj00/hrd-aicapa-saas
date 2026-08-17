@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="AI 역량평가">
+  <!-- 랜딩과 같은 톤: 순수 블랙 타일 + iOS 블루 액센트. -->
+  <!-- 오름차순 바 3개 = 역량 등급 계단(그린·블루·블랙). -->
+  <rect width="64" height="64" rx="14" fill="#000000"/>
+  <rect x="14" y="34" width="9" height="16" rx="2.5" fill="#3a3a3c"/>
+  <rect x="27.5" y="26" width="9" height="24" rx="2.5" fill="#0a84ff"/>
+  <rect x="41" y="16" width="9" height="34" rx="2.5" fill="#ffffff"/>
+</svg>

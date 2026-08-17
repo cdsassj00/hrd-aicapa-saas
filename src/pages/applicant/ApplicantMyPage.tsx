@@ -12,7 +12,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { SUPER_ADMIN_ID } from '@/lib/constants';
 
 export default function ApplicantMyPage() {
   const [exams, setExams] = useState<any[]>([]);
@@ -22,12 +21,11 @@ export default function ApplicantMyPage() {
   const [isApplying, setIsApplying] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
-  const { user, role } = useAuth();
+  const { user, role, activeOrg, isPlatformAdmin } = useAuth();
   const isApplicantRole = role === 'applicant';
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const isSuperAdmin = user?.id === SUPER_ADMIN_ID;
   const autoInviteProcessed = useRef(false);
 
   useEffect(() => {
@@ -165,7 +163,7 @@ export default function ApplicantMyPage() {
         setIsApplying(false);
         return;
       }
-    } else if (regMode === 'invite_only' && !isSuperAdmin) {
+    } else if (regMode === 'invite_only' && !isPlatformAdmin) {
       toast({ title: '이 시험은 응시코드가 필요합니다', variant: 'destructive' });
       setIsApplying(false);
       return;
@@ -182,7 +180,7 @@ export default function ApplicantMyPage() {
       .maybeSingle();
 
     if (existing) {
-      if (isSuperAdmin) {
+      if (isPlatformAdmin) {
         await supabase.from('answers').delete().eq('session_id', existing.id);
         await supabase.from('exam_sessions').update({
           status: 'waiting', start_time: null, submit_time: null, score_total: null, is_flagged: false,
@@ -284,7 +282,7 @@ export default function ApplicantMyPage() {
       <h1>마이페이지</h1>
 
       {/* 일반 사용자 가이드 (슈퍼관리자에게는 미표시) */}
-      {!isSuperAdmin && (
+      {!isPlatformAdmin && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
@@ -331,7 +329,7 @@ export default function ApplicantMyPage() {
       )}
 
       {/* 슈퍼관리자 안내 */}
-      {isSuperAdmin && (
+      {isPlatformAdmin && (
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="py-3 px-4 flex items-center gap-3">
             <Badge className="bg-amber-500 text-white text-[10px]">SUPER ADMIN</Badge>
@@ -414,7 +412,7 @@ export default function ApplicantMyPage() {
                           시험 계속
                         </Button>
                       )}
-                      {isSuperAdmin && s.status !== 'waiting' && (
+                      {isPlatformAdmin && s.status !== 'waiting' && (
                         <Button variant="ghost" size="sm" className="text-[11px] h-7 text-amber-600 hover:text-amber-700" onClick={() => handleResetSession(s.id)}>
                           <RotateCcw className="h-3 w-3 mr-1" /> 초기화
                         </Button>
@@ -441,7 +439,7 @@ export default function ApplicantMyPage() {
             <p className="text-[13px]">
               <strong>{exams.find(e => e.id === selectedExamId)?.title}</strong> 시험에 응시 신청하시겠습니까?
             </p>
-            {isSuperAdmin && (
+            {isPlatformAdmin && (
               <p className="text-[11px] text-amber-600 flex items-center gap-1">
                 <Info className="h-3.5 w-3.5" /> 슈퍼관리자: 중복 신청이 허용됩니다
               </p>
@@ -459,7 +457,7 @@ export default function ApplicantMyPage() {
             )}
             <div className="grid grid-cols-2 gap-3 text-[12px]">
               <div><Label className="text-muted-foreground">이름</Label><p className="font-medium">{user?.name}</p></div>
-              <div><Label className="text-muted-foreground">소속</Label><p className="font-medium">{user?.organization || '-'}</p></div>
+              <div><Label className="text-muted-foreground">소속</Label><p className="font-medium">{activeOrg?.orgName || '-'}</p></div>
             </div>
           </div>
           <DialogFooter>

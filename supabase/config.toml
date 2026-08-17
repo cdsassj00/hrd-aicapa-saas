@@ -1,1 +1,7 @@
 project_id = "eoeiqpgzoyltrawfflhj"
+
+# Supabase Auth 가 사용자 JWT 없이 직접 호출하는 훅이라 JWT 검증을 끈다.
+# 대신 함수 안에서 Standard Webhooks 서명을 검증한다 — 안 그러면
+# 누구나 이 URL 로 POST 해서 문자를 보낼 수 있다.
+[functions.send-sms-hook]
+verify_jwt = false

@@ -1,9 +1,10 @@
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { TopBar } from '@/components/TopBar';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { FullscreenLoader } from '@/components/FullscreenLoader';
+import { LEGAL } from '@/lib/brand';
 
 export function DashboardLayout() {
   const { user, loading } = useAuth();
@@ -35,19 +36,28 @@ export function DashboardLayout() {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar />
-          <div className="flex items-center h-10 px-4 border-b bg-muted/30">
-            <SidebarTrigger className="h-7 w-7" />
-          </div>
-          <main className="flex-1 overflow-auto p-6 bg-secondary/30">
-            <Outlet />
+          <main className="flex-1 overflow-auto px-6 py-7 md:px-8">
+            <div className="mx-auto w-full max-w-[1200px]">
+              <Outlet />
+            </div>
           </main>
-          <footer className="py-2 px-6 text-center border-t bg-muted/20">
-            <span className="text-[10px] text-muted-foreground">
-              <a href="https://cdsa.kr/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">개인정보처리방침</a>
-              {' · '}
-              <a href="https://cdsa.kr/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">이용약관</a>
-              {' · '}
-              Made by <a href="https://cdsa.kr" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">CDSA</a> (한국데이터사이언티스트협회) · © {new Date().getFullYear()}
+          <footer className="py-3 px-6 text-center border-t border-border/50">
+            <span className="text-[10.5px] text-muted-foreground/80">
+              {LEGAL.privacyUrl && (
+                <>
+                  <a href={LEGAL.privacyUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">개인정보처리방침</a>
+                  {' · '}
+                </>
+              )}
+              {LEGAL.termsUrl && (
+                <>
+                  <a href={LEGAL.termsUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">이용약관</a>
+                  {' · '}
+                </>
+              )}
+              Made by{' '}
+              <a href={LEGAL.operatorUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">{LEGAL.operator}</a>
+              {' · '}© {new Date().getFullYear()}
             </span>
           </footer>
         </div>

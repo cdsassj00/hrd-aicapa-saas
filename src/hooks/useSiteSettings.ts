@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { PRODUCT_NAME, PRODUCT_TAGLINE } from '@/lib/brand';
 
 interface SiteSettings {
   title: string;
@@ -10,13 +11,17 @@ interface SiteSettings {
   emailFromAddress: string;
 }
 
+/** 조직이 값을 설정하기 전의 표시용 기본값.
+ *  원본 브랜딩(행정안전부·NIA·CDSA·aicapa.kr)은 전부 걷어냈습니다.
+ *  발신 주소 기본값은 두지 않습니다 — 잘못된 도메인으로 메일을 보내느니
+ *  비워 두고 Edge Function 의 MAIL_FROM 이 판정하게 하는 편이 안전합니다. */
 const DEFAULTS: SiteSettings = {
-  title: 'AX역량 인증평가 CBT',
-  subtitle: 'AI 역량 인증평가 플랫폼',
-  footerOrg: '한국데이터사이언티스트협회',
-  emailSubjectPrefix: '[행정안전부·NIA]',
-  emailFromName: 'AI역량인증 평가',
-  emailFromAddress: 'noreply@aicapa.kr',
+  title: PRODUCT_NAME,
+  subtitle: PRODUCT_TAGLINE,
+  footerOrg: '',
+  emailSubjectPrefix: '',
+  emailFromName: PRODUCT_NAME,
+  emailFromAddress: '',
 };
 
 const KEY_MAP: Record<string, keyof SiteSettings> = {

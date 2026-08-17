@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<title>AICAPA for Business — AI 활용 역량진단 · 인증평가 SaaS</title>
+<title>AI 역량평가 — 채용 전형과 재직자 진단을 한 곳에서</title>
 
 <style>
 
@@ -142,7 +142,7 @@ header.site .bar { display: flex; align-items: center; gap: 28px; height: 52px; 
 header.site nav { display:none; gap: 26px; margin-inline-start: auto; }
 header.site nav a { font-size: 13.5px; color: var(--mut); transition: color .2s; }
 header.site nav a:hover { color: var(--ink); }
-header.site .cta-slot { margin-inline-start: auto; }
+header.site .cta-slot { margin-inline-start: auto; display:flex; align-items:center; gap:8px; }
 @media (min-width: 900px) {
   header.site nav { display: flex; }
   header.site .cta-slot { margin-inline-start: 0; }
@@ -150,6 +150,8 @@ header.site .cta-slot { margin-inline-start: auto; }
 .btn-sm { border-radius:999px; background: var(--accent); color:#fff; padding:7px 15px;
   font-size:13.5px; font-variation-settings:"wght" 550; transition: background .2s; }
 .btn-sm:hover { background: var(--accent-hi); }
+.btn-sm.ghost { background: transparent; color: var(--ink); border:1px solid var(--hair2); }
+.btn-sm.ghost:hover { background: var(--tint); border-color: var(--accent); color: var(--accent-hi); }
 
 /* ─── 히어로 ────────────────────────────────────────────── */
 .hero {
@@ -326,7 +328,7 @@ footer.site .links a:hover { color: var(--ink); }
 
 <header class="site">
   <div class="wrap bar">
-    <a class="wordmark" href="#top">AICAPA <span class="sub">for Business</span></a>
+    <a class="wordmark" href="#top">AI 역량평가<span class="sub">for Business</span></a>
     <nav aria-label="주요 섹션">
       <a href="#why">왜 필요한가</a>
       <a href="#product">제품</a>
@@ -334,7 +336,10 @@ footer.site .links a:hover { color: var(--ink); }
       <a href="#security">보안</a>
       <a href="#pricing">요금제</a>
     </nav>
-    <div class="cta-slot"><a class="btn-sm" href="#contact">파일럿 신청</a></div>
+    <div class="cta-slot">
+      <a class="btn-sm ghost" href="https://app.ai-hrd.com/login">로그인</a>
+      <a class="btn-sm" href="#contact">파일럿 신청</a>
+    </div>
   </div>
 </header>
 
@@ -345,24 +350,24 @@ footer.site .links a:hover { color: var(--ink); }
     <canvas id="grid-canvas" aria-hidden="true"></canvas>
     <div class="vignette"></div>
     <div class="inner">
-      <p class="overline-label">기업 HRD를 위한 AI 활용 역량진단 · 인증평가</p>
+      <p class="overline-label">채용 전형 · 재직자 진단을 위한 AI 활용 역량평가</p>
       <p class="badge-live">
         <span class="dot"><span class="ping"></span><i></i></span>
-        2026년 하반기 오픈 준비 중 · 파일럿 고객사 모집
+        2026년 하반기 오픈 · 파일럿 고객사 모집 중
       </p>
       <h1 class="hero-title">
-        <span class="ln"><span>AI를 쓴다는 말,</span></span>
-        <span class="ln"><span>이제 <span class="aurora-text">증명</span>하세요.</span></span>
+        <span class="ln"><span>"AI 잘 씁니다"를</span></span>
+        <span class="ln"><span>면접에서 확인하는 법.</span></span>
       </h1>
       <p class="hero-sub on-dark-mut">
-        교육 이수 시간이 아니라 실제 수행 능력으로. 감독형 온라인 진단과 AI 채점,
-        조직 명의 인증서까지 한 흐름으로 처리하는 기업 전용 역량진단 플랫폼입니다.
+        지원자에게는 채용 전형의 AI 역량평가로, 재직자에게는 직무별 진단과
+        사내 인증제로. 문항 출제부터 원격 감독, 채점, 보고서까지 한 곳에서 돌립니다.
       </p>
       <div class="hero-cta">
-        <a class="btn-pill" href="#contact">파일럿 신청하기</a>
-        <a class="btn-link" href="#product">제품 살펴보기 ›</a>
+        <a class="btn-pill" href="https://app.ai-hrd.com/login">역량평가 시스템 진입 →</a>
+        <a class="btn-link" href="#contact">파일럿 신청 ›</a>
       </div>
-      <p class="hero-note">공공 CBT 인증시험 플랫폼에서 검증된 감독·채점 엔진을 기업용으로 재설계했습니다.</p>
+      <p class="hero-note">서술형·실무형 문항을 원격 감독 환경에서 출제하고, 근거가 남는 AI 1차 채점으로 처리합니다.</p>
     </div>
     <a class="cue-link scroll-cue" href="#why" aria-label="아래로 스크롤">⌄</a>
   </section>
@@ -373,19 +378,19 @@ footer.site .links a:hover { color: var(--ink); }
       <ul data-stagger>
         <li>
           <p class="stat-n tabular"><span data-count="500">0</span><small>명</small></p>
-          <p class="stat-l">검증된 동시 응시 규모</p>
+          <p class="stat-l">동시 응시 가능 인원</p>
         </li>
         <li>
           <p class="stat-n tabular"><span data-count="4">0</span><small>종</small></p>
-          <p class="stat-l">부정행위 자동 감지 항목</p>
+          <p class="stat-l">응시 이상 자동 감지 항목</p>
         </li>
         <li>
           <p class="stat-n tabular"><span data-count="3">0</span><small>영역</small></p>
-          <p class="stat-l">기본 역량 체계 (변경 가능)</p>
+          <p class="stat-l">기본 진단 영역 (교체 가능)</p>
         </li>
         <li>
           <p class="stat-n">서울</p>
-          <p class="stat-l">데이터 저장 리전 (ap-northeast-2)</p>
+          <p class="stat-l">데이터 보관 (국내, ap-northeast-2)</p>
         </li>
       </ul>
     </div>
@@ -395,31 +400,31 @@ footer.site .links a:hover { color: var(--ink); }
   <section id="why">
     <div class="wrap">
       <div class="sec-head" data-reveal>
-        <p class="overline-label">The Gap</p>
-        <h2 class="h-judge">AI 교육은 늘었는데,<br>역량은 증명되지 않습니다.</h2>
+        <p class="overline-label">HRD 부서의 현실</p>
+        <h2 class="h-judge">"올해 AI 교육 성과,<br>뭐라고 보고하시겠습니까?"</h2>
         <p class="lede">
-          작년에 전사 AI 교육을 돌렸습니다. 그래서 우리 직원 중 몇 명이
-          실제로 AI를 업무에 쓸 수 있습니까 — 이 질문에 답할 수 있는 HRD 조직은 드뭅니다.
+          연초에 전사 AI 교육을 돌렸습니다. 연말 경영진 보고에 쓸 수 있는 숫자가
+          이수율과 만족도뿐이라면, 내년 교육 예산을 지키기 어렵습니다.
         </p>
       </div>
       <div class="gaps" data-stagger>
         <div class="gap-card">
-          <p class="mark">이수율 92%</p>
-          <p class="q">그런데 실제로 쓰는 사람은 몇 명입니까?</p>
-          <p class="a">출석과 이수는 참여의 기록이지 능력의 증거가 아닙니다. 수행 과제 기반으로
-            직접 측정하지 않으면 교육비는 계속 비용으로만 잡힙니다.</p>
+          <p class="mark">예산 방어</p>
+          <p class="q">"그래서 뭐가 나아졌습니까"</p>
+          <p class="a">이수율 92%는 참여의 기록이지 능력의 증거가 아닙니다.
+            교육 전후 역량 점수를 같은 기준으로 비교해야 예산 집행 근거가 됩니다.</p>
         </div>
         <div class="gap-card">
-          <p class="mark">객관식 만점</p>
-          <p class="q">프롬프트를 직접 써 본 적은 있습니까?</p>
-          <p class="a">지식 문항으로는 활용 역량이 안 잡힙니다. 실제 산출물을 만들게 하고
-            그 결과를 채점해야 합니다. 그러려면 서술형·수행형 채점이 필요합니다.</p>
+          <p class="mark">인사 연계</p>
+          <p class="q">"승진·배치에 반영할 수 있습니까"</p>
+          <p class="a">감독 없는 온라인 시험 결과는 인사 제도에 태울 수 없습니다.
+            본인 확인과 응시 환경이 기록으로 남아야 이의제기에 대응됩니다.</p>
         </div>
         <div class="gap-card">
-          <p class="mark">재택 응시</p>
-          <p class="q">그 점수, 본인이 받은 게 맞습니까?</p>
-          <p class="a">인사평가나 승진에 반영하려면 신원과 응시 환경이 확인돼야 합니다.
-            감독 없는 온라인 시험 결과는 제도에 태울 수 없습니다.</p>
+          <p class="mark">교육 설계</p>
+          <p class="q">"다음 과정은 뭘 열어야 합니까"</p>
+          <p class="a">전사 평균 점수로는 알 수 없습니다. 직무별·부서별로 어느 역량이
+            약한지 나와야 다음 커리큘럼이 정해집니다.</p>
         </div>
       </div>
     </div>
@@ -430,8 +435,8 @@ footer.site .links a:hover { color: var(--ink); }
     <div class="wrap">
       <div class="sec-head" data-reveal>
         <p class="overline-label">Product</p>
-        <h2 class="h-judge">진단 설계부터 인증서까지<br>한 흐름으로.</h2>
-        <p class="lede">네 개의 모듈이 하나의 응시 흐름 위에서 맞물립니다. 따로 도입하고 붙이는 통합 작업이 없습니다.</p>
+        <h2 class="h-judge">진단 설계부터 사내 인증서까지<br>한 흐름으로.</h2>
+        <p class="lede">HRD 담당자 한 명이 회차를 열고 결과를 뽑기까지 다른 부서 도움 없이 끝냅니다.</p>
       </div>
 
       <div class="features" data-stagger>
@@ -439,9 +444,10 @@ footer.site .links a:hover { color: var(--ink); }
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 17l5-5 3.5 3.5L21 5"/><path d="M21 10V5h-5"/>
           </svg>
-          <h3>수행형 역량진단</h3>
-          <p>객관식·서술형·수행 과제를 한 세트로 구성합니다. 문항은 역량 체계에 매핑되어
-            점수가 아니라 <strong style="font-variation-settings:'wght' 600;color:var(--ink)">어느 역량이 약한지</strong>로 나옵니다.</p>
+          <h3>직무별 역량진단</h3>
+          <p>귀사 직무역량 모델에 문항을 매핑합니다. 결과가 총점이 아니라
+            <strong style="font-variation-settings:'wght' 600;color:var(--ink)">부서별·직무별 역량 갭</strong>으로 나와서
+            다음 교육 과정 설계에 그대로 씁니다.</p>
           <ul class="meta">
             <li class="chip chip-blue">생성형 AI 활용</li>
             <li class="chip chip-blue">데이터 분석</li>
@@ -453,9 +459,9 @@ footer.site .links a:hover { color: var(--ink); }
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.6"/>
           </svg>
-          <h3>온라인 감독</h3>
-          <p>신분증과 얼굴을 대조해 본인을 확인하고, 응시 중 이상 상황을 자동으로 기록합니다.
-            화상 감독관 연결과 화면·웹캠 녹화를 함께 지원합니다.</p>
+          <h3>온라인 감독 (선택)</h3>
+          <p>승진·인사에 반영하는 회차만 켜면 됩니다. 신분증·얼굴 대조로 본인을 확인하고
+            이상 상황을 기록으로 남겨, 결과에 이의가 들어와도 근거가 있습니다.</p>
           <ul class="meta">
             <li class="chip chip-red">얼굴 이탈</li>
             <li class="chip chip-red">다중 인원</li>
@@ -468,9 +474,9 @@ footer.site .links a:hover { color: var(--ink); }
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 3l2.2 4.8L19 10l-4.8 2.2L12 17l-2.2-4.8L5 10l4.8-2.2z"/><path d="M18.5 16.5l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z"/>
           </svg>
-          <h3>AI 채점 + 사람 검수</h3>
-          <p>서술형과 산출물을 루브릭 기준으로 1차 채점하고, 채점 근거를 문장으로 남깁니다.
-            검수자는 전부가 아니라 <strong style="font-variation-settings:'wght' 600;color:var(--ink)">경계선 답안만</strong> 봅니다.</p>
+          <h3>AI 채점 + 담당자 검수</h3>
+          <p>500명 서술형을 사람이 다 볼 수는 없습니다. 루브릭 기준으로 1차 채점하고 근거를 남겨,
+            담당자는 <strong style="font-variation-settings:'wght' 600;color:var(--ink)">합격선 부근만</strong> 확인하면 됩니다.</p>
           <ul class="meta">
             <li class="chip chip-green">루브릭 기반</li>
             <li class="chip chip-green">채점 근거 기록</li>
@@ -482,9 +488,9 @@ footer.site .links a:hover { color: var(--ink); }
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="9" r="5.2"/><path d="M8.5 13.6L7 21l5-2.4L17 21l-1.5-7.4"/>
           </svg>
-          <h3>조직 명의 인증서</h3>
-          <p>귀사 서식과 로고로 인증서를 발급하고, 발급번호는 조직별로 채번합니다.
-            외부 검증 링크로 진위를 확인할 수 있고, 필요하면 회수됩니다.</p>
+          <h3>사내 인증서 발급</h3>
+          <p>"AI 활용 인증 2급" 같은 사내 자격을 운영할 수 있습니다. 귀사 서식·로고로 발급하고,
+            발급번호로 진위 확인이 되며, 퇴사·부정 발급 시 회수됩니다.</p>
           <ul class="meta">
             <li class="chip chip-gold">조직별 채번</li>
             <li class="chip chip-gold">진위 확인</li>
@@ -502,10 +508,10 @@ footer.site .links a:hover { color: var(--ink); }
         <div class="glow"></div>
         <div class="inner">
           <p class="overline-label">White Label</p>
-          <h2 class="h-judge" style="margin-top:8px">우리 회사 진단처럼<br>보이게, 실제로 그렇게.</h2>
+          <h2 class="h-judge" style="margin-top:8px">사내 제도처럼 보여야<br>직원이 진지하게 응시합니다.</h2>
           <p class="lede center" style="max-width:560px">
-            응시자가 보는 화면 어디에도 저희 이름이 필요하지 않습니다.
-            도메인부터 인증서 서식까지 조직 단위로 갈아 끼웁니다.
+            외부 업체 사이트로 보내는 순간 "그냥 형식적인 거구나"가 됩니다.
+            도메인부터 인증서 서식까지 귀사 것으로 바꿉니다.
           </p>
           <div class="brandbar">
             <div class="brand-item">
@@ -518,7 +524,7 @@ footer.site .links a:hover { color: var(--ink); }
             </div>
             <div class="brand-item">
               <span class="num">03</span>
-              <div><p class="k">자체 역량 체계</p><p class="v">저희 기본 3영역 대신 귀사의 직무역량 모델을 그대로 등록</p></div>
+              <div><p class="k">자체 역량 체계</p><p class="v">이미 쓰고 계신 직무역량 모델·역량사전을 그대로 등록</p></div>
             </div>
             <div class="brand-item">
               <span class="num">04</span>
@@ -579,27 +585,27 @@ footer.site .links a:hover { color: var(--ink); }
     <div class="wrap">
       <div class="sec-head" data-reveal>
         <p class="overline-label">Onboarding</p>
-        <h2 class="h-judge">도입은 세 단계입니다.</h2>
-        <p class="lede">문항을 처음부터 만들 필요는 없습니다. 플랫폼 공용 문제은행에서 시작해 필요한 만큼 교체합니다.</p>
+        <h2 class="h-judge">1회차까지 4주면 됩니다.</h2>
+        <p class="lede">문항을 새로 만드실 필요 없습니다. 기본 문제은행으로 1회차를 돌리고, 결과를 보고 나서 고칩니다.</p>
       </div>
       <div class="steps" data-stagger>
         <div class="step">
           <span class="n tabular">1</span><span class="arrow">→</span>
-          <h3>역량 체계 정의</h3>
-          <p>귀사 직무역량 모델을 등록하고 진단 영역과 합격 기준을 정합니다.
-            기준이 없다면 저희 기본 체계로 시작해 1회차 결과를 보고 조정합니다.</p>
+          <h3>역량 체계 등록</h3>
+          <p>쓰고 계신 역량사전이 있으면 등록하고, 없으면 기본 체계(생성형AI활용·데이터분석·서비스구현)로
+            시작합니다. 합격선은 1회차 분포를 보고 정해도 됩니다.</p>
         </div>
         <div class="step">
           <span class="n tabular">2</span><span class="arrow">→</span>
-          <h3>진단 설계 · 응시</h3>
-          <p>문항을 골라 회차를 열고 응시자를 초대합니다. 감독 수준은 회차별로 정합니다 —
-            자가진단은 감독 없이, 인증평가는 전체 감독으로.</p>
+          <h3>회차 개설 · 응시</h3>
+          <p>대상자 명단을 올리면 초대 메일이 나갑니다. 감독 수준은 회차별로 —
+            현황 파악용 자가진단은 감독 없이, 인증 회차만 감독을 켭니다.</p>
         </div>
         <div class="step">
           <span class="n tabular">3</span>
-          <h3>결과 · 인증서</h3>
-          <p>개인별 역량 프로파일과 조직 단위 분포를 확인하고, 합격자에게 조직 명의
-            인증서를 발급합니다. 결과는 HRIS로 내보낼 수 있습니다.</p>
+          <h3>보고서 · 인증서</h3>
+          <p>부서별·직무별 역량 분포와 개인 프로파일이 나옵니다. 경영진 보고에 쓸 형태로
+            내보내고, 합격자에게는 사내 인증서를 발급합니다.</p>
         </div>
       </div>
     </div>
@@ -617,7 +623,7 @@ footer.site .links a:hover { color: var(--ink); }
       <div class="plans" data-stagger>
         <div class="plan">
           <p class="name">Starter</p>
-          <p class="who">부서 단위 자가진단부터</p>
+          <p class="who">한 부서 현황 파악부터</p>
           <p class="price">문의 <span>· 파일럿 가능</span></p>
           <ul class="f">
             <li><span class="tick">✓</span><span>수행형 역량진단 · 공용 문제은행</span></li>
@@ -631,7 +637,7 @@ footer.site .links a:hover { color: var(--ink); }
 
         <div class="plan featured">
           <p class="name">Growth <span class="chip chip-blue" style="margin-inline-start:6px">추천</span></p>
-          <p class="who">전사 인증평가 운영</p>
+          <p class="who">전사 사내 인증제 운영</p>
           <p class="price">문의 <span>· 좌석 기준</span></p>
           <ul class="f">
             <li><span class="tick">✓</span><span>Starter의 모든 기능</span></li>
@@ -645,7 +651,7 @@ footer.site .links a:hover { color: var(--ink); }
 
         <div class="plan">
           <p class="name">Enterprise</p>
-          <p class="who">그룹사 · 다계열 운영</p>
+          <p class="who">그룹사 · 계열사 통합 운영</p>
           <p class="price">문의 <span>· 개별 계약</span></p>
           <ul class="f">
             <li><span class="tick">✓</span><span>Growth의 모든 기능</span></li>
@@ -669,15 +675,29 @@ footer.site .links a:hover { color: var(--ink); }
       </div>
       <div class="faq" data-reveal>
         <details class="qa" open>
-          <summary><span class="t">공공기관도 도입할 수 있나요?</span><span class="cv">⌄</span></summary>
-          <p class="ans">지금은 민간 기업을 대상으로 합니다. 공공 조달에 필요한 클라우드 보안인증(CSAP) 취득은
-            현재 계획에 없습니다. 다만 특정 클라우드에 종속되지 않도록 설계해 두었기 때문에,
-            수요가 확인되면 국내 인증 환경으로 이전하는 데 구조적인 장애는 없습니다.</p>
+          <summary><span class="t">직원들이 시험 본다고 반발하지 않을까요?</span><span class="cv">⌄</span></summary>
+          <p class="ans">1회차를 <strong style="font-variation-settings:'wght' 600;color:var(--ink)">감독 없는 자가진단</strong>으로
+            여는 고객사가 많습니다. 점수를 인사에 반영하지 않고 "내 역량 위치 확인"으로 안내하면 저항이 적고,
+            그 데이터로 다음 교육을 설계합니다. 인증 회차는 제도가 자리 잡은 뒤에 엽니다.</p>
         </details>
         <details class="qa">
-          <summary><span class="t">AI 채점 결과를 인사평가에 써도 됩니까?</span><span class="cv">⌄</span></summary>
-          <p class="ans">AI 채점은 1차 채점입니다. 모든 채점에 근거 문장이 남고, 합격선 부근 답안은
-            사람 검수를 거치도록 운영하시길 권합니다. 재채점 이력이 남기 때문에 이의제기 절차에도 대응됩니다.</p>
+          <summary><span class="t">AI 가 지원자를 채점하나요? 편향은요?</span><span class="cv">⌄</span></summary>
+          <p class="ans">아니요. 채점은 정해진 정답과의 <strong style="font-variation-settings:'wght' 600;color:var(--ink)">결정론적 대조</strong>입니다.
+            AI 판단이 점수에 개입하지 않으므로 같은 답은 항상 같은 점수를 받고, 설명 가능하며 이의에 방어됩니다.
+            우리는 AI 가 지원자를 채점하지 않습니다 — <strong style="font-variation-settings:'wght' 600;color:var(--ink)">지원자가 AI 를 얼마나 잘 부리는지</strong>를 채점합니다.</p>
+        </details>
+        <details class="qa">
+          <summary><span class="t">지원자마다 AI 접근 수준이 다른데 공정한가요?</span><span class="cv">⌄</span></summary>
+          <p class="ans">기본 문항은 <strong style="font-variation-settings:'wght' 600;color:var(--ink)">무료 AI(ChatGPT·Claude·Gemini·Copilot 무료)로 풀 수 있도록</strong>
+            설계·검증하여, 유료 구독 보유가 점수 우위를 만들지 않습니다. 정답은 정수·문자열로 떨어지므로
+            어느 도구를 쓰든 결과가 같습니다. 합격을 가르는 고신뢰 등급은 플랫폼이 동일한 AI 환경을
+            전원에게 제공해 접근 격차를 제거합니다.</p>
+        </details>
+        <details class="qa">
+          <summary><span class="t">문항이 유출되면 어떻게 되나요?</span><span class="cv">⌄</span></summary>
+          <p class="ans">문항은 템플릿에서 응시자·회차별로 생성되어 수치가 매번 다릅니다.
+            자료도 실제로 존재하지 않는 가상본이라 검색으로는 답이 나오지 않습니다.
+            유출본이 다른 응시자의 정답이 되지 않습니다.</p>
         </details>
         <details class="qa">
           <summary><span class="t">응시자 얼굴과 화면을 녹화하는 게 부담스럽습니다.</span><span class="cv">⌄</span></summary>
@@ -685,9 +705,10 @@ footer.site .links a:hover { color: var(--ink); }
             회차만 감독을 켜는 식으로 운영하는 고객사가 많을 것으로 봅니다. 녹화 보관 기간도 조직별로 설정합니다.</p>
         </details>
         <details class="qa">
-          <summary><span class="t">문항을 직접 만들어야 하나요?</span><span class="cv">⌄</span></summary>
-          <p class="ans">아닙니다. 플랫폼 공용 문제은행이 구독에 포함됩니다. 귀사가 만든 문항은
-            귀사 자산으로 분리 보관되며, 원하지 않으면 다른 조직에 공개되지 않습니다.</p>
+          <summary><span class="t">채용 전형에 쓸 때 지원자 개인정보는 어떻게 되나요?</span><span class="cv">⌄</span></summary>
+          <p class="ans">지원자 데이터는 고객사 조직 경계 안에만 저장되고, 다른 고객사에서 조회되지 않습니다.
+            보관 기간은 조직별로 설정하며, 채용 종료 후 일괄 파기할 수 있습니다.
+            데이터 저장 리전은 서울(ap-northeast-2)입니다.</p>
         </details>
         <details class="qa">
           <summary><span class="t">언제 쓸 수 있습니까?</span><span class="cv">⌄</span></summary>
@@ -702,15 +723,16 @@ footer.site .links a:hover { color: var(--ink); }
   <section id="contact" class="final">
     <div class="wrap narrow">
       <div data-reveal>
-        <h2>1회차를 같이 설계해 드립니다.</h2>
-        <p>파일럿 고객사에는 역량 체계 정의부터 첫 진단 운영까지 동행합니다.
-          지금 필요한 건 완성된 문항이 아니라, 무엇을 측정할지에 대한 합의입니다.</p>
+        <h2>1회차는 같이 돌려 드립니다.</h2>
+        <p>파일럿 고객사에는 역량 체계 등록부터 첫 회차 운영, 결과 보고서까지 동행합니다.
+          준비하실 것은 대상자 명단과 "무엇을 측정할지"에 대한 사내 합의뿐입니다.</p>
         <div class="row">
-          <a class="btn-pill" href="mailto:hello@aicapa.io?subject=AICAPA%20for%20Business%20파일럿%20문의">파일럿 신청하기</a>
           <a class="btn-ghost" href="#product">제품 다시 보기</a>
         </div>
+        <!-- TODO: 도메인 확정 후 문의 메일 주소를 넣고 아래 안내 문구를 교체할 것.
+             원본(aicapa.kr / cdsa.kr) 주소는 다른 서비스이므로 절대 쓰지 않는다. -->
         <p style="margin-top:22px;font-size:13px;color:var(--faint)">
-          문의 후 2영업일 내 회신합니다 · 도입 규모와 일정만 알려주시면 됩니다
+          파일럿 문의 채널을 준비 중입니다 · 대상 인원과 희망 시기를 정리해 두시면 오픈 시 바로 안내드립니다
         </p>
       </div>
     </div>
@@ -720,8 +742,8 @@ footer.site .links a:hover { color: var(--ink); }
 <footer class="site">
   <div class="wrap cols">
     <div>
-      <p style="color:var(--mut);font-variation-settings:'wght' 600">AICAPA for Business</p>
-      <p style="margin-top:6px">AI 활용 역량진단 · 인증평가 SaaS<br>
+      <p style="color:var(--mut);font-variation-settings:'wght' 600">AI 역량평가</p>
+      <p style="margin-top:6px">채용 전형 · 재직자 진단을 위한 AI 활용 역량평가 SaaS<br>
         데이터 저장 리전: 서울(ap-northeast-2)</p>
     </div>
     <div class="links">
@@ -729,7 +751,6 @@ footer.site .links a:hover { color: var(--ink); }
       <a href="#security">보안</a>
       <a href="#pricing">요금제</a>
       <a href="#faq">FAQ</a>
-      <a href="mailto:hello@aicapa.io">문의</a>
     </div>
   </div>
   <div class="wrap" style="margin-top:26px">
