@@ -78,8 +78,10 @@
     background:radial-gradient(1200px 620px at 72% -8%,rgba(59,160,255,.18),transparent 60%),
                radial-gradient(900px 520px at 12% 8%,rgba(139,108,255,.14),transparent 62%),var(--bg)}
   /* 프레임 시퀀스(영상) 캔버스 — 프레임 준비되면 채워지고, 없으면 아래 오로라가 보임 */
-  #heroFrames{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .5s}
-  #heroFrames.on{opacity:.9}
+  #heroFrames{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .6s}
+  #heroFrames.on{opacity:1}
+  /* 영상이 뜨면 오로라는 은은하게 낮춘다(텍스트·영상 뭉침 방지) */
+  .hero-stage:has(#heroFrames.on) .aurora{opacity:.22}
   /* 오로라 폴백 배경(항상 은은히 살아있음) */
   .aurora{position:absolute;inset:-20% -10%;filter:blur(60px);opacity:.5;pointer-events:none;
     background:
@@ -92,22 +94,25 @@
     background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),
                      linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
     background-size:44px 44px;mask-image:radial-gradient(70% 60% at 50% 40%,#000,transparent 85%)}
-  .hero-vignette{position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(180deg,transparent 55%,var(--bg) 98%)}
+  .hero-vignette{position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:
+      radial-gradient(100% 78% at 50% 50%,rgba(6,7,9,.52),rgba(6,7,9,.22) 68%,transparent 100%),
+      linear-gradient(180deg,rgba(6,7,9,.5) 0%,transparent 24%,transparent 58%,var(--bg) 99%)}
   /* 스크럽 진행바 */
   .hero-progress{position:absolute;left:0;top:0;height:3px;width:0;z-index:6;background:var(--grad-hero);
     box-shadow:0 0 18px rgba(59,160,255,.6)}
   /* 카피 레이어 — 스크롤에 따라 순차 등장 */
   .hero-copy{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:0 22px;z-index:5}
-  .hero-line{position:absolute;max-width:min(920px,92vw);opacity:0;transform:translateY(40px);
-    transition:opacity .5s ease,transform .5s cubic-bezier(.2,.7,.2,1);will-change:opacity,transform}
+  .hero-line{position:absolute;max-width:min(920px,92vw);opacity:0;transform:translateY(34px);
+    transition:opacity .4s ease,transform .4s cubic-bezier(.2,.7,.2,1);will-change:opacity,transform}
   .hero-line.show{opacity:1;transform:none}
   .hero-line .kicker{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);
     border-radius:999px;padding:7px 15px;font-size:13px;color:var(--mut);margin-bottom:22px;
     background:rgba(20,23,28,.6);backdrop-filter:blur(6px)}
   .hero-line .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 4px rgba(52,199,89,.18)}
   .hero-line h1{font-size:clamp(30px,6.4vw,68px);line-height:1.1;letter-spacing:-.035em;
-    font-variation-settings:"wght" 840}
+    font-variation-settings:"wght" 840;text-shadow:0 2px 30px rgba(0,0,0,.55),0 1px 4px rgba(0,0,0,.5)}
+  .hero-line .lead2{text-shadow:0 1px 12px rgba(0,0,0,.6)}
   .hero-line h1 .em{background:var(--grad-hero);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
   .hero-line .lead2{margin-top:20px;font-size:clamp(15px,2.1vw,20px);color:var(--mut);line-height:1.6;
     max-width:640px;margin-left:auto;margin-right:auto}
@@ -131,8 +136,14 @@
 
   /* proof strip */
   .proof{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg2)}
-  .proof .wrap{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;padding:0}
-  @media(min-width:820px){.proof .wrap{grid-template-columns:repeat(4,1fr)}}
+  .proof .wrap{padding:56px 24px 44px}
+  .proof-head{max-width:780px;margin:0 auto 30px;text-align:center}
+  .proof-head .eyebrow{display:block}
+  .proof-head h2.sec{margin-top:10px}
+  .proof-head .lead{margin:14px auto 0}
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;
+    padding-top:28px;border-top:1px solid var(--line)}
+  @media(min-width:820px){.stats{grid-template-columns:repeat(4,1fr);gap:1px}}
   .stat{padding:30px 24px;position:relative}
   .stat::before{content:"";position:absolute;left:0;top:0;width:26px;height:3px;border-radius:2px}
   .stat:nth-child(1)::before{background:var(--accent-hi)}
@@ -410,10 +421,18 @@
   <!-- PROOF STRIP -->
   <section class="proof">
     <div class="wrap">
-      <div class="stat"><div class="n"><b>600+</b></div><div class="k">교육·자문 참여 기관 (대기업·대학·공공)</div></div>
-      <div class="stat"><div class="n">국가 <b>AI역량</b> 설계</div><div class="k">행정안전부 AI역량강화 체계·AI챔피언 평가 설계·검증</div></div>
-      <div class="stat"><div class="n">2023–2026</div><div class="k">행정안전부 AI·데이터분석 전문인재 주임교수</div></div>
-      <div class="stat"><div class="n">63개 과정</div><div class="k">2025년 한 해 출강 (현장 검증된 커리큘럼)</div></div>
+      <div class="proof-head">
+        <span class="eyebrow" style="color:var(--gold)">Why us</span>
+        <h2 class="sec">AI 교육·AI 역량체계를 <span class="g-cool">검증해 온 전문가들</span>이 설계했습니다.</h2>
+        <p class="lead">누가 만드느냐가 평가의 신뢰를 결정합니다. 국가 AI역량강화 체계와 AI챔피언 인증을
+          <b>직접 설계·검증한 이력</b>이, 이 채용 역량평가의 근거입니다.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="n"><b>600+</b></div><div class="k">교육·자문 참여 기관 (대기업·대학·공공)</div></div>
+        <div class="stat"><div class="n">국가 <b>AI역량</b> 설계</div><div class="k">행정안전부 AI역량강화 체계·AI챔피언 평가 설계·검증</div></div>
+        <div class="stat"><div class="n">2023–2026</div><div class="k">행정안전부 AI·데이터분석 전문인재 주임교수</div></div>
+        <div class="stat"><div class="n">63개 과정</div><div class="k">2025년 한 해 출강 (현장 검증된 커리큘럼)</div></div>
+      </div>
     </div>
   </section>
 
@@ -628,7 +647,7 @@
          + '.band > .wrap > .eyebrow,.band > .wrap > h2.sec,.band > .wrap > .lead';
   document.querySelectorAll(RV).forEach(function(el){ el.classList.add('rv'); });
   // 그리드 자식은 순차 지연(stagger)
-  document.querySelectorAll('.grid.g3,.roles,.comp,.why-list,.proof .wrap,.chips').forEach(function(g){
+  document.querySelectorAll('.grid.g3,.roles,.comp,.why-list,.stats,.chips').forEach(function(g){
     Array.prototype.forEach.call(g.children, function(c,i){
       if(c.classList.contains('rv')) c.style.transitionDelay = (i*70)+'ms';
     });
@@ -692,9 +711,11 @@
   var hint   = document.getElementById('scrollHint');
   var cv     = document.getElementById('heroFrames');
 
-  /* 프레임 시퀀스 설정 — 영상 프레임을 /hero-frames/f_0001.jpg … 로 넣으면 자동 재생.
-     COUNT=0 이면 오로라 배경만 사용(현재 상태). 영상 받으면 여기 COUNT만 바꾸면 됨. */
-  var FRAMES = { count:0, path:function(i){ return '/hero-frames/f_'+String(i+1).padStart(4,'0')+'.jpg'; } };
+  /* 프레임 시퀀스 — /hero-frames/f_0001.jpg … (ffmpeg fps=7 · 1280w). 스크롤 진행도에
+     맞춰 캔버스에 재생. 메모리 절약 위해 데스크톱(≥820px)에서만 로드, 모바일·감속모드는
+     오로라 배경으로 폴백. */
+  var FRAMES = { count:106, path:function(i){ return '/hero-frames/f_'+String(i+1).padStart(4,'0')+'.jpg'; } };
+  var useFrames = !!cv && FRAMES.count>0 && innerWidth>=820 && !REDUCE;
   var imgs = [], imgsReady = 0, ctx = cv && cv.getContext ? cv.getContext('2d') : null;
   function sizeCanvas(){ if(!cv) return; cv.width = cv.offsetWidth*Math.min(2,devicePixelRatio||1); cv.height = cv.offsetHeight*Math.min(2,devicePixelRatio||1); }
   function drawFrame(i){
@@ -703,11 +724,11 @@
     var w=im.naturalWidth*s, h=im.naturalHeight*s;
     ctx.clearRect(0,0,cw,ch); ctx.drawImage(im,(cw-w)/2,(ch-h)/2,w,h);
   }
-  if(cv && FRAMES.count>0){
-    sizeCanvas(); addEventListener('resize', sizeCanvas, {passive:true});
-    for(var i=0;i<FRAMES.count;i++){ (function(k){ var im=new Image();
+  if(useFrames){
+    sizeCanvas(); addEventListener('resize', function(){ sizeCanvas(); render(); }, {passive:true});
+    for(var fi=0;fi<FRAMES.count;fi++){ (function(k){ var im=new Image();
       im.onload=function(){ imgsReady++; if(imgsReady===1){ cv.classList.add('on'); drawFrame(0);} };
-      im.src=FRAMES.path(k); imgs[k]=im; })(i); }
+      im.src=FRAMES.path(k); imgs[k]=im; })(fi); }
   }
 
   function render(){
@@ -721,7 +742,7 @@
     var n = lines.length;
     var active = Math.min(n-1, Math.floor(p*n));
     for(var i=0;i<n;i++){ lines[i].classList.toggle('show', i===active); }
-    if(FRAMES.count>0){ drawFrame(Math.min(FRAMES.count-1, Math.floor(p*(FRAMES.count-1)))); }
+    if(useFrames){ drawFrame(Math.min(FRAMES.count-1, Math.floor(p*(FRAMES.count-1)))); }
   }
   if(scroll && !REDUCE){
     var rafPend=false;
