@@ -32,8 +32,15 @@
     --bg:#0a0b0d; --bg2:#101216; --card:#14171c; --line:#232830; --line2:#2d333d;
     --ink:#f3f5f8; --mut:#aab2be; --faint:#6b7481;
     --accent:#0a84ff; --accent-hi:#3ba0ff; --gold:#e8b64c; --good:#34c759;
+    /* 강조용 밝은 컬러 — 검정 섹션에 색을 넣는다 */
+    --violet:#8b6cff; --cyan:#22d3ee; --hot:#ff6a3d; --lime:#a3e635; --pink:#ff5d8f;
+    --grad-hero:linear-gradient(103deg,#3ba0ff 0%,#8b6cff 44%,#22d3ee 100%);
+    --grad-warm:linear-gradient(100deg,#ff6a3d,#ff5d8f 60%,#8b6cff);
     --maxw:1120px;
   }
+  /* 그라데이션 텍스트 유틸 */
+  .g-cool{background:var(--grad-hero);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+  .g-warm{background:var(--grad-warm);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
   body{background:var(--bg);color:var(--ink);
@@ -65,31 +72,137 @@
   .nav .cta{margin-left:auto;display:flex;gap:10px;align-items:center}
   @media(min-width:900px){nav.links{display:flex}}
 
-  /* hero */
-  .hero{position:relative;overflow:hidden;padding:110px 0 90px;
-    background:radial-gradient(1000px 500px at 70% -10%,rgba(10,132,255,.16),transparent 60%),var(--bg)}
-  .hero .badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);
-    border-radius:999px;padding:7px 14px;font-size:12.5px;color:var(--mut);margin-bottom:26px}
-  .dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 4px rgba(52,199,89,.18)}
-  h1.hero{font-size:60px;line-height:1.08;letter-spacing:-.03em;font-variation-settings:"wght" 820}
-  @media(max-width:820px){h1.hero{font-size:40px}}
-  h1.hero .em{color:var(--accent-hi)}
-  .hero .sub{margin-top:26px;font-size:19px;color:var(--mut);max-width:620px;line-height:1.65}
-  .hero .row{margin-top:36px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
-  .hero .note{margin-top:20px;font-size:13px;color:var(--faint)}
+  /* ── 스크롤스크럽 히어로 (scrollytelling) ── */
+  .hero-scroll{position:relative;height:420vh}            /* 스크롤 길이 = 스크럽 구간 */
+  .hero-stage{position:sticky;top:0;height:100vh;overflow:hidden;
+    background:radial-gradient(1200px 620px at 72% -8%,rgba(59,160,255,.18),transparent 60%),
+               radial-gradient(900px 520px at 12% 8%,rgba(139,108,255,.14),transparent 62%),var(--bg)}
+  /* 프레임 시퀀스(영상) 캔버스 — 프레임 준비되면 채워지고, 없으면 아래 오로라가 보임 */
+  #heroFrames{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .5s}
+  #heroFrames.on{opacity:.9}
+  /* 오로라 폴백 배경(항상 은은히 살아있음) */
+  .aurora{position:absolute;inset:-20% -10%;filter:blur(60px);opacity:.5;pointer-events:none;
+    background:
+      radial-gradient(38% 44% at 20% 30%,rgba(59,160,255,.55),transparent 60%),
+      radial-gradient(34% 40% at 78% 26%,rgba(139,108,255,.5),transparent 60%),
+      radial-gradient(32% 36% at 60% 78%,rgba(34,211,238,.42),transparent 62%);
+    animation:auroraFloat 18s ease-in-out infinite alternate}
+  @keyframes auroraFloat{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(3%,2%,0) scale(1.12)}}
+  .hero-grid{position:absolute;inset:0;pointer-events:none;opacity:.35;
+    background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+    background-size:44px 44px;mask-image:radial-gradient(70% 60% at 50% 40%,#000,transparent 85%)}
+  .hero-vignette{position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,transparent 55%,var(--bg) 98%)}
+  /* 스크럽 진행바 */
+  .hero-progress{position:absolute;left:0;top:0;height:3px;width:0;z-index:6;background:var(--grad-hero);
+    box-shadow:0 0 18px rgba(59,160,255,.6)}
+  /* 카피 레이어 — 스크롤에 따라 순차 등장 */
+  .hero-copy{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:0 22px;z-index:5}
+  .hero-line{position:absolute;max-width:min(920px,92vw);opacity:0;transform:translateY(40px);
+    transition:opacity .5s ease,transform .5s cubic-bezier(.2,.7,.2,1);will-change:opacity,transform}
+  .hero-line.show{opacity:1;transform:none}
+  .hero-line .kicker{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);
+    border-radius:999px;padding:7px 15px;font-size:13px;color:var(--mut);margin-bottom:22px;
+    background:rgba(20,23,28,.6);backdrop-filter:blur(6px)}
+  .hero-line .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 4px rgba(52,199,89,.18)}
+  .hero-line h1{font-size:clamp(30px,6.4vw,68px);line-height:1.1;letter-spacing:-.035em;
+    font-variation-settings:"wght" 840}
+  .hero-line h1 .em{background:var(--grad-hero);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .hero-line .lead2{margin-top:20px;font-size:clamp(15px,2.1vw,20px);color:var(--mut);line-height:1.6;
+    max-width:640px;margin-left:auto;margin-right:auto}
+  .hero-line .lead2 b{color:var(--ink);font-variation-settings:"wght" 680}
+  .hero-line .row{margin-top:30px;display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+  .hero-scroll-hint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:6;
+    font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+    display:flex;flex-direction:column;align-items:center;gap:8px;transition:opacity .4s}
+  .hero-scroll-hint .mouse{width:22px;height:34px;border:1.5px solid var(--line2);border-radius:12px;position:relative}
+  .hero-scroll-hint .mouse::after{content:"";position:absolute;left:50%;top:6px;width:3px;height:6px;border-radius:2px;
+    background:var(--accent-hi);transform:translateX(-50%);animation:wheel 1.5s ease-in-out infinite}
+  @keyframes wheel{0%{opacity:0;transform:translate(-50%,0)}30%{opacity:1}60%{opacity:1}100%{opacity:0;transform:translate(-50%,10px)}}
+  @media(prefers-reduced-motion:reduce){
+    .hero-scroll{height:auto}
+    .hero-stage{position:relative;height:auto;padding:110px 0 90px}
+    .hero-copy{position:relative;display:block}
+    .hero-line{position:relative;opacity:1;transform:none;margin:0 auto 46px;max-width:820px}
+    .aurora{animation:none}.hero-scroll-hint,.hero-progress{display:none}
+    #heroFrames{display:none}
+  }
 
   /* proof strip */
   .proof{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg2)}
   .proof .wrap{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;padding:0}
   @media(min-width:820px){.proof .wrap{grid-template-columns:repeat(4,1fr)}}
-  .stat{padding:30px 24px}
+  .stat{padding:30px 24px;position:relative}
+  .stat::before{content:"";position:absolute;left:0;top:0;width:26px;height:3px;border-radius:2px}
+  .stat:nth-child(1)::before{background:var(--accent-hi)}
+  .stat:nth-child(2)::before{background:var(--violet)}
+  .stat:nth-child(3)::before{background:var(--cyan)}
+  .stat:nth-child(4)::before{background:var(--hot)}
   .stat .n{font-size:30px;font-variation-settings:"wght" 800;letter-spacing:-.02em}
-  .stat .n b{color:var(--accent-hi)}
+  .stat .n b{background:var(--grad-hero);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
   .stat .k{margin-top:6px;font-size:13.5px;color:var(--mut)}
+
+  /* ── 언론 속 흐름 : 트럼프카드 덱 ── */
+  #signal{background:radial-gradient(900px 460px at 82% -10%,rgba(139,108,255,.12),transparent 62%),var(--bg)}
+  .deck-wrap{margin-top:44px;display:flex;justify-content:center}
+  .deck{position:relative;display:flex;justify-content:center;align-items:flex-end;
+    perspective:1400px;padding:34px 0 12px;min-height:300px}
+  .news-card{position:relative;width:230px;min-height:260px;flex:0 0 auto;
+    border:1px solid var(--line2);border-radius:18px;padding:20px 18px;
+    background:linear-gradient(170deg,#171b22,#0f1217);
+    box-shadow:0 22px 46px -18px rgba(0,0,0,.75);
+    transform-origin:bottom center;cursor:pointer;
+    transition:transform .55s cubic-bezier(.2,.8,.2,1),box-shadow .35s,border-color .3s;
+    margin-left:-58px}                                   /* 겹쳐서 부채꼴 */
+  .news-card:first-child{margin-left:0}
+  /* 초기 부채꼴 각도(트럼프카드) */
+  .news-card:nth-child(1){transform:rotate(-13deg) translateY(20px)}
+  .news-card:nth-child(2){transform:rotate(-4.5deg) translateY(3px)}
+  .news-card:nth-child(3){transform:rotate(4.5deg) translateY(3px)}
+  .news-card:nth-child(4){transform:rotate(13deg) translateY(20px)}
+  /* 스크롤 진입 시 덱이 한 번 펼쳐지는 리빌 */
+  .deck.dealt .news-card{transition:transform .7s cubic-bezier(.2,.8,.2,1),box-shadow .35s,border-color .3s}
+  .deck:not(.dealt) .news-card{transform:translateY(60px) rotate(0) scale(.96);opacity:0}
+  /* 덱 호버 → 카드가 나란히 펴진다 */
+  @media(hover:hover) and (min-width:820px){
+    .deck:hover .news-card{margin-left:14px;box-shadow:0 26px 50px -20px rgba(0,0,0,.8)}
+    .deck:hover .news-card:first-child{margin-left:0}
+    .deck:hover .news-card:nth-child(1){transform:rotate(-2deg) translateY(0)}
+    .deck:hover .news-card:nth-child(2){transform:rotate(-.6deg) translateY(-4px)}
+    .deck:hover .news-card:nth-child(3){transform:rotate(.6deg) translateY(-4px)}
+    .deck:hover .news-card:nth-child(4){transform:rotate(2deg) translateY(0)}
+    .deck .news-card:hover{transform:translateY(-22px) rotate(0) scale(1.05)!important;z-index:9;
+      border-color:var(--accent);box-shadow:0 34px 60px -18px rgba(10,132,255,.4)}
+  }
+  .news-card .src{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;
+    font-variation-settings:"wght" 680;letter-spacing:.01em}
+  .news-card .src .pip{width:8px;height:8px;border-radius:2px}
+  .news-card:nth-child(1) .src{color:var(--accent-hi)} .news-card:nth-child(1) .src .pip{background:var(--accent-hi)}
+  .news-card:nth-child(2) .src{color:var(--violet)}    .news-card:nth-child(2) .src .pip{background:var(--violet)}
+  .news-card:nth-child(3) .src{color:var(--cyan)}      .news-card:nth-child(3) .src .pip{background:var(--cyan)}
+  .news-card:nth-child(4) .src{color:var(--hot)}       .news-card:nth-child(4) .src .pip{background:var(--hot)}
+  .news-card .hl{margin-top:14px;font-size:16.5px;line-height:1.42;font-variation-settings:"wght" 760;
+    letter-spacing:-.015em;color:var(--ink)}
+  .news-card .dek{margin-top:10px;font-size:12.5px;color:var(--mut);line-height:1.55}
+  .news-card .go{position:absolute;left:18px;bottom:16px;font-size:12px;color:var(--faint);
+    font-variation-settings:"wght" 620;transition:color .2s}
+  .news-card:hover .go{color:var(--accent-hi)}
+  .deck-src{text-align:center;margin-top:26px;font-size:12.5px;color:var(--faint)}
+  @media(max-width:819px){
+    .deck{flex-direction:column;align-items:stretch;perspective:none;gap:12px;min-height:0;padding:8px 0}
+    .news-card{width:auto;min-height:0;margin-left:0!important;transform:none!important;padding-bottom:44px}
+    .deck:not(.dealt) .news-card{transform:translateY(24px)!important;opacity:0}
+    .news-card:nth-child(n){transform:none}
+  }
 
   /* credibility */
   .cred{background:linear-gradient(180deg,var(--bg2),var(--bg))}
-  .cred-card{border:1px solid var(--line);border-radius:20px;background:var(--card);padding:34px;margin-top:30px}
+  .cred-card{position:relative;border:1px solid var(--line);border-radius:20px;background:var(--card);
+    padding:34px;margin-top:30px;overflow:hidden}
+  .cred-card::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:var(--grad-hero)}
+  .cred-card::after{content:"";position:absolute;right:-80px;top:-80px;width:240px;height:240px;border-radius:50%;
+    background:radial-gradient(circle,rgba(139,108,255,.16),transparent 70%);pointer-events:none}
   .cred-card .who{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
   .avatar{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#243244,#12161c);border:1px solid var(--line2);display:grid;place-items:center;font-size:22px}
   .who .nm{font-size:19px;font-variation-settings:"wght" 720}
@@ -97,6 +210,8 @@
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
   .chip{border:1px solid var(--line2);border-radius:999px;padding:7px 13px;font-size:12.5px;color:var(--mut)}
   .chip b{color:var(--ink);font-variation-settings:"wght" 620}
+  .chip:first-child{border-color:rgba(59,160,255,.5);background:rgba(59,160,255,.08);color:var(--ink)}
+  .chip:first-child b{color:var(--accent-hi)}
   .verify{margin-top:24px;padding-top:22px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .vlabel{font-size:13px;color:var(--faint);margin-right:4px;font-variation-settings:"wght" 600}
   .btn-v{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);border-radius:999px;padding:9px 16px;font-size:13px;color:var(--ink);background:var(--bg2);transition:.16s;font-variation-settings:"wght" 560}
@@ -250,18 +365,45 @@
 
 <main id="top">
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="wrap">
-      <span class="badge"><span class="dot"></span> 채용을 위한 AI 활용 역량평가 · 2026 오픈</span>
-      <h1 class="hero">“AI 잘 씁니다”를<br><span class="em">채용에서 검증</span>합니다.</h1>
-      <p class="sub">이력서·면접으로는 알 수 없습니다. 지원자가 <b>실제 업무를 생성형 AI로 어떻게 끝내는지</b>를,
-        작업형 과제로 직접 측정합니다. AI는 마법이 아니라 <b>일하는 방식</b>이니까요.</p>
-      <div class="row">
-        <a class="btn btn-p" href="https://app.ai-hrd.com/login">역량평가 시스템 진입 →</a>
-        <a class="btn btn-g" href="#measure">무엇을 측정하는지 보기</a>
+  <!-- HERO : 스크롤스크럽 스토리텔링 -->
+  <section class="hero-scroll" id="hero" aria-label="AI 역량평가 소개">
+    <div class="hero-stage">
+      <canvas id="heroFrames" aria-hidden="true"></canvas>
+      <div class="aurora"></div>
+      <div class="hero-grid"></div>
+      <div class="hero-vignette"></div>
+      <div class="hero-progress" id="heroProgress"></div>
+
+      <div class="hero-copy">
+        <!-- 1 -->
+        <div class="hero-line" data-line="0">
+          <span class="kicker"><span class="dot"></span> 채용을 위한 AI 활용 역량평가 · 2026</span>
+          <h1>AI 잘 쓰는 인재 검증을 위한<br><span class="em">국내 최초 작업형 AI 역량평가</span></h1>
+        </div>
+        <!-- 2 -->
+        <div class="hero-line" data-line="1">
+          <h1>“AI 잘 씁니다”를<br><span class="em">채용에서 검증</span>합니다.</h1>
+          <p class="lead2">이력서 한 줄·면접 몇 마디로는 알 수 없습니다.<br>
+            지원자가 <b>실제 업무를 생성형 AI로 끝까지 해내는지</b>, 작업형 과제로 직접 봅니다.</p>
+        </div>
+        <!-- 3 -->
+        <div class="hero-line" data-line="2">
+          <h1>국가 <span class="em">AI 챔피언 인증체계</span>를<br>설계한 전문가들이 만들었습니다.</h1>
+          <p class="lead2">행정안전부 국가 AI역량강화 체계와 AI챔피언 인증을 설계·검증해 온
+            <b>한국데이터사이언티스트협회(CDSA)</b>가, 그 방법론을 채용용으로 다시 세웠습니다.</p>
+        </div>
+        <!-- 4 : 마무리 + CTA -->
+        <div class="hero-line" data-line="3">
+          <h1>그래서, <span class="em">뽑기 전에 검증</span>합니다.</h1>
+          <p class="lead2">점수가 아니라 <b>6축 역량 프로파일</b>로 — 누구를 어디에 배치할지까지.</p>
+          <div class="row">
+            <a class="btn btn-p" href="https://app.ai-hrd.com/login">역량평가 시스템 진입 →</a>
+            <a class="btn btn-g" href="#measure">무엇을 측정하는지 보기</a>
+          </div>
+        </div>
       </div>
-      <p class="note">범용 도구(ChatGPT · Claude · Gemini) 기반 실무 산출물 평가 · 자동채점 가능한 작업형 · 지원자별 역량 프로파일 리포트</p>
+
+      <div class="hero-scroll-hint" id="scrollHint"><span>스크롤</span><span class="mouse"></span></div>
     </div>
   </section>
 
@@ -278,8 +420,8 @@
   <!-- COMMON COMPETENCY -->
   <section class="band" id="common">
     <div class="wrap">
-      <span class="eyebrow">Why it matters</span>
-      <h2 class="sec">AI 활용력은 특정 직무가 아니라,<br>이제 <span style="color:var(--accent-hi)">모든 직무의 공통역량</span>입니다.</h2>
+      <span class="eyebrow" style="color:var(--cyan)">Why it matters</span>
+      <h2 class="sec">AI 활용력은 특정 직무가 아니라,<br>이제 <span class="g-cool">모든 직무의 공통역량</span>입니다.</h2>
       <p class="lead">개발자만의 이야기가 아닙니다. 기획서를 쓰고, 데이터를 보고, 반복 업무를 줄이는 —
         이미 <b>모든 직무가 AI로 일합니다.</b> 자기 분야에서 생성형 AI로 <b>실제 성과를 내는 사람</b>,
         그가 진짜 AI 인재입니다.</p>
@@ -300,8 +442,8 @@
   <!-- WHY -->
   <section class="band" id="why">
     <div class="wrap">
-      <span class="eyebrow">Why</span>
-      <h2 class="sec">이제 채용은 “AI를 얼마나 잘 쓰는가”를 봅니다.</h2>
+      <span class="eyebrow" style="color:var(--hot)">The problem</span>
+      <h2 class="sec">이제 채용은 <span class="g-warm">“AI를 얼마나 잘 쓰는가”</span>를 봅니다.</h2>
       <p class="lead">문서·데이터·자동화 — 같은 일을 누군가는 하루, 누군가는 10분에 끝냅니다.
         차이는 AI를 아는 게 아니라 <b>AI로 업무를 끝까지 작동시키는 힘</b>에서 납니다.
         그런데 이 힘을 <b>이력서 한 줄·면접 몇 마디로는 검증할 수 없습니다.</b></p>
@@ -313,39 +455,51 @@
     </div>
   </section>
 
-  <!-- MARKET SIGNAL (언론 속 흐름 · 인라인 줄글 링크) -->
-  <style>
-    #signal .press{font-size:clamp(17px,2.3vw,21px);line-height:1.9;color:var(--mut);max-width:62ch;margin-top:18px}
-    #signal .press b{color:var(--ink);font-variation-settings:"wght" 680}
-    #signal .press a{color:var(--ink);text-decoration:none;
-      background:linear-gradient(var(--accent-hi),var(--accent-hi)) left 100% / 100% 1.5px no-repeat;
-      padding-bottom:1.5px;transition:color .18s ease,background-size .18s ease;font-variation-settings:"wght" 600}
-    #signal .press a:hover{color:var(--accent-hi);background-size:100% 2px}
-    #signal .press a:focus-visible{outline:2px solid var(--accent-hi);outline-offset:3px;border-radius:2px}
-    #signal .src{margin-top:22px;font-size:12.5px;color:var(--faint)}
-    #signal .src a{color:var(--faint);text-decoration:underline;text-underline-offset:2px}
-  </style>
+  <!-- MARKET SIGNAL (언론 속 흐름 · 트럼프카드 덱) -->
   <section class="band" id="signal">
     <div class="wrap">
-      <span class="eyebrow">Market signal</span>
-      <h2 class="sec">이미 시장이 그렇게 뽑고 있습니다.</h2>
-      <p class="press">
-        2026년, 채용의 기준이 눈에 띄게 바뀌고 있습니다. SK하이닉스는
-        <a href="https://news.skhynix.co.kr/ai-talent-recruit-2026/" target="_blank" rel="noopener">‘AI 시대 실력 중심’을 내세워 신입 채용의 학력 제한을 전면 철폐</a>했고,
-        네이버·카카오는 <a href="https://www.hankyung.com/article/2026081159401" target="_blank" rel="noopener">정기 공채 관례를 깨고 AI 인재를 수시로</a> 뽑기 시작했습니다.
-        올해 1~5월 ‘AI’ 키워드 채용 공고는 <a href="https://www.sedaily.com/article/20058432" target="_blank" rel="noopener">전년 대비 70% 늘어 IT를 넘어 전 산업으로</a> 번졌고,
-        한 신문 칼럼의 표현처럼 <a href="https://www.hankyung.com/article/202607216253i" target="_blank" rel="noopener">‘문송합니다’ 공식을 깨고 ‘AI 잘 쓰는 인재’</a>를 찾는 흐름입니다.
-        남은 질문은 하나입니다 — <b>그 힘을 무엇으로 검증할 것인가.</b>
-      </p>
-      <p class="src">출처 — SK하이닉스 뉴스룸 · 한국경제 · 서울경제 (2026)</p>
+      <span class="eyebrow" style="color:var(--violet)">Market signal</span>
+      <h2 class="sec">이미 시장은 <span class="g-cool">그렇게 뽑고</span> 있습니다.</h2>
+      <p class="lead">2026년, 대기업 채용의 기준이 눈앞에서 바뀌고 있습니다. 남은 질문은 하나 —
+        <b style="color:var(--ink)">그 “AI 잘 쓰는 힘”을 무엇으로 검증할 것인가.</b></p>
+
+      <div class="deck-wrap">
+        <div class="deck" id="newsDeck">
+          <a class="news-card" href="https://news.skhynix.co.kr/ai-talent-recruit-2026/" target="_blank" rel="noopener">
+            <span class="src"><span class="pip"></span>SK하이닉스 뉴스룸</span>
+            <div class="hl">‘AI 시대 실력 중심’, 신입 채용 학력 제한 전면 철폐</div>
+            <div class="dek">스펙이 아니라 실제로 AI를 써서 성과를 내는가를 본다.</div>
+            <span class="go">기사 보기 →</span>
+          </a>
+          <a class="news-card" href="https://www.hankyung.com/article/2026081159401" target="_blank" rel="noopener">
+            <span class="src"><span class="pip"></span>한국경제</span>
+            <div class="hl">네이버·카카오, 공채 관례 깨고 ‘AI 인재’ 수시 채용</div>
+            <div class="dek">정기 공채의 시대가 저물고, 역량 중심 상시 채용으로.</div>
+            <span class="go">기사 보기 →</span>
+          </a>
+          <a class="news-card" href="https://www.sedaily.com/article/20058432" target="_blank" rel="noopener">
+            <span class="src"><span class="pip"></span>서울경제</span>
+            <div class="hl">‘AI’ 채용 공고 전년比 70%↑ … IT 넘어 전 산업으로</div>
+            <div class="dek">개발 직군만의 이야기가 아니다. 모든 직무의 공통역량.</div>
+            <span class="go">기사 보기 →</span>
+          </a>
+          <a class="news-card" href="https://www.hankyung.com/article/202607216253i" target="_blank" rel="noopener">
+            <span class="src"><span class="pip"></span>한국경제 칼럼</span>
+            <div class="hl">‘문송합니다’ 공식 깨고 “AI 잘 쓰는 인재”를 찾는다</div>
+            <div class="dek">전공이 아니라, AI로 일을 끝내는 사람이 뽑힌다.</div>
+            <span class="go">기사 보기 →</span>
+          </a>
+        </div>
+      </div>
+      <p class="deck-src">출처 — SK하이닉스 뉴스룸 · 한국경제 · 서울경제 (2026) · 카드를 누르면 원문으로 이동합니다</p>
     </div>
   </section>
 
   <!-- MEASURE -->
   <section class="band" id="measure" style="background:linear-gradient(180deg,var(--bg2),var(--bg))">
     <div class="wrap">
-      <span class="eyebrow">What we measure</span>
-      <h2 class="sec">3개 작업형 영역 + 6개 역량 프로파일</h2>
+      <span class="eyebrow" style="color:var(--lime)">What we measure</span>
+      <h2 class="sec"><span class="g-cool">3개 작업형 영역</span> + 6개 역량 프로파일</h2>
       <p class="lead">“문제”가 먼저가 아니라 <b>“측정할 역량”이 먼저</b>입니다. 문항은 회차마다 바뀌어도, 재는 역량은 같습니다.
         모든 과제는 지원자가 범용 AI로 <b>실제 산출물</b>을 만들어 제출하는 방식입니다.</p>
 
@@ -388,8 +542,8 @@
   <!-- WHO -->
   <section class="band cred" id="who">
     <div class="wrap">
-      <span class="eyebrow">Who built it</span>
-      <h2 class="sec">한국데이터사이언티스트협회(CDSA)가<br>설계·운영하는 채용 AI 역량평가입니다.</h2>
+      <span class="eyebrow" style="color:var(--violet)">Who built it</span>
+      <h2 class="sec"><span class="g-cool">국가 AI챔피언 인증체계</span>를 설계한<br>바로 그 협회가 만든 채용 역량평가입니다.</h2>
       <p class="lead">개인이 아니라 <b>협회가 책임지는 평가</b>입니다. <b>행정안전부</b>의 국가 AI역량강화 체계와 AI챔피언 인증을 설계·검증해 온
         <b>한국데이터사이언티스트협회(CDSA)</b>가, 그 방법론을 민간 채용용으로 다시 만들었습니다.</p>
       <div class="cred-card">
@@ -427,8 +581,8 @@
   <!-- DIFF -->
   <section class="band" id="diff">
     <div class="wrap">
-      <span class="eyebrow">How it's different</span>
-      <h2 class="sec">뻔한 AI 시험과 무엇이 다른가</h2>
+      <span class="eyebrow" style="color:var(--hot)">How it's different</span>
+      <h2 class="sec">뻔한 AI 시험과 <span class="g-warm">무엇이 다른가</span></h2>
       <div class="why-list">
         <div class="w"><div class="h">범용 도구 그대로</div><div class="p">지원자가 실무에서 쓸 ChatGPT·Claude·Gemini로 평가합니다. 특정 벤더에 종속되지 않습니다.</div></div>
         <div class="w"><div class="h">자동채점되는 작업형</div><div class="p">작업(파이썬 분석)인데 답이 수치·단답으로 떨어지게 설계 — 엄밀함과 대규모 채점을 동시에.</div></div>
@@ -441,7 +595,7 @@
   <section class="band cta-band" id="contact">
     <div class="wrap">
       <div class="cta-box">
-        <h2>채용에 AI 역량평가를 도입해 보세요.</h2>
+        <h2>채용에 <span class="g-cool">AI 역량평가</span>를 도입해 보세요.</h2>
         <p>파일럿 고객사를 모집합니다. 대상 인원과 희망 시기를 알려주시면 맞춰 설계해 드립니다.</p>
         <div class="row">
           <a class="btn btn-p" href="#contact" data-inquiry>도입 문의하기</a>
@@ -529,21 +683,64 @@
     });
   }
 
-  /* ── 히어로 패럴랙스 (parallax) — 스크롤 스크럽 ── */
-  var hero = document.querySelector('.hero .wrap');
-  if(hero && !REDUCE){
-    var ticking = false;
-    addEventListener('scroll', function(){
-      if(ticking) return; ticking = true;
-      requestAnimationFrame(function(){
-        var y = pageYOffset;
-        if(y < 760){
-          hero.style.transform = 'translateY('+(y*0.16)+'px)';
-          hero.style.opacity = String(Math.max(0, 1 - y/620));
-        }
-        ticking = false;
-      });
-    }, {passive:true});
+  /* ── 스크롤스크럽 히어로 스토리텔링 ──
+     섹션을 스크롤하는 동안 진행도(0~1)를 구해 카피 4장을 순차로 보여주고,
+     (프레임 시퀀스가 준비되면) 캔버스에 해당 프레임을 그린다. */
+  var scroll = document.querySelector('.hero-scroll');
+  var lines  = Array.prototype.slice.call(document.querySelectorAll('.hero-line'));
+  var bar    = document.getElementById('heroProgress');
+  var hint   = document.getElementById('scrollHint');
+  var cv     = document.getElementById('heroFrames');
+
+  /* 프레임 시퀀스 설정 — 영상 프레임을 /hero-frames/f_0001.jpg … 로 넣으면 자동 재생.
+     COUNT=0 이면 오로라 배경만 사용(현재 상태). 영상 받으면 여기 COUNT만 바꾸면 됨. */
+  var FRAMES = { count:0, path:function(i){ return '/hero-frames/f_'+String(i+1).padStart(4,'0')+'.jpg'; } };
+  var imgs = [], imgsReady = 0, ctx = cv && cv.getContext ? cv.getContext('2d') : null;
+  function sizeCanvas(){ if(!cv) return; cv.width = cv.offsetWidth*Math.min(2,devicePixelRatio||1); cv.height = cv.offsetHeight*Math.min(2,devicePixelRatio||1); }
+  function drawFrame(i){
+    if(!ctx || !imgs[i] || !imgs[i].complete || !imgs[i].naturalWidth) return;
+    var im=imgs[i], cw=cv.width, ch=cv.height, s=Math.max(cw/im.naturalWidth, ch/im.naturalHeight);
+    var w=im.naturalWidth*s, h=im.naturalHeight*s;
+    ctx.clearRect(0,0,cw,ch); ctx.drawImage(im,(cw-w)/2,(ch-h)/2,w,h);
+  }
+  if(cv && FRAMES.count>0){
+    sizeCanvas(); addEventListener('resize', sizeCanvas, {passive:true});
+    for(var i=0;i<FRAMES.count;i++){ (function(k){ var im=new Image();
+      im.onload=function(){ imgsReady++; if(imgsReady===1){ cv.classList.add('on'); drawFrame(0);} };
+      im.src=FRAMES.path(k); imgs[k]=im; })(i); }
+  }
+
+  function render(){
+    if(!scroll) return;
+    var r = scroll.getBoundingClientRect();
+    var total = scroll.offsetHeight - innerHeight;
+    var p = total>0 ? Math.min(1, Math.max(0, -r.top/total)) : 0;   // 진행도 0~1
+    if(bar) bar.style.width = (p*100)+'%';
+    if(hint) hint.style.opacity = p>0.04 ? '0' : '1';
+    // 카피 4장을 진행 구간에 1:1 매핑 — 한 번에 한 장만 활성(겹침 방지)
+    var n = lines.length;
+    var active = Math.min(n-1, Math.floor(p*n));
+    for(var i=0;i<n;i++){ lines[i].classList.toggle('show', i===active); }
+    if(FRAMES.count>0){ drawFrame(Math.min(FRAMES.count-1, Math.floor(p*(FRAMES.count-1)))); }
+  }
+  if(scroll && !REDUCE){
+    var rafPend=false;
+    addEventListener('scroll', function(){ if(rafPend) return; rafPend=true;
+      requestAnimationFrame(function(){ render(); rafPend=false; }); }, {passive:true});
+    addEventListener('resize', render, {passive:true});
+    render();
+  } else if(scroll){ lines.forEach(function(l){ l.classList.add('show'); }); }
+
+  /* ── 뉴스 덱 딜(deal) 리빌 ── */
+  var deck = document.getElementById('newsDeck');
+  if(deck){
+    if(REDUCE){ deck.classList.add('dealt'); }
+    else{
+      var dio = new IntersectionObserver(function(es){
+        es.forEach(function(e){ if(e.isIntersecting){ deck.classList.add('dealt'); dio.disconnect(); } });
+      }, {threshold:0.3});
+      dio.observe(deck);
+    }
   }
 })();
 </script>
