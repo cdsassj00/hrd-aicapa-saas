@@ -189,30 +189,32 @@
   .deck-wrap{margin-top:44px;display:flex;justify-content:center}
   .deck{position:relative;display:flex;justify-content:center;align-items:flex-end;
     perspective:1400px;padding:34px 0 12px;min-height:300px}
-  .news-card{position:relative;width:230px;min-height:260px;flex:0 0 auto;
+  .news-card{position:relative;width:222px;min-height:262px;flex:0 0 auto;
     border:1px solid var(--line2);border-radius:18px;padding:20px 18px;
     background:linear-gradient(170deg,#171b22,#0f1217);
     box-shadow:0 22px 46px -18px rgba(0,0,0,.75);
     transform-origin:bottom center;cursor:pointer;
     transition:transform .55s cubic-bezier(.2,.8,.2,1),box-shadow .35s,border-color .3s;
-    margin-left:-58px}                                   /* 겹쳐서 부채꼴 */
+    margin-left:-60px}                                   /* 겹쳐서 부채꼴 */
   .news-card:first-child{margin-left:0}
-  /* 초기 부채꼴 각도(트럼프카드) */
-  .news-card:nth-child(1){transform:rotate(-13deg) translateY(20px)}
-  .news-card:nth-child(2){transform:rotate(-4.5deg) translateY(3px)}
-  .news-card:nth-child(3){transform:rotate(4.5deg) translateY(3px)}
-  .news-card:nth-child(4){transform:rotate(13deg) translateY(20px)}
+  /* 초기 부채꼴 각도(트럼프카드) — 5장 */
+  .news-card:nth-child(1){transform:rotate(-16deg) translateY(24px)}
+  .news-card:nth-child(2){transform:rotate(-8deg) translateY(9px)}
+  .news-card:nth-child(3){transform:rotate(0deg) translateY(2px)}
+  .news-card:nth-child(4){transform:rotate(8deg) translateY(9px)}
+  .news-card:nth-child(5){transform:rotate(16deg) translateY(24px)}
   /* 스크롤 진입 시 덱이 한 번 펼쳐지는 리빌 */
   .deck.dealt .news-card{transition:transform .7s cubic-bezier(.2,.8,.2,1),box-shadow .35s,border-color .3s}
   .deck:not(.dealt) .news-card{transform:translateY(60px) rotate(0) scale(.96);opacity:0}
   /* 덱 호버 → 카드가 나란히 펴진다 */
   @media(hover:hover) and (min-width:820px){
-    .deck:hover .news-card{margin-left:14px;box-shadow:0 26px 50px -20px rgba(0,0,0,.8)}
+    .deck:hover .news-card{margin-left:10px;box-shadow:0 26px 50px -20px rgba(0,0,0,.8)}
     .deck:hover .news-card:first-child{margin-left:0}
-    .deck:hover .news-card:nth-child(1){transform:rotate(-2deg) translateY(0)}
-    .deck:hover .news-card:nth-child(2){transform:rotate(-.6deg) translateY(-4px)}
-    .deck:hover .news-card:nth-child(3){transform:rotate(.6deg) translateY(-4px)}
-    .deck:hover .news-card:nth-child(4){transform:rotate(2deg) translateY(0)}
+    .deck:hover .news-card:nth-child(1){transform:rotate(-2.4deg) translateY(0)}
+    .deck:hover .news-card:nth-child(2){transform:rotate(-1.2deg) translateY(-4px)}
+    .deck:hover .news-card:nth-child(3){transform:rotate(0deg) translateY(-6px)}
+    .deck:hover .news-card:nth-child(4){transform:rotate(1.2deg) translateY(-4px)}
+    .deck:hover .news-card:nth-child(5){transform:rotate(2.4deg) translateY(0)}
     .deck .news-card:hover{transform:translateY(-22px) rotate(0) scale(1.05)!important;z-index:9;
       border-color:var(--accent);box-shadow:0 34px 60px -18px rgba(10,132,255,.4)}
   }
@@ -223,6 +225,11 @@
   .news-card:nth-child(2) .src{color:var(--violet)}    .news-card:nth-child(2) .src .pip{background:var(--violet)}
   .news-card:nth-child(3) .src{color:var(--cyan)}      .news-card:nth-child(3) .src .pip{background:var(--cyan)}
   .news-card:nth-child(4) .src{color:var(--hot)}       .news-card:nth-child(4) .src .pip{background:var(--hot)}
+  .news-card:nth-child(5) .src{color:#ff4d4d}          .news-card:nth-child(5) .src .pip{background:#ff4d4d}
+  /* 영상 카드 표시 */
+  .news-card .vtag{position:absolute;top:16px;right:16px;display:inline-flex;align-items:center;gap:4px;
+    font-size:10px;font-variation-settings:"wght" 700;color:#ff4d4d;border:1px solid rgba(255,77,77,.4);
+    border-radius:6px;padding:2px 6px;background:rgba(255,77,77,.08)}
   .news-card .hl{margin-top:14px;font-size:16.5px;line-height:1.42;font-variation-settings:"wght" 760;
     letter-spacing:-.015em;color:var(--ink)}
   .news-card .dek{margin-top:10px;font-size:12.5px;color:var(--mut);line-height:1.55}
@@ -509,7 +516,8 @@
     <div class="wrap">
       <span class="eyebrow" style="color:var(--violet)">Market signal</span>
       <h2 class="sec">이미 시장은 <span class="g-cool">그렇게 뽑고</span> 있습니다.</h2>
-      <p class="lead">2026년, 대기업 채용의 기준이 눈앞에서 바뀌고 있습니다. 남은 질문은 하나 —
+      <p class="lead">2026년, 대기업 채용의 기준이 눈앞에서 바뀌고 있습니다. <b style="color:var(--ink)">기아·HD현대·포스코DX</b>가
+        올해 AI 능력 평가 전형을 도입했고, SK하이닉스는 자기소개서부터 AI 활용을 봅니다. 남은 질문은 하나 —
         <b style="color:var(--ink)">그 “AI 잘 쓰는 힘”을 무엇으로 검증할 것인가.</b></p>
 
       <div class="deck-wrap">
@@ -538,9 +546,19 @@
             <div class="dek">전공이 아니라, AI로 일을 끝내는 사람이 뽑힌다.</div>
             <span class="go">기사 보기 →</span>
           </a>
+          <a class="news-card" href="https://www.youtube.com/watch?v=BKWHxxlNwDI" target="_blank" rel="noopener">
+            <span class="vtag">▶ 영상</span>
+            <span class="src"><span class="pip"></span>KBS 뉴스</span>
+            <div class="hl">“대기업 채용 싹 바뀌었다” … 시험지는 없고 AI가 파트너</div>
+            <div class="dek">모니터가 시험지, 생성형 AI가 파트너. 채점도 AI로 S~D 등급.</div>
+            <span class="go">영상 보기 →</span>
+          </a>
         </div>
       </div>
-      <p class="deck-src">출처 — SK하이닉스 뉴스룸 · 한국경제 · 서울경제 (2026) · 카드를 누르면 원문으로 이동합니다</p>
+      <p class="deck-src">출처 — KBS 뉴스 · SK하이닉스 뉴스룸 · 한국경제 · 서울경제 (2026) · 카드를 누르면 원문으로 이동합니다</p>
+
+      <p class="punch" style="margin-top:36px">기업들은 이미 <span class="hl">“누가 AI를 더 잘 쓰는 사람인가”</span>를 묻기 시작했습니다.<br>
+        우리는 그 질문에 <b>채점 가능한 답</b>을 만듭니다.</p>
     </div>
   </section>
 
