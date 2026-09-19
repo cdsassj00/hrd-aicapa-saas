@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { GradeBadge } from '@/components/GradeBadge';
 import { QuestionDifficulty, QuestionType } from '@/types';
-import { Plus, Pencil, Trash2, Search, Paperclip, Upload, Download, Loader2, FileDown, Info, Copy, Check, FileJson, Eye, ArrowUp, ArrowDown, ArrowUpDown, Sparkles } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Paperclip, Upload, Download, Loader2, FileDown, Info, Copy, Check, FileJson, Eye, ArrowUp, ArrowDown, ArrowUpDown, Sparkles, ChevronDown } from 'lucide-react';
 import SingleQuestionPreviewDialog from '@/components/question-bank/SingleQuestionPreviewDialog';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -97,6 +98,9 @@ export default function QuestionBankPage() {
   const [deletingBulk, setDeletingBulk] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copiedGuide, setCopiedGuide] = useState(false);
+  const [copiedTpl, setCopiedTpl] = useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [tab, setTab] = useState<'bank' | 'sets'>('bank');
   const [setRefreshKey, setSetRefreshKey] = useState(0);
   const [previewQ, setPreviewQ] = useState<any | null>(null);
@@ -126,6 +130,139 @@ export default function QuestionBankPage() {
     setCopiedGuide(true);
     setTimeout(() => setCopiedGuide(false), 2000);
   };
+
+  // ── JSON 업로드용 빈 템플릿 & AI 생성 프롬프트 ──
+  const SET_JSON_TEMPLATE = `{
+  "version": 1,
+  "sets": [
+    {
+      "title": "세트 제목",
+      "category": "데이터분석",
+      "difficulty": "medium",
+      "tags": ["민간"],
+      "order_num": 1,
+      "scenario": "시나리오 설명. 데이터는 csv 코드블록(삼중 백틱)으로 본문에 인라인하거나, attachment_refs로 파일 첨부.",
+      "questions": [
+        {
+          "content": "문항 지문",
+          "type": "work_based",
+          "category": "데이터분석",
+          "difficulty": "medium",
+          "max_score": 100,
+          "allow_file_upload": true,
+          "tags": ["민간"],
+          "submission_slots": [
+            { "id": "slot_1", "type": "number", "label": "(1) ...", "max_score": 60, "required": true, "auto_grade": "numeric", "tolerance": 0, "correct_answer": 0, "rubric": "정확히 일치" },
+            { "id": "submission_file", "type": "file", "label": "(2) 산출물", "max_score": 40, "required": true, "accept": ".md,.csv,.xlsx", "auto_grade": "none", "max_size_mb": 10, "rubric": "..." }
+          ]
+        }
+      ]
+    }
+  ],
+  "standalone": [
+    {
+      "content": "단독 객관식 예시",
+      "type": "multiple_choice",
+      "category": "생성형AI활용",
+      "difficulty": "easy",
+      "max_score": 10,
+      "allow_file_upload": false,
+      "tags": ["민간"],
+      "options": [
+        { "id": "a", "text": "보기1", "is_correct": false },
+        { "id": "b", "text": "보기2(정답)", "is_correct": true }
+      ],
+      "correct_answer": "보기2(정답)"
+    }
+  ]
+}`;
+
+  const JSON_PROMPT = `아래 스키마로 "AI 활용 역량평가" 문제를 만들어 JSON만 출력하라(설명·마크다운 금지).
+
+[최상위] { "version":1, "sets":[...], "standalone":[...] }  // 단일문제=standalone, 시나리오+하위문항=sets
+[type] multiple_choice | short_answer | essay | file_upload | work_based
+[category] 생성형AI활용 | 데이터분석 | 서비스구현
+[difficulty] easy | medium | hard
+[grade] 공공(행정안전부 AI챔피언) 전용: green|blue|black|전문인재 — 민간은 grade 생략. 섹터는 tags:["공공"] 또는 ["민간"]
+[submission_slots] 있으면 슬롯 max_score 합 = 문항 max_score
+  슬롯 type: number|text|long_text|url|file
+  자동채점: auto_grade "numeric"(tolerance) | "exact" | "none". numeric/exact는 correct_answer 필수(결정적 정답).
+[데이터분석] 시나리오에 데이터를 csv 코드블록으로 인라인하고, 단답 슬롯 correct_answer를 실제 계산해 채워라.
+
+내가 만들려는 문제:
+〔여기에 자연어로: 주제/직무, 섹터(공공/민간), 난이도, 문항수, 자동채점 여부〕`;
+
+  const handleCopyTpl = async () => {
+    await navigator.clipboard.writeText(SET_JSON_TEMPLATE);
+    setCopiedTpl(true); setTimeout(() => setCopiedTpl(false), 2000);
+  };
+  const handleCopyPrompt = async () => {
+    await navigator.clipboard.writeText(JSON_PROMPT);
+    setCopiedPrompt(true); setTimeout(() => setCopiedPrompt(false), 2000);
+  };
+  const downloadJsonTemplate = () => {
+    const blob = new Blob([SET_JSON_TEMPLATE], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '문제_템플릿.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  const handleExportXlsx = () => {
+    const headers = ['문제코드', '카테고리', '등급', '난이도', '유형', '문제내용', '배점', '태그', '파일업로드허용', '보기1', '보기2', '보기3', '보기4', '보기5', '정답'];
+    const gradeMap: Record<string, string> = { green: '그린', blue: '블루', black: '블랙', '전문인재': '전문인재' };
+    const diffMap: Record<string, string> = { easy: '하', medium: '중', hard: '상' };
+    const typeMap: Record<string, string> = { essay: '서술형', short_answer: '단답형', multiple_choice: '객관식', file_upload: '실기형', work_based: '작업형' };
+    const rows = filtered.map(q => {
+      const opts = (q.options as any[]) || [];
+      return [
+        q.code || '', q.category, gradeMap[q.grade] || '', diffMap[q.difficulty] || q.difficulty,
+        typeMap[q.type] || q.type, q.content, q.max_score,
+        (q.tags || []).join(','), q.allow_file_upload ? 'O' : '',
+        opts[0]?.text || '', opts[1]?.text || '', opts[2]?.text || '', opts[3]?.text || '', opts[4]?.text || '',
+        q.correct_answer || '',
+      ];
+    });
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 40 }, { wch: 6 }, { wch: 15 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 8 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '문제은행');
+    XLSX.writeFile(wb, `문제은행_${filtered.length}건.xlsx`);
+  };
+
+  // JSON 도움말 팝오버(단독·세트 공용): 빈 템플릿 복사/다운로드 + AI 프롬프트 복사
+  const jsonHelp = (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="text-[13px] gap-1 text-muted-foreground">
+          <Info className="h-3.5 w-3.5" />JSON 도움말
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[460px] p-0" align="end">
+        <div className="flex items-center justify-between px-3 py-2 border-b">
+          <span className="text-[13px] font-medium">JSON 템플릿 &amp; AI 프롬프트</span>
+          <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1" onClick={downloadJsonTemplate}>
+            <Download className="h-3 w-3" />템플릿 .json
+          </Button>
+        </div>
+        <div className="px-3 py-2 border-b flex items-center justify-between">
+          <span className="text-[12px] text-muted-foreground">① 빈 템플릿(직접 작성용)</span>
+          <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1" onClick={handleCopyTpl}>
+            {copiedTpl ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}{copiedTpl ? '복사됨' : '복사'}
+          </Button>
+        </div>
+        <div className="px-3 py-2 flex items-center justify-between">
+          <span className="text-[12px] text-muted-foreground">② AI로 생성 — ChatGPT/Claude에 붙여넣기</span>
+          <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1" onClick={handleCopyPrompt}>
+            {copiedPrompt ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}{copiedPrompt ? '복사됨' : '복사'}
+          </Button>
+        </div>
+        <div className="p-3 text-[11px] leading-relaxed whitespace-pre-wrap font-mono text-muted-foreground select-all max-h-[280px] overflow-y-auto border-t">
+          {JSON_PROMPT}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 
   useEffect(() => { fetchQuestions(); }, []);
 
@@ -368,76 +505,54 @@ export default function QuestionBankPage() {
             </Button>
           )}
           {tab === 'bank' && <>
-            <span className="text-[12px] text-muted-foreground">{filtered.length}개 문제</span>
-            <Button variant="outline" size="sm" className="text-[12px] gap-1" onClick={() => {
-              const headers = ['문제코드', '카테고리', '등급', '난이도', '유형', '문제내용', '배점', '태그', '파일업로드허용', '보기1', '보기2', '보기3', '보기4', '보기5', '정답'];
-              const gradeMap: Record<string, string> = { green: '그린', blue: '블루', black: '블랙', '전문인재': '전문인재' };
-              const diffMap: Record<string, string> = { easy: '하', medium: '중', hard: '상' };
-              const typeMap: Record<string, string> = { essay: '서술형', short_answer: '단답형', multiple_choice: '객관식', file_upload: '실기형', work_based: '작업형' };
-              const rows = filtered.map(q => {
-                const opts = (q.options as any[]) || [];
-                return [
-                  q.code || '', q.category, gradeMap[q.grade] || '', diffMap[q.difficulty] || q.difficulty,
-                  typeMap[q.type] || q.type, q.content, q.max_score,
-                  (q.tags || []).join(','), q.allow_file_upload ? 'O' : '',
-                  opts[0]?.text || '', opts[1]?.text || '', opts[2]?.text || '', opts[3]?.text || '', opts[4]?.text || '',
-                  q.correct_answer || '',
-                ];
-              });
-              const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-              ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 40 }, { wch: 6 }, { wch: 15 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 8 }];
-              const wb = XLSX.utils.book_new();
-              XLSX.utils.book_append_sheet(wb, ws, '문제은행');
-              XLSX.writeFile(wb, `문제은행_${filtered.length}건.xlsx`);
-            }}>
-              <FileDown className="h-3.5 w-3.5" />다운로드 ({filtered.length})
-            </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="text-[12px] gap-1">
-                  <Info className="h-3.5 w-3.5" />형식 안내
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[380px] p-0" align="end">
-                <div className="flex items-center justify-between px-3 py-2 border-b">
-                  <span className="text-[12px] font-medium">업로드 형식 안내</span>
-                  <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1" onClick={handleCopyGuide}>
-                    {copiedGuide ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    {copiedGuide ? '복사됨' : '전체 복사'}
-                  </Button>
-                </div>
-                <div className="p-3 text-[11px] leading-relaxed whitespace-pre-wrap font-mono text-muted-foreground select-all max-h-[400px] overflow-y-auto">
-                  {GUIDE_TEXT}
-                </div>
-              </PopoverContent>
-            </Popover>
-            <Button variant="outline" size="sm" className="text-[12px] gap-1" onClick={downloadTemplate}>
-              <Download className="h-3.5 w-3.5" />템플릿
-            </Button>
+            <span className="text-[12px] text-muted-foreground mr-1">{filtered.length}개 문제</span>
             <input ref={fileInputRef} type="file" accept=".xlsx,.csv" className="hidden" onChange={handleBulkUpload} />
-            <Button variant="outline" size="sm" className="text-[12px] gap-1" disabled={bulkUploading}
-              onClick={() => fileInputRef.current?.click()}>
-              {bulkUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-              일괄 등록
+            {/* 엑셀·양식 그룹 → 하나의 드롭다운으로 묶음 */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="text-[13px] gap-1">
+                  <FileDown className="h-3.5 w-3.5" />엑셀·양식 <ChevronDown className="h-3 w-3 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="text-[11px] text-muted-foreground">엑셀</DropdownMenuLabel>
+                <DropdownMenuItem className="text-[13px] gap-2" disabled={bulkUploading} onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-3.5 w-3.5" />엑셀 일괄 등록
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-[13px] gap-2" onClick={downloadTemplate}>
+                  <Download className="h-3.5 w-3.5" />엑셀 템플릿 받기
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-[13px] gap-2" onClick={handleExportXlsx}>
+                  <FileDown className="h-3.5 w-3.5" />목록 내보내기 ({filtered.length})
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-[13px] gap-2" onClick={() => setGuideOpen(true)}>
+                  <Info className="h-3.5 w-3.5" />업로드 형식 안내
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {jsonHelp}
+            <span className="mx-1 h-5 w-px bg-border" aria-hidden />
+            {/* 추가 그룹 — 색으로 구분 */}
+            <Button size="sm" className="text-[13px] gap-1 bg-violet-600 hover:bg-violet-700 text-white" onClick={() => setAiGenOpen(true)}>
+              <Sparkles className="h-4 w-4" />AI 생성
             </Button>
-            <Button variant="outline" size="sm" className="text-[12px] gap-1" onClick={() => setAiGenOpen(true)}>
-              <Sparkles className="h-3.5 w-3.5" />AI 생성
+            <Button size="sm" variant="secondary" className="text-[13px] gap-1" onClick={() => setSetUploadOpen(true)}>
+              <FileJson className="h-4 w-4" />JSON 업로드
             </Button>
-            <Button variant="outline" size="sm" className="text-[12px] gap-1" onClick={() => setSetUploadOpen(true)}>
-              <FileJson className="h-3.5 w-3.5" />JSON 업로드
-            </Button>
-            <Button size="sm" className="text-[12px] gap-1" onClick={() => {
+            <Button size="sm" className="text-[13px] gap-1" onClick={() => {
               setEditQ({ ...defaultNewQuestion });
               setEditOpen(true);
             }}>
-              <Plus className="h-3.5 w-3.5" />문제 추가
+              <Plus className="h-4 w-4" />문제 추가
             </Button>
           </>}
-          {tab === 'sets' && (
-            <Button variant="default" size="sm" className="text-[12px] gap-1" onClick={() => setSetUploadOpen(true)}>
-              <FileJson className="h-3.5 w-3.5" />세트 업로드 (JSON)
+          {tab === 'sets' && <>
+            {jsonHelp}
+            <Button variant="default" size="sm" className="text-[13px] gap-1" onClick={() => setSetUploadOpen(true)}>
+              <FileJson className="h-4 w-4" />세트 업로드 (JSON)
             </Button>
-          )}
+          </>}
         </div>
       </div>
 
@@ -599,6 +714,24 @@ export default function QuestionBankPage() {
         )}
       </Card>
       </>)}
+
+      <AlertDialog open={guideOpen} onOpenChange={setGuideOpen}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>업로드 형식 안내 (엑셀)</AlertDialogTitle>
+            <AlertDialogDescription className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono text-muted-foreground max-h-[50vh] overflow-y-auto select-all">
+              {GUIDE_TEXT}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" size="sm" className="gap-1" onClick={handleCopyGuide}>
+              {copiedGuide ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copiedGuide ? '복사됨' : '전체 복사'}
+            </Button>
+            <AlertDialogAction>닫기</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
