@@ -406,6 +406,9 @@ export default function QuestionBankPage() {
             <Button variant="outline" size="sm" className="text-[12px] gap-1" onClick={() => setAiGenOpen(true)}>
               <Sparkles className="h-3.5 w-3.5" />AI 생성
             </Button>
+            <Button variant="outline" size="sm" className="text-[12px] gap-1" onClick={() => setSetUploadOpen(true)}>
+              <FileJson className="h-3.5 w-3.5" />JSON 업로드
+            </Button>
             <Button size="sm" className="text-[12px] gap-1" onClick={() => {
               setEditQ({ ...defaultNewQuestion });
               setEditOpen(true);
@@ -609,7 +612,7 @@ export default function QuestionBankPage() {
       <QuestionSetUploadDialog
         open={setUploadOpen}
         onOpenChange={setSetUploadOpen}
-        onCommitted={() => { fetchQuestions(); setSetRefreshKey(k => k + 1); setTab('sets'); }}
+        onCommitted={() => { fetchQuestions(); setSetRefreshKey(k => k + 1); }}
       />
 
       <AiGenerateDialog
