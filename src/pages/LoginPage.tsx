@@ -298,7 +298,7 @@ export default function LoginPage() {
               </p>
             </div>
           ) : (
-          <Tabs defaultValue="login">
+          <Tabs defaultValue={searchParams.get('tab') === 'signup' ? 'signup' : 'login'}>
             <TabsList className="grid w-full grid-cols-2 mb-5 h-10 rounded-full bg-muted/60 p-1">
               <TabsTrigger value="login" className="rounded-full text-[13px]">로그인</TabsTrigger>
               <TabsTrigger value="signup" className="rounded-full text-[13px]">회원가입</TabsTrigger>
