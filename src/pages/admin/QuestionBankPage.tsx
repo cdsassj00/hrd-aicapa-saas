@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { logQuestionChange, logQuestionChanges } from '@/lib/questionLog';
 import { useToast } from '@/hooks/use-toast';
 import { QuestionEditDialog } from '@/components/question-bank/QuestionEditDialog';
@@ -109,6 +110,7 @@ export default function QuestionBankPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const { toast } = useToast();
+  const { activeOrgId } = useAuth();
 
   const GUIDE_TEXT = `[문제은행 업로드 형식 안내]
 
@@ -414,26 +416,33 @@ export default function QuestionBankPage() {
     if (!file) return;
     e.target.value = '';
 
+    if (!activeOrgId) {
+      toast({ title: '조직 미선택', description: '상단에서 조직을 선택한 뒤 다시 시도하세요.', variant: 'destructive' });
+      e.target.value = '';
+      return;
+    }
     setBulkUploading(true);
     try {
       const parsed = await parseFile(file);
       const warnings = (parsed as any)._warnings as string[] | undefined;
 
-      // Build base row payload (shared by insert/update)
+      // 새 스키마(points + answer_key jsonb + code 컬럼)로 매핑.
+      // category/grade/tags/options/correct_answer/allow_file_upload 는 answer_key 안에.
       const toRow = (q: typeof parsed[number]) => ({
-        code: q.code,
-        category: q.category as any,
-        grade: q.grade as any,
-        difficulty: q.difficulty as any,
+        code: q.code || null,
         type: q.type,
         content: q.content,
-        max_score: q.max_score,
-        tags: q.tags,
-        allow_file_upload: q.allow_file_upload,
-        options: q.options as any,
-        correct_answer: q.correct_answer,
-        order_num: q.order_num,
+        difficulty: q.difficulty as any,
+        points: q.max_score,
         attachments: (q.attachments || []) as any,
+        answer_key: {
+          category: q.category ?? null,
+          grade: q.grade ?? null,
+          tags: q.tags ?? [],
+          options: q.options ?? null,
+          correct_answer: q.correct_answer ?? null,
+          allow_file_upload: q.allow_file_upload ?? false,
+        } as any,
       });
 
       // Split rows by code presence and look up existing codes for overwrite
@@ -444,6 +453,7 @@ export default function QuestionBankPage() {
         const { data: existing, error: lookupErr } = await supabase
           .from('questions')
           .select('id, code')
+          .eq('org_id', activeOrgId)
           .in('code', codes);
         if (lookupErr) throw lookupErr;
         existingByCode = new Map((existing || []).filter(e => e.code).map(e => [e.code as string, e.id as string]));
@@ -456,7 +466,7 @@ export default function QuestionBankPage() {
         if (q.code && existingByCode.has(q.code)) {
           updates.push({ id: existingByCode.get(q.code)!, row });
         } else {
-          insertRows.push(row);
+          insertRows.push({ ...row, org_id: activeOrgId, visibility: 'org' });
         }
       }
 
