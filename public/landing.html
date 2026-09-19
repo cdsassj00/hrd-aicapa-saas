@@ -329,7 +329,31 @@
   .contact a:hover{color:var(--accent-hi)}
 
   footer{border-top:1px solid var(--line);padding:34px 0;color:var(--faint);font-size:13px}
-  footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center}
+  footer .fwrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;align-items:flex-start}
+  .fbiz{display:flex;flex-direction:column;gap:5px;line-height:1.55}
+  .fbrand{color:var(--mut);font-variation-settings:"wght" 680;font-size:14px}
+  .fline{color:var(--faint);font-size:12.5px}
+  .fline a{color:var(--mut)} .fline a:hover{color:var(--accent-hi)}
+  .fcopy{margin-top:8px;font-size:12px;color:var(--faint)}
+  .flinks{display:flex;gap:16px;font-size:13px}
+  .flinks a{color:var(--mut)} .flinks a:hover{color:var(--accent-hi)}
+
+  /* 요금제(상품) */
+  #pricing{background:radial-gradient(800px 420px at 20% -10%,rgba(232,182,76,.10),transparent 62%),var(--bg)}
+  .plans{display:grid;gap:16px;margin-top:34px;grid-template-columns:1fr}
+  @media(min-width:820px){.plans{grid-template-columns:repeat(3,1fr)}}
+  .plan{position:relative;border:1px solid var(--line);border-radius:20px;background:var(--card);padding:28px 24px;display:flex;flex-direction:column}
+  .plan.feat{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 24px 50px -24px rgba(10,132,255,.4)}
+  .plan .badge2{position:absolute;top:-11px;left:24px;background:var(--grad-hero);color:#fff;font-size:11.5px;
+    font-variation-settings:"wght" 700;padding:4px 11px;border-radius:999px}
+  .plan .pname{font-size:16px;font-variation-settings:"wght" 720;color:var(--ink)}
+  .plan .pprice{margin-top:12px;font-size:32px;font-variation-settings:"wght" 820;letter-spacing:-.02em;color:var(--ink)}
+  .plan .pprice span{font-size:14px;color:var(--mut);font-variation-settings:"wght" 500;margin-left:4px}
+  .plan ul{list-style:none;margin:18px 0 22px;display:flex;flex-direction:column;gap:9px}
+  .plan li{font-size:13.5px;color:var(--mut);display:flex;gap:8px;align-items:flex-start}
+  .plan li::before{content:"✓";color:var(--good);font-variation-settings:"wght" 800}
+  .plan .btn{margin-top:auto;justify-content:center;width:100%}
+  .pnote{margin-top:20px;font-size:12.5px;color:var(--faint)}
 
   /* ── 애니메이션 ─────────────────────────────────────── */
   /* 등장 리빌 (fade-up) — JS 가 대상에 .rv 부여, 뷰포트 진입 시 .show */
@@ -402,6 +426,7 @@
       <a href="#common">왜 필요한가</a>
       <a href="#measure">무엇을 측정하나</a>
       <a href="#who">누가 만들었나</a>
+      <a href="#pricing">요금제</a>
       <a href="#diff">차별점</a>
     </nav>
     <div class="cta">
@@ -658,6 +683,51 @@
     </div>
   </section>
 
+  <!-- PRICING (상품/요금제) -->
+  <section class="band" id="pricing">
+    <div class="wrap">
+      <span class="eyebrow" style="color:var(--gold)">Pricing</span>
+      <h2 class="sec">요금제 · <span class="g-cool">상품 안내</span></h2>
+      <p class="lead">채용 규모에 맞춰 선택하세요. 표시 금액은 부가세 별도이며, 결제·세금계산서 등 자세한 조건은 도입 문의 시 안내드립니다.</p>
+      <div class="plans">
+        <div class="plan">
+          <div class="pname">Free</div>
+          <div class="pprice">0<span>원</span></div>
+          <ul>
+            <li>문제은행 기본 이용</li>
+            <li>기본 역량 리포트</li>
+            <li>멤버 최대 10명 · 월 3회 시험</li>
+          </ul>
+          <a class="btn btn-g" href="https://app.ai-hrd.com/login">무료로 시작</a>
+        </div>
+        <div class="plan feat">
+          <div class="badge2">가장 인기</div>
+          <div class="pname">Pro</div>
+          <div class="pprice">290,000<span>원 / 월</span></div>
+          <ul>
+            <li>AI 문항 생성</li>
+            <li>실시간 감독 · 화면 녹화</li>
+            <li>6축 역량 프로파일 리포트</li>
+            <li>멤버 최대 100명 · 월 50회 시험 · 이메일 지원</li>
+          </ul>
+          <a class="btn btn-p" href="#contact" data-inquiry>도입 문의</a>
+        </div>
+        <div class="plan">
+          <div class="pname">Enterprise</div>
+          <div class="pprice">맞춤 견적</div>
+          <ul>
+            <li>무제한 인원 · 무제한 시험</li>
+            <li>SSO · 보안심사 대응</li>
+            <li>맞춤 역량체계 설계</li>
+            <li>전용 지원</li>
+          </ul>
+          <a class="btn btn-g" href="#contact" data-inquiry>도입 문의</a>
+        </div>
+      </div>
+      <p class="pnote">※ Pro 요금은 월 구독 기준(부가세 별도)이며, 파일럿·연간 계약·대량 응시는 별도 견적으로 안내드립니다.</p>
+    </div>
+  </section>
+
   <!-- CTA -->
   <section class="band cta-band" id="contact">
     <div class="wrap">
@@ -680,9 +750,19 @@
 </main>
 
 <footer>
-  <div class="wrap">
-    <div>© 2026 한국데이터사이언티스트협회(CDSA). All rights reserved.</div>
-    <div>AI 역량평가 for Business · <a href="https://cdsa.kr" style="color:var(--mut)">cdsa.kr</a></div>
+  <div class="wrap fwrap">
+    <div class="fbiz">
+      <div class="fbrand">주식회사 한국데이터사이언티스트협회</div>
+      <div class="fline">대표 신성진 · 사업자등록번호 325-88-02939</div>
+      <div class="fline">서울특별시 금천구 벚꽃로36길 30, 6층 622호 (가산동, 가산KS TOWER)</div>
+      <div class="fline">대표전화 010-7107-2047 · 이메일 <a href="mailto:sjshin@cdsa.kr">sjshin@cdsa.kr</a> · 개인정보관리책임자 신성진</div>
+      <div class="fcopy">© 2026 주식회사 한국데이터사이언티스트협회. All rights reserved.</div>
+    </div>
+    <div class="flinks">
+      <a href="#pricing">요금제</a>
+      <a href="https://cdsa.kr" target="_blank" rel="noopener">cdsa.kr</a>
+      <a href="https://app.ai-hrd.com/login">로그인</a>
+    </div>
   </div>
 </footer>
 
