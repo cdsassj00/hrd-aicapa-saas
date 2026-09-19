@@ -329,14 +329,14 @@
   .contact a:hover{color:var(--accent-hi)}
 
   footer{border-top:1px solid var(--line);padding:34px 0;color:var(--faint);font-size:13px}
-  footer .fwrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;align-items:flex-start}
-  .fbiz{display:flex;flex-direction:column;gap:5px;line-height:1.55}
-  .fbrand{color:var(--mut);font-variation-settings:"wght" 680;font-size:14px}
+  .flinkrow{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .flinkrow a{color:var(--mut);font-size:13px} .flinkrow a:hover{color:var(--accent-hi)}
+  .flinkrow a.strong{color:var(--ink);font-variation-settings:"wght" 680}
+  .fbiz{display:flex;flex-direction:column;gap:5px;line-height:1.6}
+  .fbrand{color:var(--mut);font-variation-settings:"wght" 700;font-size:13.5px;margin-bottom:2px}
   .fline{color:var(--faint);font-size:12.5px}
   .fline a{color:var(--mut)} .fline a:hover{color:var(--accent-hi)}
-  .fcopy{margin-top:8px;font-size:12px;color:var(--faint)}
-  .flinks{display:flex;gap:16px;font-size:13px}
-  .flinks a{color:var(--mut)} .flinks a:hover{color:var(--accent-hi)}
+  .fcopy{margin-top:10px;font-size:12px;color:var(--faint)}
 
   /* 요금제(상품) */
   #pricing{background:radial-gradient(800px 420px at 20% -10%,rgba(232,182,76,.10),transparent 62%),var(--bg)}
@@ -750,18 +750,18 @@
 </main>
 
 <footer>
-  <div class="wrap fwrap">
-    <div class="fbiz">
-      <div class="fbrand">주식회사 한국데이터사이언티스트협회</div>
-      <div class="fline">대표 신성진 · 사업자등록번호 325-88-02939</div>
-      <div class="fline">서울특별시 금천구 벚꽃로36길 30, 6층 622호 (가산동, 가산KS TOWER)</div>
-      <div class="fline">대표전화 010-7107-2047 · 이메일 <a href="mailto:sjshin@cdsa.kr">sjshin@cdsa.kr</a> · 개인정보관리책임자 신성진</div>
-      <div class="fcopy">© 2026 주식회사 한국데이터사이언티스트협회. All rights reserved.</div>
+  <div class="wrap">
+    <div class="flinkrow">
+      <a href="#pricing">판매 상품 안내</a>
+      <a href="/terms.html">이용약관</a>
+      <a class="strong" href="/privacy.html">개인정보처리방침</a>
+      <a href="/refund.html">결제 · 환불정책</a>
     </div>
-    <div class="flinks">
-      <a href="#pricing">요금제</a>
-      <a href="https://cdsa.kr" target="_blank" rel="noopener">cdsa.kr</a>
-      <a href="https://app.ai-hrd.com/login">로그인</a>
+    <div class="fbiz">
+      <div class="fbrand">사업자 정보</div>
+      <div class="fline">상호명 (주)한국데이터사이언티스트협회 · 대표 신성진 · 사업자등록번호 325-88-02939</div>
+      <div class="fline">통신판매업 신고 2023-서울금천-1275 · 서울특별시 금천구 벚꽃로36길 30 가산 KS타워 6층, 622호 · 문의 <a href="mailto:sjshin@cdsa.kr">sjshin@cdsa.kr</a></div>
+      <div class="fcopy">© 2026 (주)한국데이터사이언티스트협회. All rights reserved.</div>
     </div>
   </div>
 </footer>

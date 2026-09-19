@@ -1,0 +1,25 @@
+/* 약관·정책 공통 스타일 (랜딩 다크 테마) */
+:root{--bg:#0a0b0d;--bg2:#101216;--card:#14171c;--line:#232830;--ink:#f3f5f8;--mut:#aab2be;--faint:#6b7481;--accent:#0a84ff;--accent-hi:#3ba0ff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.7;font-variation-settings:"wght" 420}
+a{color:var(--accent-hi);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:860px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);background:rgba(10,11,13,.8);position:sticky;top:0;backdrop-filter:blur(12px)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.brand{font-variation-settings:"wght" 760;letter-spacing:-.01em;font-size:15px}
+.brand span{color:var(--faint);font-size:12px;font-variation-settings:"wght" 500}
+.back{font-size:13px;color:var(--mut)}
+main{padding:48px 0 80px}
+h1{font-size:28px;font-variation-settings:"wght" 800;letter-spacing:-.02em;margin-bottom:6px}
+.updated{color:var(--faint);font-size:13px;margin-bottom:32px}
+h2{font-size:18px;font-variation-settings:"wght" 720;margin:34px 0 10px;letter-spacing:-.01em}
+h3{font-size:15px;font-variation-settings:"wght" 680;margin:18px 0 6px;color:var(--ink)}
+p,li{color:var(--mut);font-size:14.5px}
+ul,ol{margin:8px 0 8px 20px;display:flex;flex-direction:column;gap:6px}
+.box{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:18px 20px;margin:16px 0}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;color:var(--mut);vertical-align:top}
+th{background:var(--bg2);color:var(--ink);font-variation-settings:"wght" 640;white-space:nowrap}
+.biz{margin-top:44px;padding-top:22px;border-top:1px solid var(--line);color:var(--faint);font-size:12.5px;line-height:1.7}
+.biz b{color:var(--mut);font-variation-settings:"wght" 640}
