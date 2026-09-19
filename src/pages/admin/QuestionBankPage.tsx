@@ -62,6 +62,23 @@ const SortBtn = ({ k, label, sortKey, sortDir, onToggle }: {
   </button>
 );
 
+// 새 스키마(questions: points + answer_key jsonb) → 화면이 기대하는 옛 필드 형태로 정규화.
+// category/grade/tags/options/correct_answer/allow_file_upload 는 answer_key 안, 배점은 points.
+function normalizeQuestion(q: any) {
+  const ak = (q && q.answer_key) || {};
+  return {
+    ...q,
+    category: q.category ?? ak.category ?? null,
+    grade: q.grade ?? ak.grade ?? null,
+    tags: q.tags ?? ak.tags ?? [],
+    max_score: q.max_score ?? q.points ?? 0,
+    allow_file_upload: q.allow_file_upload ?? ak.allow_file_upload ?? false,
+    options: q.options ?? ak.options ?? null,
+    correct_answer: q.correct_answer ?? ak.correct_answer ?? null,
+    submission_slots: ak.submission_slots ?? null,
+  };
+}
+
 export default function QuestionBankPage() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [catFilter, setCatFilter] = useState<string>('all');
@@ -117,7 +134,7 @@ export default function QuestionBankPage() {
       .from('questions')
       .select('*')
       .order('created_at', { ascending: false });
-    if (data) setQuestions(data);
+    if (data) setQuestions(data.map(normalizeQuestion));
   };
 
   // 태그 통계는 단독 문제(문제은행 탭 대상)만 기준으로 집계
