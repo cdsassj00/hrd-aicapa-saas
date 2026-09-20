@@ -17,6 +17,8 @@ export default function FullscreenGuard({ enabled, sessionId, onViolation, maxVi
   const [violationCount, setViolationCount] = useState(0);
   const [fullscreenSupported, setFullscreenSupported] = useState(true);
   const graceRef = useRef(false);
+  // 한 번의 이탈(전체화면 해제 + 그에 따른 blur 등)이 여러 이벤트로 중복 집계되지 않도록 쿨다운.
+  const lastViolationRef = useRef(0);
 
   useEffect(() => {
     // Check if fullscreen is actually available
@@ -46,30 +48,38 @@ export default function FullscreenGuard({ enabled, sessionId, onViolation, maxVi
     setShowWarning(false);
   }, []);
 
+  /** 이탈 1건 기록 — 전체화면 해제·탭 전환·창 이탈 모두 여기로 모은다.
+   *  쿨다운으로 같은 행위가 여러 이벤트로 중복 집계되는 것을 막는다. */
+  const registerViolation = useCallback((_reason: 'fullscreen_exit' | 'tab_switch' | 'window_blur') => {
+    if (graceRef.current) return;
+    const now = Date.now();
+    if (now - lastViolationRef.current < 1200) return;
+    lastViolationRef.current = now;
+
+    setShowWarning(true);
+    setViolationCount(prev => {
+      const next = prev + 1;
+      onViolation(next);
+
+      supabase.from('monitoring_events').insert({
+        session_id: sessionId,
+        event_type: 'tab_switch' as any,
+      }).then();
+
+      supabase.from('exam_sessions').update({ is_flagged: true }).eq('id', sessionId).then();
+
+      if (next >= maxViolations && onForceSubmit) {
+        onForceSubmit();
+      }
+      return next;
+    });
+  }, [sessionId, onViolation, maxViolations, onForceSubmit]);
+
   useEffect(() => {
     if (!enabled || !fullscreenSupported) return;
 
     const handleFullscreenChange = () => {
-      if (graceRef.current) return;
-      if (!document.fullscreenElement && enabled) {
-        setShowWarning(true);
-        setViolationCount(prev => {
-          const next = prev + 1;
-          onViolation(next);
-
-          supabase.from('monitoring_events').insert({
-            session_id: sessionId,
-            event_type: 'tab_switch' as any,
-          }).then();
-
-          supabase.from('exam_sessions').update({ is_flagged: true }).eq('id', sessionId).then();
-
-          if (next >= maxViolations && onForceSubmit) {
-            onForceSubmit();
-          }
-          return next;
-        });
-      }
+      if (!document.fullscreenElement) registerViolation('fullscreen_exit');
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -81,7 +91,21 @@ export default function FullscreenGuard({ enabled, sessionId, onViolation, maxVi
         document.exitFullscreen().catch(() => {});
       }
     };
-  }, [enabled, fullscreenSupported, sessionId, onViolation, maxViolations, onForceSubmit, enterFullscreen]);
+  }, [enabled, fullscreenSupported, registerViolation, enterFullscreen]);
+
+  // 탭 전환·다른 앱으로 이동 감지 — 전체화면을 유지한 채 Alt/Cmd+Tab 하는 경우까지 잡는다.
+  // 전체화면 미지원 환경에서도 동작한다.
+  useEffect(() => {
+    if (!enabled) return;
+    const onVisibility = () => { if (document.hidden) registerViolation('tab_switch'); };
+    const onBlur = () => registerViolation('window_blur');
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, [enabled, registerViolation]);
 
   if (!enabled) return null;
 
