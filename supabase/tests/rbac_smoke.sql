@@ -313,9 +313,17 @@ set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","r
 select pg_temp.assert(
   exists (select 1 from public.competency_frameworks where org_id is null and code = 'ai-utilization'),
   '플랫폼 기본 역량 체계가 보여야 함');
+-- 3작업형영역(ai-utilization) 9개 + 6대 역량 독립축(ai-competency-6) 7개(CAP.A~F + LIT).
 select pg_temp.assert(
-  (select count(*) from public.competencies where org_id is null) = 9,
-  '기본 역량 9개가 보여야 함');
+  (select count(*) from public.competencies c
+     join public.competency_frameworks f on f.id = c.framework_id
+   where c.org_id is null and f.code = 'ai-utilization') = 9,
+  '3작업형영역 기본 역량 9개가 보여야 함');
+select pg_temp.assert(
+  (select count(*) from public.competencies c
+     join public.competency_frameworks f on f.id = c.framework_id
+   where c.org_id is null and f.code = 'ai-competency-6') = 7,
+  '6대 역량 독립축 7개가 보여야 함');
 select pg_temp.assert(
   (select count(*) from public.grade_levels where org_id is null) = 4,
   '기본 등급 4단계가 보여야 함');
