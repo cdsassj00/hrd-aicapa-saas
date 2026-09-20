@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Sparkles, FileText, Lock, Paperclip, Download, Upload, Terminal,
-  CheckCircle2, FileSpreadsheet, MessageSquare, Minus, ArrowUp,
+  CheckCircle2, FileSpreadsheet, MessageSquare, Minus, ArrowUp, Maximize2, Minimize2,
 } from 'lucide-react';
 import { DemoSwitch } from '@/components/demo/DemoSwitch';
 
@@ -47,6 +47,35 @@ export default function DemoExamPage() {
   const [chatOpen, setChatOpen] = useState(true);
   const [downloaded, setDownloaded] = useState<Record<string, boolean>>({});
   const allDownloaded = FILES.every((f) => downloaded[f.name]);
+
+  // 챗 창 크기 조절 — 좌상단 모서리 드래그 + 확대/기본 토글.
+  const [dims, setDims] = useState({ w: 410, h: 480 });
+  const dragRef = useRef<{ sx: number; sy: number; sw: number; sh: number } | null>(null);
+
+  const onResizeDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    dragRef.current = { sx: e.clientX, sy: e.clientY, sw: dims.w, sh: dims.h };
+    const move = (ev: PointerEvent) => {
+      if (!dragRef.current) return;
+      const w = Math.min(Math.max(dragRef.current.sw + (dragRef.current.sx - ev.clientX), 300), window.innerWidth - 24);
+      const h = Math.min(Math.max(dragRef.current.sh + (dragRef.current.sy - ev.clientY), 300), window.innerHeight - 80);
+      setDims({ w, h });
+    };
+    const up = () => {
+      dragRef.current = null;
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  const toggleExpand = () =>
+    setDims((d) =>
+      d.w > 520
+        ? { w: 410, h: 480 }
+        : { w: Math.min(760, window.innerWidth - 24), h: Math.min(760, window.innerHeight - 80) },
+    );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-muted/40 via-background to-background text-foreground">
@@ -214,9 +243,21 @@ export default function DemoExamPage() {
 
       {/* 플로팅 AI 창 — 독립 AI 서비스(ChatGPT) 같은 느낌 */}
       {chatOpen ? (
-        <div className="fixed bottom-4 right-4 z-30 flex w-[min(410px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0f1117] text-slate-100 shadow-2xl ring-1 ring-black/40">
+        <div
+          style={{ width: dims.w, height: dims.h, maxWidth: 'calc(100vw - 1.5rem)', maxHeight: 'calc(100vh - 5rem)' }}
+          className="fixed bottom-4 right-4 z-30 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0f1117] text-slate-100 shadow-2xl ring-1 ring-black/40"
+        >
+          {/* 좌상단 크기조절 핸들 */}
+          <div
+            onPointerDown={onResizeDown}
+            title="드래그해서 크기 조절"
+            className="absolute left-0 top-0 z-10 flex h-5 w-5 cursor-nwse-resize items-start justify-start p-1"
+          >
+            <span className="h-2 w-2 rounded-full border-l-2 border-t-2 border-slate-500" />
+          </div>
+
           {/* 창 크롬 (신호등 + 타이틀 + 모델칩) */}
-          <div className="flex items-center gap-2 border-b border-white/10 bg-[#171922] px-4 py-2.5">
+          <div className="flex items-center gap-2 border-b border-white/10 bg-[#171922] px-4 py-2.5 pl-6">
             <span className="flex gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
@@ -225,18 +266,27 @@ export default function DemoExamPage() {
             <div className="ml-1 flex items-center gap-1.5 text-[12.5px] font-medium">
               <Sparkles className="h-3.5 w-3.5 text-emerald-400" /> AI 어시스턴트
             </div>
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-slate-300">샌드박스 연결됨</span>
-            <button
-              onClick={() => setChatOpen(false)}
-              className="ml-auto rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-slate-100"
-              aria-label="AI 창 접기"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
+            <span className="hidden rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-slate-300 sm:inline">샌드박스 연결됨</span>
+            <div className="ml-auto flex items-center gap-0.5">
+              <button
+                onClick={toggleExpand}
+                className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-slate-100"
+                aria-label="넓게 보기 / 기본 크기"
+              >
+                {dims.w > 520 ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </button>
+              <button
+                onClick={() => setChatOpen(false)}
+                className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-slate-100"
+                aria-label="AI 창 접기"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* 대화 본문 */}
-          <div className="flex max-h-[54vh] min-h-[260px] flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
             {CHAT.map((m, i) => (
               m.who === 'user' ? (
                 <div key={i} className="flex justify-end">
