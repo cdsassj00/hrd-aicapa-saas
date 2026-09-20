@@ -49,7 +49,11 @@ export default function DemoExamPage() {
   const allDownloaded = FILES.every((f) => downloaded[f.name]);
 
   // 챗 창 크기 조절 — 좌상단 모서리 드래그 + 확대/기본 토글.
-  const [dims, setDims] = useState({ w: 410, h: 480 });
+  // 기본값을 세로로 길게(화면 높이 거의 가득) 잡는다.
+  const [dims, setDims] = useState(() => ({
+    w: 440,
+    h: typeof window !== 'undefined' ? Math.min(760, window.innerHeight - 96) : 640,
+  }));
   const dragRef = useRef<{ sx: number; sy: number; sw: number; sh: number } | null>(null);
 
   const onResizeDown = (e: React.PointerEvent) => {
