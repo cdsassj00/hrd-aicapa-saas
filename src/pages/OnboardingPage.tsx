@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FullscreenLoader } from '@/components/FullscreenLoader';
 import { toast } from 'sonner';
+import { Clock, Mail, CreditCard, LogOut } from 'lucide-react';
 import { ORG_DOMAIN_SUFFIX } from '@/lib/brand';
 
 /** 서브도메인으로 그대로 쓰이므로 DB 의 organizations_slug_format 과
@@ -23,7 +24,7 @@ function suggestSlug(name: string) {
 }
 
 export default function OnboardingPage() {
-  const { user, memberships, loading, switchOrg, refreshMemberships } = useAuth();
+  const { user, memberships, loading, isPlatformAdmin, switchOrg, refreshMemberships, signOut } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -46,14 +47,13 @@ export default function OnboardingPage() {
     setSubmitting(true);
     try {
       // 조직·소유자 멤버십·브랜딩을 한 트랜잭션으로 만드는 유일한 통로.
-      // organizations 에는 INSERT 정책이 없어 직접 insert 는 막혀 있다.
+      // 0023 이후 플랫폼 운영자만 호출할 수 있다.
       const { data, error } = await supabase.rpc('create_organization', {
         _slug: effectiveSlug,
         _name: name.trim(),
       });
 
       if (error) {
-        // DB 제약(중복 slug·예약어)이 그대로 올라온다 — 사람이 읽을 말로 바꾼다
         const msg = error.message.includes('organizations_slug_key')
           ? '이미 사용 중인 주소입니다. 다른 주소를 입력하세요.'
           : error.message.includes('slug_not_reserved')
@@ -73,88 +73,153 @@ export default function OnboardingPage() {
     }
   };
 
+  // 이미 속한 조직이 있으면(초대 수락 등) 바로 들어갈 수 있게 항상 먼저 보여준다.
+  const orgSwitcher = memberships.length > 0 && (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">이미 속한 조직</CardTitle>
+        <CardDescription>선택해서 바로 들어갈 수 있습니다.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        {memberships.map(m => (
+          <Button
+            key={`${m.orgId}-${m.role}`}
+            variant="outline"
+            className="justify-between"
+            onClick={() => { switchOrg(m.orgId); navigate('/', { replace: true }); }}
+          >
+            <span>{m.orgName}</span>
+            <span className="text-xs text-muted-foreground">{m.role}</span>
+          </Button>
+        ))}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">조직을 만들어 시작하세요</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          진단·평가 데이터는 조직 단위로 완전히 분리됩니다. 다른 조직의 데이터는
-          관리자라도 볼 수 없습니다.
-        </p>
-      </div>
+      {isPlatformAdmin ? (
+        // ── 플랫폼 운영자: 고객사 조직을 직접 프로비저닝한다 ──────────────
+        <>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">조직 프로비저닝 (운영자)</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              승인된 고객사의 조직을 만들고, 만든 사람이 소유자(org_owner)가 됩니다.
+              진단·평가 데이터는 조직 단위로 완전히 분리됩니다.
+            </p>
+          </div>
 
-      {memberships.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">이미 속한 조직</CardTitle>
-            <CardDescription>선택해서 바로 들어갈 수 있습니다.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {memberships.map(m => (
-              <Button
-                key={`${m.orgId}-${m.role}`}
-                variant="outline"
-                className="justify-between"
-                onClick={() => { switchOrg(m.orgId); navigate('/', { replace: true }); }}
-              >
-                <span>{m.orgName}</span>
-                <span className="text-xs text-muted-foreground">{m.role}</span>
-              </Button>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+          {orgSwitcher}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">새 조직 만들기</CardTitle>
-          <CardDescription>만든 사람이 소유자(org_owner)가 됩니다.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreate} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="org-name">조직 이름</Label>
-              <Input
-                id="org-name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="주식회사 에이스엠"
-                required
-                maxLength={80}
-              />
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">새 조직 만들기</CardTitle>
+              <CardDescription>운영자 전용. 일반 가입자는 도입 문의를 거쳐 승인됩니다.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreate} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="org-name">조직 이름</Label>
+                  <Input
+                    id="org-name"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="주식회사 에이스엠"
+                    required
+                    maxLength={80}
+                  />
+                </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="org-slug">주소</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="org-slug"
-                  value={effectiveSlug}
-                  onChange={e => { setSlugTouched(true); setSlug(e.target.value.toLowerCase()); }}
-                  placeholder="acme"
-                  required
-                  maxLength={63}
-                />
-                {ORG_DOMAIN_SUFFIX && (
-                  <span className="whitespace-nowrap text-sm text-muted-foreground">{ORG_DOMAIN_SUFFIX}</span>
-                )}
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="org-slug">주소</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="org-slug"
+                      value={effectiveSlug}
+                      onChange={e => { setSlugTouched(true); setSlug(e.target.value.toLowerCase()); }}
+                      placeholder="acme"
+                      required
+                      maxLength={63}
+                    />
+                    {ORG_DOMAIN_SUFFIX && (
+                      <span className="whitespace-nowrap text-sm text-muted-foreground">{ORG_DOMAIN_SUFFIX}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    영문 소문자·숫자·하이픈만. 조직을 식별하는 고유 주소이며, 나중에 자체 도메인을 연결할 수 있습니다.
+                  </p>
+                  {effectiveSlug && !slugValid && (
+                    <p className="text-xs text-destructive">
+                      주소 형식이 올바르지 않습니다. 영문 소문자로 시작하고 끝나야 합니다.
+                    </p>
+                  )}
+                </div>
+
+                <Button type="submit" disabled={submitting || !name.trim() || !slugValid}>
+                  {submitting ? '만드는 중...' : '조직 만들기'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        // ── 일반 가입자: 승인 대기. 자가 조직 생성은 불가(도입문의→승인) ──
+        <>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">가입이 완료되었습니다 🎉</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              계정은 만들어졌지만, 아직 연결된 조직(워크스페이스)이 없습니다.
+              시스템 이용은 <b>담당자 승인</b>을 거쳐 열립니다.
+            </p>
+          </div>
+
+          {orgSwitcher}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4 text-primary" /> 승인 대기 중
+              </CardTitle>
+              <CardDescription>이용을 시작하는 두 가지 방법입니다.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 text-[13.5px]">
+              <div className="flex gap-3">
+                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <div>
+                  <div className="font-medium">도입 문의 → 담당자 승인</div>
+                  <p className="text-muted-foreground">
+                    대상 인원·직무를 알려주시면 조직을 개설하고 관리자 권한을 부여해 드립니다.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                영문 소문자·숫자·하이픈만. 조직을 식별하는 고유 주소이며, 나중에 자체 도메인을 연결할 수 있습니다.
-              </p>
-              {effectiveSlug && !slugValid && (
-                <p className="text-xs text-destructive">
-                  주소 형식이 올바르지 않습니다. 영문 소문자로 시작하고 끝나야 합니다.
-                </p>
-              )}
-            </div>
+              <div className="flex gap-3">
+                <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div>
+                  <div className="font-medium flex items-center gap-2">
+                    크레딧 구매 <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">준비 중</span>
+                  </div>
+                  <p className="text-muted-foreground">
+                    응시 인원만큼 크레딧을 구매해 바로 시작하는 방식은 곧 열립니다. 구독 요금제도 결제 심사 후 오픈됩니다.
+                  </p>
+                </div>
+              </div>
 
-            <Button type="submit" disabled={submitting || !name.trim() || !slugValid}>
-              {submitting ? '만드는 중...' : '조직 만들기'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <a href="https://ai-hrd.com/#contact"><Button className="text-[13px]">도입 문의하기</Button></a>
+                <Button variant="outline" className="text-[13px]" onClick={() => navigate('/demo')}>응시 화면 미리보기</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <button
+            type="button"
+            onClick={async () => { await signOut(); navigate('/login', { replace: true }); }}
+            className="mx-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="h-3.5 w-3.5" /> 로그아웃
+          </button>
+        </>
+      )}
 
       <p className="text-center text-xs text-muted-foreground">
         초대를 받으셨나요? 메일의 링크로 들어오시면 조직에 바로 합류합니다.

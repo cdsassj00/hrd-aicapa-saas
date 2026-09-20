@@ -180,20 +180,30 @@ select pg_temp.assert(
   '플랫폼 운영자에게 전 조직이 보여야 함');
 
 -- ---------------------------------------------------------------------------
--- 6. create_organization() — 조직 + 소유자 + 브랜딩 원자적 생성
+-- 6. create_organization() — 플랫폼 운영자만 조직을 만든다(0023, 도입문의→승인 모델)
 -- ---------------------------------------------------------------------------
+-- 6a. 일반 사용자는 자가 조직 생성이 거부돼야 한다.
 set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
+do $$
+begin
+  perform public.create_organization('gamma', '감마 주식회사');
+  raise exception 'RBAC 검증 실패: 일반 사용자가 조직을 생성함';
+exception
+  when insufficient_privilege then null;  -- 기대된 차단
+end $$;
 
+-- 6b. 플랫폼 운영자는 조직 + 소유자 + 브랜딩을 원자적으로 만든다.
+set local request.jwt.claims = '{"sub":"44444444-4444-4444-4444-444444444444","role":"authenticated"}';
 select public.create_organization('gamma', '감마 주식회사');
 
 select pg_temp.assert(
-  (select count(*) from public.organizations) = 2,
-  'create_organization 후 소속 조직이 2개여야 함');
+  exists (select 1 from public.organizations where slug = 'gamma'),
+  '플랫폼 운영자의 create_organization 이 조직을 만들어야 함');
 
 select pg_temp.assert(
   public.has_org_role(
     (select id from public.organizations where slug = 'gamma'), 'org_owner'),
-  '생성자가 org_owner 여야 함');
+  '생성자(운영자)가 org_owner 여야 함');
 
 -- ---------------------------------------------------------------------------
 -- 7. 초대 플로우 (0004)
