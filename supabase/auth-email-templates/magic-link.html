@@ -1,0 +1,35 @@
+<!-- Supabase Auth → Authentication → Emails → "Magic Link" 템플릿에 붙여넣기.
+     변수 {{ .ConfirmationURL }} 는 Supabase 가 채웁니다. Subject 예: "[AI 역량평가] 로그인 링크" -->
+<!doctype html><html><body style="margin:0;padding:0;background:#f1f5f9">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:28px 12px">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6eaf0;font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','맑은 고딕',sans-serif">
+        <tr><td style="background:linear-gradient(100deg,#4f46e5,#7c3aed);padding:22px 24px">
+          <div style="color:#ffffff;font-size:16px;font-weight:800;letter-spacing:-0.01em">AI 역량평가 <span style="opacity:.8;font-weight:600">for Business</span></div>
+          <div style="margin-top:6px"><span style="display:inline-block;background:rgba(255,255,255,.18);color:#ffffff;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px">로그인 링크</span></div>
+        </td></tr>
+        <tr><td style="padding:26px 24px 0">
+          <h1 style="margin:0 0 10px;font-size:20px;color:#0f172a;letter-spacing:-0.01em">로그인 링크가 도착했습니다</h1>
+          <p style="margin:0;color:#475569;font-size:14px;line-height:1.7">
+            아래 버튼을 눌러 비밀번호 없이 바로 로그인하세요. 이 링크는 일정 시간이 지나면 만료됩니다.
+          </p>
+        </td></tr>
+        <tr><td style="padding:22px 24px 4px">
+          <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:13px 22px;border-radius:10px">로그인하기</a>
+        </td></tr>
+        <tr><td style="padding:16px 24px 0">
+          <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.7">
+            버튼이 눌리지 않으면 이 주소를 복사해 브라우저에 붙여넣으세요:<br>
+            <a href="{{ .ConfirmationURL }}" style="color:#6366f1;word-break:break-all">{{ .ConfirmationURL }}</a>
+          </p>
+        </td></tr>
+        <tr><td style="padding:22px 24px 24px">
+          <hr style="border:none;border-top:1px solid #eef1f6;margin:0 0 12px">
+          <div style="color:#94a3b8;font-size:11.5px;line-height:1.7">
+            본인이 요청하지 않았다면 이 메일을 무시하셔도 됩니다.<br>
+            (주)한국데이터사이언티스트협회 · <a href="https://ai-hrd.com" style="color:#6366f1;text-decoration:none">ai-hrd.com</a>
+          </div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table></body></html>

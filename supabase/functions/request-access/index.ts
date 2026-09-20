@@ -4,7 +4,7 @@
 //       (3) Resend 메일 알림 → INQUIRY_NOTIFY_TO(sjshin@cdsa.kr)
 // 설계문서 §8: 비즈니스 로직 최소, HTTP 껍데기.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.99.1";
-import { sendEmail } from "../_shared/email.ts";
+import { sendEmail, renderNotifyEmail } from "../_shared/email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,9 +15,6 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-
-const esc = (s?: string | null) =>
-  String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -75,20 +72,22 @@ Deno.serve(async (req) => {
     // (3) 메일 알림
     try {
       const to = Deno.env.get("INQUIRY_NOTIFY_TO") || "sjshin@cdsa.kr";
-      const rowHtml = (k: string, v?: string | null) =>
-        v ? `<tr><td style="padding:6px 12px;color:#667;white-space:nowrap">${k}</td><td style="padding:6px 12px"><b>${esc(v)}</b></td></tr>` : "";
       await sendEmail({
         to,
-        subject: `[AI-HRD 가입 승인요청] ${esc(user.email ?? name)}`,
-        html: `<div style="font-family:-apple-system,'Malgun Gothic',sans-serif;font-size:14px;color:#111;max-width:560px">
-          <h2 style="margin:0 0 14px;font-size:18px">가입자 접근 승인 요청</h2>
-          <table style="border-collapse:collapse;background:#f6f8fb;border-radius:10px;width:100%">
-            ${rowHtml("이름", name)}${rowHtml("이메일", user.email)}${rowHtml("소속", org)}
-            ${rowHtml("예상 인원", headcount)}${rowHtml("연락처", phone)}${rowHtml("user_id", user.id)}
-            ${message ? `<tr><td style="padding:6px 12px;color:#667;vertical-align:top">메모</td><td style="padding:6px 12px;white-space:pre-wrap">${esc(message)}</td></tr>` : ""}
-          </table>
-          <p style="color:#8a94a3;font-size:12px;margin-top:16px">app.ai-hrd.com 승인 대기 화면에서 요청 · 조직 개설 후 org_owner 로 초대하면 접근이 열립니다.</p>
-        </div>`,
+        subject: `[AI-HRD 가입 승인요청] ${user.email ?? name}`,
+        html: renderNotifyEmail({
+          kicker: "가입 승인요청",
+          title: "가입자 접근 승인 요청",
+          rows: [
+            { label: "이름", value: name },
+            { label: "이메일", value: user.email },
+            { label: "소속", value: org },
+            { label: "예상 인원", value: headcount },
+            { label: "연락처", value: phone },
+          ],
+          message,
+          footnote: `승인 대기 화면에서 접수된 요청입니다. 조직을 개설하고 org_owner 로 초대하면 이 사용자의 접근이 열립니다. (user_id: ${user.id})`,
+        }),
         replyTo: user.email ?? undefined,
       });
     } catch (e) {

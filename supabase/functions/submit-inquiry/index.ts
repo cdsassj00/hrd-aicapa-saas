@@ -4,7 +4,7 @@
 //       (3) Resend 메일 알림(베스트에포트) — INQUIRY_NOTIFY_TO 로 발송
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.99.1";
 import { createInquiryNotionPage } from "../_shared/notion.ts";
-import { sendEmail } from "../_shared/email.ts";
+import { sendEmail, renderNotifyEmail } from "../_shared/email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,21 +16,23 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const esc = (s?: string | null) =>
-  String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
-
 function notifyHtml(i: Record<string, string | null>): string {
-  const row = (k: string, v?: string | null) =>
-    v ? `<tr><td style="padding:6px 12px;color:#667;white-space:nowrap">${k}</td><td style="padding:6px 12px"><b>${esc(v)}</b></td></tr>` : "";
-  return `<div style="font-family:-apple-system,'Malgun Gothic',sans-serif;font-size:14px;color:#111;max-width:560px">
-    <h2 style="margin:0 0 14px;font-size:18px">새 도입 문의 · ${esc(i.company)}</h2>
-    <table style="border-collapse:collapse;background:#f6f8fb;border-radius:10px;width:100%">
-      ${row("회사/기관", i.company)}${row("담당자", i.contact_name)}${row("이메일", i.email)}${row("연락처", i.phone)}
-      ${row("유형", i.inquiry_type)}${row("예상 인원", i.headcount)}${row("희망 시기", i.timeframe)}${row("유입경로", i.source)}
-      ${i.message ? `<tr><td style="padding:6px 12px;color:#667;vertical-align:top">문의 내용</td><td style="padding:6px 12px;white-space:pre-wrap">${esc(i.message)}</td></tr>` : ""}
-    </table>
-    <p style="color:#8a94a3;font-size:12px;margin-top:16px">ai-hrd.com 도입 문의 폼 접수 · Notion DB 에도 기록되었습니다.</p>
-  </div>`;
+  return renderNotifyEmail({
+    kicker: "도입 문의",
+    title: `새 도입 문의 · ${i.company ?? ""}`,
+    rows: [
+      { label: "회사/기관", value: i.company },
+      { label: "담당자", value: i.contact_name },
+      { label: "이메일", value: i.email },
+      { label: "연락처", value: i.phone },
+      { label: "유형", value: i.inquiry_type },
+      { label: "예상 인원", value: i.headcount },
+      { label: "희망 시기", value: i.timeframe },
+      { label: "유입경로", value: i.source },
+    ],
+    message: i.message,
+    footnote: "ai-hrd.com 도입 문의 폼으로 접수되었습니다. Notion DB 에도 기록됩니다.",
+  });
 }
 
 Deno.serve(async (req) => {
