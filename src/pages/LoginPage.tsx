@@ -29,7 +29,6 @@ export default function LoginPage() {
   const [department, setDepartment] = useState('');
   const [position, setPosition] = useState('');
   const [phone, setPhone] = useState('');
-  const selectedRole: UserRole = 'applicant';
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [signupError, setSignupError] = useState('');
@@ -39,10 +38,14 @@ export default function LoginPage() {
   const [otpStep, setOtpStep] = useState<'info' | 'verify'>('info');
   const [otpCode, setOtpCode] = useState('');
   const [otpSending, setOtpSending] = useState(false);
-  const { signIn, signUp, user, role, loading } = useAuth();
+  const { signIn, signUp, signOut, user, role, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { settings } = useSiteSettings();
+
+  // 명시적으로 회원가입을 눌러 들어온 경우(?tab=signup). 이미 로그인돼 있어도
+  // 대시보드로 튕기지 않고 "로그아웃하고 새로 가입" 안내를 보여준다.
+  const wantSignup = searchParams.get('tab') === 'signup';
 
   const routes: Record<UserRole, string> = {
     applicant: '/applicant',
@@ -78,15 +81,16 @@ export default function LoginPage() {
     }
   };
 
-  // Auto-redirect if already logged in (handles OAuth callback)
+  // Auto-redirect if already logged in (handles OAuth callback).
+  // 단, 회원가입을 명시적으로 눌러 들어온 경우엔 튕기지 않는다(안내 카드를 보여줌).
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && !wantSignup) {
       const params = new URLSearchParams(window.location.search);
       const invite = params.get('invite');
       const target = getSafeRedirect() || routes[role] || '/applicant';
       navigate(invite ? `${target}?invite=${invite}` : target, { replace: true });
     }
-  }, [loading, user, role, navigate, redirectParam]);
+  }, [loading, user, role, navigate, redirectParam, wantSignup]);
 
   useEffect(() => {
     if (user || loading) return;
@@ -122,6 +126,38 @@ export default function LoginPage() {
 
   // Show loading spinner while auth is restoring session
   if (loading || inviteResolving) return <FullscreenLoader message="세션 확인 중..." />;
+  // 로그인 상태로 회원가입 진입 → 대시보드로 튕기지 않고 안내 카드를 보여준다.
+  if (user && wantSignup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
+        <AsciiMorphBackground />
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-background/30 via-background/65 to-background backdrop-blur-2xl" />
+        <Card className="w-full max-w-[400px] relative z-10 rounded-[28px] border-border/40 bg-card/70 backdrop-blur-2xl shadow-[0_24px_70px_-20px_rgba(0,0,0,0.45)]">
+          <CardHeader className="text-center pt-9 pb-3">
+            <CardTitle className="text-[20px] font-semibold tracking-tight">이미 로그인되어 있습니다</CardTitle>
+            <p className="text-[13px] text-muted-foreground mt-2">
+              현재 <b>{user.email}</b> 계정으로 로그인 중입니다.<br />새 계정으로 가입하려면 먼저 로그아웃하세요.
+            </p>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2.5 pb-8">
+            <Button
+              className="w-full h-11 rounded-full text-[14px] font-medium"
+              onClick={async () => { await signOut(); }}
+            >
+              로그아웃하고 새 계정 만들기
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-11 rounded-full text-[14px]"
+              onClick={() => navigate(routes[role] || '/applicant', { replace: true })}
+            >
+              내 화면으로 이동
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   if (user) return <FullscreenLoader message="리다이렉트 중..." />;
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -166,8 +202,9 @@ export default function LoginPage() {
     if (error) {
       setSignupError(error.message || '회원가입에 실패했습니다.');
     } else {
-      toast({ title: '회원가입 완료', description: '로그인되었습니다.' });
-      setTimeout(() => navigate(routes[selectedRole]), 500);
+      // 가입 직후엔 소속 조직이 없다 → 홈으로 보내면 승인 대기(온보딩) 화면으로 라우팅된다.
+      toast({ title: '회원가입 완료', description: '담당자 승인 후 이용할 수 있습니다.' });
+      setTimeout(() => navigate('/', { replace: true }), 500);
     }
   };
 
