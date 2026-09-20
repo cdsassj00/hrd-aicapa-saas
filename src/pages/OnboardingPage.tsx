@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FullscreenLoader } from '@/components/FullscreenLoader';
 import { toast } from 'sonner';
-import { Clock, Mail, CreditCard, LogOut } from 'lucide-react';
+import { Clock, Mail, CreditCard, LogOut, Send } from 'lucide-react';
 import { ORG_DOMAIN_SUFFIX } from '@/lib/brand';
 
 /** 서브도메인으로 그대로 쓰이므로 DB 의 organizations_slug_format 과
@@ -30,6 +30,32 @@ export default function OnboardingPage() {
   const [slug, setSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // 승인 요청/독촉 폼 (일반 가입자)
+  const [reqOrg, setReqOrg] = useState('');
+  const [reqHeadcount, setReqHeadcount] = useState('');
+  const [reqMessage, setReqMessage] = useState('');
+  const [reqSending, setReqSending] = useState(false);
+  const [reqSent, setReqSent] = useState(false);
+
+  const handleRequestAccess = async () => {
+    setReqSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('request-access', {
+        body: { org: reqOrg.trim(), headcount: reqHeadcount.trim(), message: reqMessage.trim() },
+      });
+      if (error || (data && (data as { error?: string }).error)) {
+        toast.error((data as { error?: string })?.error || '승인 요청 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+      setReqSent(true);
+      toast.success('담당자에게 승인 요청 메일을 보냈습니다. 승인 후 로그인해 이용할 수 있습니다.');
+    } catch {
+      toast.error('승인 요청 전송 중 오류가 발생했습니다.');
+    } finally {
+      setReqSending(false);
+    }
+  };
 
   if (loading) return <FullscreenLoader message="세션 확인 중..." />;
   if (!user) {
@@ -178,34 +204,62 @@ export default function OnboardingPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Clock className="h-4 w-4 text-primary" /> 승인 대기 중
+                <Clock className="h-4 w-4 text-primary" /> 승인 후 로그인해 이용할 수 있습니다
               </CardTitle>
-              <CardDescription>이용을 시작하는 두 가지 방법입니다.</CardDescription>
+              <CardDescription>담당자 승인이 나면 이 계정으로 바로 시스템에 입장합니다.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 text-[13.5px]">
-              <div className="flex gap-3">
-                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <div>
-                  <div className="font-medium">도입 문의 → 담당자 승인</div>
-                  <p className="text-muted-foreground">
-                    대상 인원·직무를 알려주시면 조직을 개설하고 관리자 권한을 부여해 드립니다.
-                  </p>
-                </div>
-              </div>
               <div className="flex gap-3">
                 <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <div>
                   <div className="font-medium flex items-center gap-2">
-                    크레딧 구매 <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">준비 중</span>
+                    크레딧 구매 · 구독 결제 <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">준비 중</span>
                   </div>
                   <p className="text-muted-foreground">
-                    응시 인원만큼 크레딧을 구매해 바로 시작하는 방식은 곧 열립니다. 구독 요금제도 결제 심사 후 오픈됩니다.
+                    응시 인원만큼 크레딧을 구매해 바로 시작하는 방식과 정기 구독은 결제 심사 후 오픈됩니다.
+                    지금은 아래로 <b>승인 요청</b>을 보내주세요.
                   </p>
                 </div>
               </div>
 
+              {reqSent ? (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-[13px]">
+                  <div className="flex items-center gap-2 font-medium text-primary"><Send className="h-4 w-4" /> 승인 요청을 보냈습니다</div>
+                  <p className="mt-1 text-muted-foreground">
+                    담당자 검토 후 조직을 개설하고 권한을 부여해 드립니다. 승인 완료 안내를 받으면 다시 로그인해 주세요.
+                  </p>
+                  <Button variant="outline" size="sm" className="mt-3 text-[13px]" disabled={reqSending} onClick={handleRequestAccess}>
+                    한 번 더 독촉하기
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-lg border bg-muted/20 p-4">
+                  <div className="flex items-center gap-2 text-[13px] font-medium">
+                    <Mail className="h-4 w-4 text-primary" /> 승인 요청 · 독촉하기
+                  </div>
+                  <p className="mt-1 text-[12.5px] text-muted-foreground">
+                    담당자(sjshin@cdsa.kr)에게 승인 요청 메일이 전송됩니다. 소속·인원을 남기면 더 빨리 처리됩니다.
+                  </p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <Input value={reqOrg} onChange={e => setReqOrg(e.target.value)} placeholder="소속 기관/회사 (선택)" maxLength={80} />
+                    <Input value={reqHeadcount} onChange={e => setReqHeadcount(e.target.value)} placeholder="예상 응시 인원 (선택)" maxLength={40} />
+                  </div>
+                  <textarea
+                    value={reqMessage}
+                    onChange={e => setReqMessage(e.target.value)}
+                    placeholder="도입 목적·희망 시기 등 메모 (선택)"
+                    maxLength={1000}
+                    rows={2}
+                    className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-[13px]"
+                  />
+                  <Button className="mt-3 w-full text-[13px]" disabled={reqSending} onClick={handleRequestAccess}>
+                    {reqSending ? '보내는 중...' : '승인 요청 메일 보내기'}
+                  </Button>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2 pt-1">
-                <a href="https://ai-hrd.com/#contact"><Button className="text-[13px]">도입 문의하기</Button></a>
+                <a href="https://ai-hrd.com/#contact"><Button variant="outline" className="text-[13px]">도입 문의 페이지</Button></a>
                 <Button variant="outline" className="text-[13px]" onClick={() => navigate('/demo')}>응시 화면 미리보기</Button>
               </div>
             </CardContent>
