@@ -44,12 +44,18 @@ export default function OnboardingPage() {
       const { data, error } = await supabase.functions.invoke('request-access', {
         body: { org: reqOrg.trim(), headcount: reqHeadcount.trim(), message: reqMessage.trim() },
       });
-      if (error || (data && (data as { error?: string }).error)) {
-        toast.error((data as { error?: string })?.error || '승인 요청 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      const res = (data ?? {}) as { error?: string; ok?: boolean; emailed?: boolean };
+      if (error || res.error) {
+        toast.error(res.error || '승인 요청 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
         return;
       }
       setReqSent(true);
-      toast.success('담당자에게 승인 요청 메일을 보냈습니다. 승인 후 로그인해 이용할 수 있습니다.');
+      if (res.emailed === false) {
+        // 요청은 기록됐으나 알림 메일 발송은 실패(예: 발신 도메인 미인증).
+        toast.success('승인 요청이 접수되었습니다. 담당자가 관리자 화면에서 확인합니다.');
+      } else {
+        toast.success('담당자에게 승인 요청 메일을 보냈습니다. 승인 후 로그인해 이용할 수 있습니다.');
+      }
     } catch {
       toast.error('승인 요청 전송 중 오류가 발생했습니다.');
     } finally {
