@@ -32,6 +32,7 @@ import NotFound from "@/pages/NotFound";
 import OnboardingPage from "@/pages/OnboardingPage";
 import AcceptInvitePage from "@/pages/AcceptInvitePage";
 import DemoExamPage from "@/pages/DemoExamPage";
+import DemoAdminPage from "@/pages/DemoAdminPage";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,7 @@ function AuthGate() {
       <Route path="/platform" element={<PlatformRoute><PlatformDashboard /></PlatformRoute>} />
       <Route path="/invite/accept" element={<AcceptInvitePage />} />
       <Route path="/demo" element={<DemoExamPage />} />
+      <Route path="/demo/admin" element={<DemoAdminPage />} />
       <Route path="/" element={<HomeRedirect />} />
       <Route element={<DashboardLayout />}>
         {/* 응시자 */}

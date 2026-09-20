@@ -24,6 +24,7 @@ export default function LoginPage() {
   const redirectParam = searchParams.get('redirect');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [organization, setOrganization] = useState('');
   const [department, setDepartment] = useState('');
@@ -53,6 +54,16 @@ export default function LoginPage() {
     org_owner: '/admin/exams',
     org_admin: '/admin/exams',
     viewer: '/admin/certifications',
+  };
+
+  // 비밀번호 강도(0~4) — 길이 + 문자종류. 라벨/색은 렌더에서 매핑.
+  const pwScore = (pw: string) => {
+    let s = 0;
+    if (pw.length >= 8) s++;
+    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s++;
+    if (/\d/.test(pw)) s++;
+    if (/[^A-Za-z0-9]/.test(pw)) s++;
+    return Math.min(s, 4);
   };
 
   const getSafeRedirect = () => {
@@ -192,6 +203,14 @@ export default function LoginPage() {
     setSignupError('');
     if (!name || !email || !password) {
       setSignupError('이름, 이메일, 비밀번호는 필수입니다.');
+      return;
+    }
+    if (password.length < 8) {
+      setSignupError('비밀번호는 8자 이상으로 설정해주세요.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setSignupError('비밀번호가 일치하지 않습니다.');
       return;
     }
     setIsLoading(true);
@@ -425,7 +444,40 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[12px]">비밀번호 *</Label>
-                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="6자 이상" />
+                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="8자 이상" />
+                  {password && (() => {
+                    const score = pwScore(password);
+                    const meta = [
+                      { label: '매우 약함', color: 'bg-destructive', text: 'text-destructive' },
+                      { label: '약함', color: 'bg-destructive', text: 'text-destructive' },
+                      { label: '보통', color: 'bg-amber-500', text: 'text-amber-600' },
+                      { label: '강함', color: 'bg-emerald-500', text: 'text-emerald-600' },
+                      { label: '매우 강함', color: 'bg-emerald-500', text: 'text-emerald-600' },
+                    ][score];
+                    return (
+                      <div className="space-y-1">
+                        <div className="flex gap-1">
+                          {[0, 1, 2, 3].map(i => (
+                            <span key={i} className={`h-1 flex-1 rounded-full ${i < score ? meta.color : 'bg-muted'}`} />
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className={meta.text}>비밀번호 강도: {meta.label}</span>
+                          {password.length < 8 && <span className="text-muted-foreground">8자 이상 권장</span>}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[12px]">비밀번호 확인 *</Label>
+                  <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="비밀번호를 다시 입력" />
+                  {confirmPassword && confirmPassword !== password && (
+                    <p className="text-[11px] text-destructive">비밀번호가 일치하지 않습니다.</p>
+                  )}
+                  {confirmPassword && confirmPassword === password && (
+                    <p className="text-[11px] text-emerald-600">비밀번호가 일치합니다.</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[12px]">이름 *</Label>
