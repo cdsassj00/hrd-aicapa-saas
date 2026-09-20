@@ -1,131 +1,262 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, FileText, Bot, User, Lock } from 'lucide-react';
+import {
+  Sparkles, FileText, Bot, User, Lock, Paperclip, Download,
+  Upload, Terminal, ChevronRight, ChevronLeft, CheckCircle2, FileSpreadsheet,
+} from 'lucide-react';
 
 /**
  * 공개 응시자 화면 미리보기 (/demo)
  * 로그인·승인 없이 "응시자가 보는 시험 화면"을 그대로 체험. 채점·저장 없음.
- * 실제 도입(승인)은 회원가입·도입 문의 후 진행.
+ * 실제 응시에서는 오른쪽 AI 사이드바에서 E2B 샌드박스 에이전트와 대화하며
+ * 파일을 생성·다운로드하고, 그 결과물을 제출합니다.
  */
+
+// AI 사이드바 목업 대화 — 프롬프트·대화 로그가 평가 대상임을 보여준다.
+const CHAT = [
+  { who: 'user', text: '첨부된 orders_2026Q2.csv 열어서 컬럼이랑 행 수부터 확인해줘.' },
+  {
+    who: 'ai',
+    text: '파일을 읽었습니다. 320행 · 9개 컬럼(order_id, order_date, category, amount, status, region, ship_days, customer_id, coupon). status에 결측 4건, amount에 통화기호가 섞여 있어 정제가 필요합니다.',
+  },
+  { who: 'user', text: "‘완료’ 주문만 대상으로 카테고리별 매출·평균 배송일 구하고, 재구매 고객 비율까지 계산해서 요약해줘." },
+  {
+    who: 'ai',
+    text: 'pandas로 정제 후 집계했습니다. 완료 주문 271건 기준 — 가전이 매출 1위(1억 2,430만원), 평균 배송일은 패션이 1.8일로 가장 빠릅니다. 재구매(2회 이상 구매) 고객 비율은 34.7%입니다. 집계표와 요약 리포트를 파일로 만들었습니다.',
+  },
+  { who: 'user', text: '재구매 비율은 어떤 기준으로 잡았어? 근거 남겨서 메모에 넣어줘.' },
+];
+
+// E2B 샌드박스가 남긴 작업 과정(코드 실행 로그) 목업.
+const STEPS = [
+  { label: 'orders_2026Q2.csv 로드 (320행)', ok: true },
+  { label: 'amount 통화기호 제거 · 숫자 변환, status 결측 4건 제외', ok: true },
+  { label: "status == '완료' 필터 → 271건", ok: true },
+  { label: 'category별 매출·평균 ship_days groupby 집계', ok: true },
+  { label: 'customer_id 기준 재구매(2회+) 비율 산출 = 34.7%', ok: true },
+  { label: 'summary.md · category_stats.csv 파일 생성', ok: true },
+];
+
+const FILES = [
+  { name: 'category_stats.csv', size: '2.1 KB', icon: FileSpreadsheet },
+  { name: 'summary.md', size: '1.4 KB', icon: FileText },
+];
+
 export default function DemoExamPage() {
+  const [chatOpen, setChatOpen] = useState(true);
+  const [downloaded, setDownloaded] = useState<Record<string, boolean>>({});
+  const allDownloaded = FILES.every((f) => downloaded[f.name]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* 상단 바 */}
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
+      <header className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4">
           <Badge variant="secondary" className="gap-1 text-[11px]">
             <Sparkles className="h-3 w-3" /> 응시자 화면 미리보기
           </Badge>
-          <span className="hidden text-[12.5px] text-muted-foreground sm:inline">
+          <span className="hidden text-[12.5px] text-muted-foreground md:inline">
             실제 시험 화면입니다 · 체험용이라 채점·저장은 되지 않습니다
           </span>
           <div className="ml-auto flex items-center gap-2">
-            <a href="https://ai-hrd.com/#contact"><Button variant="outline" size="sm" className="text-[13px]">도입 문의</Button></a>
-            <Link to="/login?tab=signup"><Button size="sm" className="text-[13px]">회원가입</Button></Link>
+            <a href="https://ai-hrd.com/#contact">
+              <Button variant="outline" size="sm" className="text-[13px] font-medium">도입 문의</Button>
+            </a>
+            <Link to="/login?tab=signup">
+              <Button size="sm" className="text-[13px] font-medium">회원가입</Button>
+            </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        <div className="mb-4">
-          <h1 className="text-[18px] font-semibold tracking-tight">AI 활용 역량평가 — 체험 문항</h1>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            지원자는 왼쪽 <b>과제</b>를 읽고, 오른쪽 <b>생성형 AI</b>와 대화하며 실제 산출물을 만들어 제출합니다.
-            (예시: 민간 · 데이터 분석)
-          </p>
-        </div>
+      <div className="mx-auto flex max-w-7xl gap-0">
+        {/* 왼쪽: 과제 + 작업과정 + 제출 */}
+        <main className="min-w-0 flex-1 px-4 py-6">
+          <div className="mb-4">
+            <h1 className="text-[18px] font-semibold tracking-tight">AI 활용 역량평가 — 체험 문항</h1>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              오른쪽 <b>생성형 AI 사이드바</b>에서 AI에게 파일을 열어 분석시키고, 결과 파일을 <b>다운로드</b>한 뒤
+              아래에 <b>업로드해 제출</b>합니다. (예시: 민간 · 데이터 분석)
+            </p>
+          </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          {/* 왼쪽: 과제 */}
-          <Card className="flex flex-col p-5">
+          {/* 과제 */}
+          <Card className="p-5">
             <div className="mb-2 flex items-center gap-2 text-[13px] font-medium">
               <FileText className="h-4 w-4 text-primary" /> 과제
             </div>
-            <p className="text-[13.5px] leading-relaxed text-muted-foreground">
-              당신은 이커머스 회사의 담당자입니다. 아래 주문 데이터에서 <b>‘완료’ 주문만</b> 대상으로
-              AI를 활용해 다음을 구하세요. (파이썬을 몰라도 AI에게 물어보며 풀 수 있습니다)
+            <p className="text-[13.5px] leading-relaxed">
+              당신은 이커머스 회사의 담당자입니다. 첨부된 <b>2분기 주문 데이터(320행)</b>는 통화기호·결측이 섞여
+              있어 그대로는 계산할 수 없습니다. AI에게 데이터를 <b>정제·집계</b>시켜 아래 3가지를 산출하고,
+              <b>집계표(.csv)와 요약 리포트(.md)</b>를 만들어 제출하세요.
+              <span className="mt-1 block text-[12.5px] text-muted-foreground">
+                (파이썬을 몰라도 됩니다. AI에게 무엇을·왜 시키는지가 평가 대상입니다.)
+              </span>
             </p>
 
-            <div className="mt-3 overflow-hidden rounded-lg border text-[12.5px]">
-              <table className="w-full">
-                <thead className="bg-muted/60 text-left">
-                  <tr><th className="px-3 py-1.5">주문</th><th className="px-3 py-1.5">카테고리</th><th className="px-3 py-1.5">금액</th><th className="px-3 py-1.5">상태</th></tr>
-                </thead>
-                <tbody className="text-muted-foreground">
-                  <tr className="border-t"><td className="px-3 py-1.5">1</td><td className="px-3 py-1.5">의류</td><td className="px-3 py-1.5">50,000</td><td className="px-3 py-1.5">완료</td></tr>
-                  <tr className="border-t"><td className="px-3 py-1.5">2</td><td className="px-3 py-1.5">가전</td><td className="px-3 py-1.5">300,000</td><td className="px-3 py-1.5">완료</td></tr>
-                  <tr className="border-t"><td className="px-3 py-1.5">3</td><td className="px-3 py-1.5">의류</td><td className="px-3 py-1.5">30,000</td><td className="px-3 py-1.5">취소</td></tr>
-                  <tr className="border-t"><td className="px-3 py-1.5">4</td><td className="px-3 py-1.5">가전</td><td className="px-3 py-1.5">250,000</td><td className="px-3 py-1.5">완료</td></tr>
-                </tbody>
-              </table>
-            </div>
+            <ol className="mt-3 space-y-1.5 text-[13px]">
+              <li className="flex gap-2"><span className="font-semibold text-primary">1.</span> ‘완료’ 주문만 대상으로 <b>카테고리별 매출 합계 · 평균 배송일</b></li>
+              <li className="flex gap-2"><span className="font-semibold text-primary">2.</span> 매출 1위 카테고리와 <b>가장 빠른 배송 카테고리</b></li>
+              <li className="flex gap-2"><span className="font-semibold text-primary">3.</span> <b>재구매(2회 이상) 고객 비율</b> — 산출 기준을 리포트에 명시</li>
+            </ol>
 
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="text-[12.5px] text-muted-foreground">(1) ‘완료’ 주문의 총 매출 합계</label>
-                <input disabled placeholder="예: 600000" className="mt-1 w-full rounded-lg border bg-muted/40 px-3 py-2 text-[13px]" />
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-[12.5px]">
+                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-medium">orders_2026Q2.csv</span>
+                <span className="text-muted-foreground">· 320행 · 24 KB</span>
               </div>
-              <div>
-                <label className="text-[12.5px] text-muted-foreground">(2) 매출 1위 카테고리</label>
-                <input disabled placeholder="예: 가전" className="mt-1 w-full rounded-lg border bg-muted/40 px-3 py-2 text-[13px]" />
-              </div>
-              <div>
-                <label className="text-[12.5px] text-muted-foreground">(3) 분석 메모 (.md/.csv)</label>
-                <div className="mt-1 flex items-center gap-2 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-[12.5px] text-muted-foreground">
-                  <Lock className="h-3.5 w-3.5" /> 체험 미리보기 — 제출은 실제 응시에서
-                </div>
-              </div>
+              <span className="text-[12px] text-muted-foreground">← 첨부파일. AI 사이드바에서 열어 분석하세요.</span>
             </div>
           </Card>
 
-          {/* 오른쪽: AI 대화창 */}
-          <Card className="flex flex-col p-5">
-            <div className="mb-2 flex items-center gap-2 text-[13px] font-medium">
-              <Bot className="h-4 w-4 text-primary" /> 생성형 AI
+          {/* 작업 과정 (E2B 샌드박스 로그) */}
+          <Card className="mt-4 p-5">
+            <div className="mb-3 flex items-center gap-2 text-[13px] font-medium">
+              <Terminal className="h-4 w-4 text-primary" /> AI 작업 과정
+              <span className="text-[11.5px] font-normal text-muted-foreground">· E2B 안전 샌드박스에서 실행된 코드 단계</span>
             </div>
-            <div className="flex-1 space-y-3 overflow-y-auto rounded-lg border bg-muted/20 p-3">
-              <div className="flex gap-2">
-                <User className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                <div className="rounded-lg bg-background px-3 py-2 text-[13px]">
-                  이 표에서 상태가 ‘완료’인 주문만 골라서 카테고리별 매출 합계랑 총합을 알려줘.
+            <div className="space-y-1.5">
+              {STEPS.map((s, i) => (
+                <div key={i} className="flex items-start gap-2 text-[12.5px]">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                  <span className="text-muted-foreground"><span className="mr-1.5 font-mono text-[11px] text-foreground/70">#{i + 1}</span>{s.label}</span>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <Bot className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <div className="rounded-lg bg-primary/10 px-3 py-2 text-[13px] leading-relaxed">
-                  완료 주문(1·2·4)만 집계했습니다.<br />
-                  · 가전: 550,000원 · 의류: 50,000원<br />
-                  <b>총 매출 600,000원, 1위 카테고리는 ‘가전’</b>입니다.
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <User className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                <div className="rounded-lg bg-background px-3 py-2 text-[13px]">
-                  근거가 되는 계산 과정을 메모로 정리해줘.
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-[12.5px] text-muted-foreground">
-              <Lock className="h-3.5 w-3.5" /> 실제 응시에서는 여기서 AI와 실시간으로 대화하며 풉니다
+              ))}
             </div>
           </Card>
+
+          {/* 생성된 파일 → 다운로드 */}
+          <Card className="mt-4 p-5">
+            <div className="mb-3 flex items-center gap-2 text-[13px] font-medium">
+              <Download className="h-4 w-4 text-primary" /> AI가 생성한 파일
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {FILES.map((f) => {
+                const Ico = f.icon;
+                const done = downloaded[f.name];
+                return (
+                  <button
+                    key={f.name}
+                    onClick={() => setDownloaded((d) => ({ ...d, [f.name]: true }))}
+                    className="flex items-center gap-3 rounded-lg border bg-muted/20 px-3 py-2.5 text-left transition hover:border-primary/50 hover:bg-muted/40"
+                  >
+                    <Ico className="h-5 w-5 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-medium">{f.name}</div>
+                      <div className="text-[11.5px] text-muted-foreground">{f.size}</div>
+                    </div>
+                    {done ? (
+                      <span className="flex items-center gap-1 text-[11.5px] font-medium text-emerald-600">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> 받음
+                      </span>
+                    ) : (
+                      <Download className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* 제출 (업로드) */}
+          <Card className="mt-4 p-5">
+            <div className="mb-3 flex items-center gap-2 text-[13px] font-medium">
+              <Upload className="h-4 w-4 text-primary" /> 제출
+            </div>
+            <div className={`flex flex-col items-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition ${allDownloaded ? 'border-primary/50 bg-primary/5' : 'border-muted bg-muted/20'}`}>
+              <Upload className={`h-6 w-6 ${allDownloaded ? 'text-primary' : 'text-muted-foreground'}`} />
+              <div className="text-[13px] font-medium">
+                {allDownloaded ? 'AI가 만든 파일을 여기에 올려 제출합니다' : '먼저 위에서 생성 파일을 다운로드하세요'}
+              </div>
+              <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                <Lock className="h-3.5 w-3.5" /> 체험 미리보기 — 실제 제출·채점은 승인된 응시에서 진행됩니다
+              </div>
+              <Button size="sm" disabled className="mt-1 text-[13px]">
+                파일 선택 후 제출 (미리보기 비활성)
+              </Button>
+            </div>
+          </Card>
+
+          {/* 하단 CTA — 가독성 개선(솔리드 버튼) */}
+          <Card className="mt-6 flex flex-col items-center gap-3 border-primary/20 bg-gradient-to-b from-primary/5 to-transparent p-6 text-center">
+            <div className="text-[15px] font-semibold">
+              이 화면으로 지원자의 <span className="text-primary">AI 활용 역량</span>을 평가합니다
+            </div>
+            <p className="max-w-xl text-[13px] text-muted-foreground">
+              정답만이 아니라 <b className="text-foreground">AI에게 던진 프롬프트와 대화 흐름, 작업 과정</b>까지 함께 봅니다.
+              도입은 회원가입 후 담당자 승인을 거쳐 진행됩니다.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link to="/login?tab=signup"><Button className="text-[13px] font-medium">회원가입</Button></Link>
+              <a href="https://ai-hrd.com/#contact"><Button variant="secondary" className="text-[13px] font-medium">도입 문의</Button></a>
+              <Link to="/login"><Button variant="outline" className="text-[13px] font-medium">로그인</Button></Link>
+            </div>
+          </Card>
+        </main>
+
+        {/* 오른쪽: 접었다 펼치는 넓은 AI 사이드바 */}
+        <aside
+          className={`sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 border-l bg-muted/10 transition-all duration-300 lg:block ${chatOpen ? 'w-[420px]' : 'w-12'}`}
+        >
+          {chatOpen ? (
+            <div className="flex h-full flex-col">
+              <div className="flex items-center gap-2 border-b px-4 py-3">
+                <Bot className="h-4 w-4 text-primary" />
+                <span className="text-[13px] font-medium">생성형 AI</span>
+                <span className="text-[11px] text-muted-foreground">· 샌드박스 연결됨</span>
+                <button
+                  onClick={() => setChatOpen(false)}
+                  className="ml-auto rounded-md p-1 text-muted-foreground hover:bg-muted"
+                  aria-label="사이드바 접기"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 space-y-3 overflow-y-auto p-4">
+                {CHAT.map((m, i) => (
+                  <div key={i} className="flex gap-2">
+                    {m.who === 'user'
+                      ? <User className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      : <Bot className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
+                    <div className={`rounded-lg px-3 py-2 text-[13px] leading-relaxed ${m.who === 'user' ? 'bg-background' : 'bg-primary/10'}`}>
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t p-3">
+                <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-[12.5px] text-muted-foreground">
+                  <Lock className="h-3.5 w-3.5" /> 실제 응시에서는 여기서 AI와 실시간으로 대화합니다
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setChatOpen(true)}
+              className="flex h-full w-full flex-col items-center gap-2 py-4 text-muted-foreground hover:text-foreground"
+              aria-label="AI 사이드바 펼치기"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <Bot className="h-4 w-4 text-primary" />
+              <span className="[writing-mode:vertical-rl] text-[12px]">AI 열기</span>
+            </button>
+          )}
+        </aside>
+      </div>
+
+      {/* 모바일: 하단 고정 AI 안내 (사이드바 대체) */}
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/90 px-4 py-2.5 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 text-[12px] text-muted-foreground">
+          <Bot className="h-4 w-4 shrink-0 text-primary" />
+          실제 응시에서는 화면 오른쪽에 <b className="mx-1 text-foreground">AI 대화 사이드바</b>가 열립니다
         </div>
-
-        {/* 하단 CTA */}
-        <Card className="mt-6 flex flex-col items-center gap-3 p-6 text-center">
-          <div className="text-[15px] font-semibold">이 화면으로 지원자의 <span className="text-primary">AI 활용 역량</span>을 평가합니다</div>
-          <p className="max-w-xl text-[13px] text-muted-foreground">
-            도입은 회원가입 후 담당자 승인을 거쳐 진행됩니다. 도입 문의를 남겨주시면 대상 인원·직무에 맞춰 설계해 드립니다.
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            <Link to="/login?tab=signup"><Button className="text-[13px]">회원가입</Button></Link>
-            <a href="https://ai-hrd.com/#contact"><Button variant="outline" className="text-[13px]">도입 문의</Button></a>
-            <Link to="/login"><Button variant="ghost" className="text-[13px]">로그인</Button></Link>
-          </div>
-        </Card>
-      </main>
+      </div>
     </div>
   );
 }
