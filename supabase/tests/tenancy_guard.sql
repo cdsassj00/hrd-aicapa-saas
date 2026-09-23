@@ -23,7 +23,8 @@ declare
     'platform_admins',  -- 조직 밖 전역 운영자
     'plans',            -- 플랫폼 공용 요금제 카탈로그
     'profiles',         -- 전역 사용자 프로필. 조직별 정보는 org_members
-    'sms_otp_codes'     -- 인증 전 단계라 org 를 알 수 없음. TTL 정리 잡으로 관리
+    'sms_otp_codes',    -- 인증 전 단계라 org 를 알 수 없음. TTL 정리 잡으로 관리
+    'demo_chat_usage'   -- 공개 데모 챗 남용 방지 카운터. 로그인 전이라 org 가 없음(0024)
   ];
 
   -- RLS 를 켜지 않아도 되는 테이블. 원칙적으로 비어 있어야 합니다.
