@@ -24,6 +24,8 @@ export interface ChatOptions {
   temperature?: number;
   /** 응답을 JSON 객체로 강제 (채점 결과 파싱용) */
   jsonMode?: boolean;
+  /** 응답 토큰 상한 — 공개 데모처럼 비용이 노출되는 호출에서 반드시 건다 */
+  maxTokens?: number;
 }
 
 export class AiRateLimitError extends Error {}
@@ -37,19 +39,32 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
     .replace(/\/+$/, "");
   const model = opts.model ?? Deno.env.get("AI_MODEL") ?? "gpt-4o-mini";
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: opts.messages,
-      ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
-      ...(opts.jsonMode ? { response_format: { type: "json_object" } } : {}),
-    }),
-  });
+  // 모델마다 토큰 상한 파라미터 이름이 다르다(max_tokens / max_completion_tokens).
+  // 400 을 받으면 반대쪽 이름으로 한 번 재시도한다.
+  const call = async (tokenParam: "max_tokens" | "max_completion_tokens") => {
+    return await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: opts.messages,
+        ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+        ...(opts.maxTokens !== undefined ? { [tokenParam]: opts.maxTokens } : {}),
+        ...(opts.jsonMode ? { response_format: { type: "json_object" } } : {}),
+      }),
+    });
+  };
+
+  let res = await call("max_tokens");
+  if (res.status === 400 && opts.maxTokens !== undefined) {
+    const detail = await res.clone().text().catch(() => "");
+    if (detail.includes("max_completion_tokens") || detail.includes("max_tokens")) {
+      res = await call("max_completion_tokens");
+    }
+  }
 
   // 호출부가 이미 429/402 를 구분해 처리하고 있어 타입을 나눠 던진다
   if (res.status === 429) throw new AiRateLimitError("AI 요청이 한도를 초과했습니다");

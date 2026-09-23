@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import {
   CheckCircle2, FileSpreadsheet, MessageSquare, Minus, ArrowUp, Maximize2, Minimize2,
 } from 'lucide-react';
 import { DemoSwitch } from '@/components/demo/DemoSwitch';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * 공개 응시자 화면 미리보기 (/demo)
@@ -15,19 +16,18 @@ import { DemoSwitch } from '@/components/demo/DemoSwitch';
  * 파일을 생성·다운로드하고, 그 결과물을 제출합니다.
  */
 
-const CHAT = [
-  { who: 'user', text: '첨부된 orders_2026Q2.csv 열어서 컬럼이랑 행 수부터 확인해줘.' },
-  {
-    who: 'ai',
-    text: '파일을 읽었습니다. 320행 · 9개 컬럼(order_id, order_date, category, amount, status, region, ship_days, customer_id, coupon). status에 결측 4건, amount에 통화기호가 섞여 있어 정제가 필요합니다.',
-  },
-  { who: 'user', text: "‘완료’ 주문만 대상으로 카테고리별 매출·평균 배송일 구하고, 재구매 고객 비율까지 계산해서 요약해줘." },
-  {
-    who: 'ai',
-    text: 'pandas로 정제 후 집계했습니다. 완료 주문 271건 기준 — 가전이 매출 1위(1억 2,430만원), 평균 배송일은 패션이 1.8일로 가장 빠릅니다. 재구매(2회 이상 구매) 고객 비율은 34.7%입니다. 집계표와 요약 리포트를 파일로 만들었습니다.',
-  },
-  { who: 'user', text: '재구매 비율은 어떤 기준으로 잡았어? 근거 남겨서 메모에 넣어줘.' },
-];
+const MAX_TURNS = 3;
+
+type Msg = { role: 'user' | 'assistant'; content: string };
+
+// 첫 인사 — 방문자가 바로 무엇을 시켜볼지 알 수 있게 과제를 짚어 준다.
+const GREETING: Msg = {
+  role: 'assistant',
+  content:
+    '안녕하세요. 왼쪽 과제(orders_2026Q2.csv · 320행)를 함께 풀어 볼게요.\n' +
+    '예를 들어 "완료 주문만 카테고리별 매출이랑 평균 배송일 구해줘" 처럼 지시해 보세요.\n' +
+    '체험은 3턴까지 가능합니다.',
+};
 
 const STEPS = [
   'orders_2026Q2.csv 로드 (320행)',
@@ -73,6 +73,45 @@ export default function DemoExamPage() {
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
   };
+
+  // 실제 3턴 대화 — 공개 엔드포인트(demo-chat)가 서버에서도 턴/IP 상한을 강제한다.
+  const [msgs, setMsgs] = useState<Msg[]>([GREETING]);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const [chatErr, setChatErr] = useState('');
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const turnsUsed = msgs.filter((m) => m.role === 'user').length;
+  const turnsLeft = Math.max(0, MAX_TURNS - turnsUsed);
+
+  const sendMsg = async () => {
+    const text = input.trim();
+    if (!text || sending || turnsLeft === 0) return;
+    const next = [...msgs, { role: 'user' as const, content: text }];
+    setMsgs(next);
+    setInput('');
+    setChatErr('');
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('demo-chat', {
+        // 첫 인사는 서버 턴 계산에서 빼고 보낸다
+        body: { messages: next.slice(1).map((m) => ({ role: m.role, content: m.content })) },
+      });
+      const res = (data ?? {}) as { reply?: string; error?: string };
+      if (error || res.error || !res.reply) {
+        setChatErr(res.error || '지금은 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+      setMsgs((cur) => [...cur, { role: 'assistant', content: res.reply as string }]);
+    } catch {
+      setChatErr('네트워크 오류가 발생했습니다.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [msgs, sending]);
 
   const toggleExpand = () =>
     setDims((d) =>
@@ -290,40 +329,77 @@ export default function DemoExamPage() {
           </div>
 
           {/* 대화 본문 */}
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
-            {CHAT.map((m, i) => (
-              m.who === 'user' ? (
+          <div ref={scrollRef} className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
+            {msgs.map((m, i) => (
+              m.role === 'user' ? (
                 <div key={i} className="flex justify-end">
-                  <div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-indigo-600 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-white">
-                    {m.text}
+                  <div className="max-w-[82%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-indigo-600 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-white">
+                    {m.content}
                   </div>
                 </div>
               ) : (
                 <div key={i} className="flex gap-2.5">
                   <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-[11px] font-bold text-[#0f1117]">AI</span>
-                  <div className="max-w-[82%] rounded-2xl rounded-tl-sm bg-[#1c1f2a] px-3.5 py-2.5 text-[12.5px] leading-relaxed text-slate-100">
-                    {m.text}
+                  <div className="max-w-[82%] whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-[#1c1f2a] px-3.5 py-2.5 text-[12.5px] leading-relaxed text-slate-100">
+                    {m.content}
                   </div>
                 </div>
               )
             ))}
+            {sending && (
+              <div className="flex gap-2.5">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-[11px] font-bold text-[#0f1117]">AI</span>
+                <div className="rounded-2xl rounded-tl-sm bg-[#1c1f2a] px-3.5 py-3">
+                  <span className="flex gap-1">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '0ms' }} />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '120ms' }} />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '240ms' }} />
+                  </span>
+                </div>
+              </div>
+            )}
+            {chatErr && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] text-red-300">{chatErr}</div>
+            )}
           </div>
 
-          {/* 입력 바 (ChatGPT 느낌) */}
+          {/* 입력 바 — 3턴 체험 */}
           <div className="border-t border-white/10 bg-[#171922] p-3">
-            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[#0f1117] px-3 py-2">
-              <input
-                disabled
-                placeholder="AI에게 지시를 입력하세요…  (미리보기 비활성)"
-                className="min-w-0 flex-1 bg-transparent text-[12.5px] text-slate-200 placeholder:text-slate-500 focus:outline-none"
-              />
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white">
-                <ArrowUp className="h-4 w-4" />
-              </span>
-            </div>
-            <div className="mt-1.5 flex items-center justify-center gap-1 text-[10.5px] text-slate-500">
-              <Lock className="h-3 w-3" /> 실제 응시에서는 여기서 AI와 실시간으로 대화합니다
-            </div>
+            {turnsLeft > 0 ? (
+              <>
+                <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[#0f1117] px-3 py-2">
+                  <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMsg(); } }}
+                    disabled={sending}
+                    maxLength={1000}
+                    placeholder="AI에게 지시를 입력하세요…"
+                    className="min-w-0 flex-1 bg-transparent text-[12.5px] text-slate-200 placeholder:text-slate-500 focus:outline-none disabled:opacity-50"
+                  />
+                  <button
+                    onClick={() => void sendMsg()}
+                    disabled={sending || !input.trim()}
+                    aria-label="보내기"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white transition hover:brightness-110 disabled:opacity-40"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="mt-1.5 text-center text-[10.5px] text-slate-500">
+                  체험 <b className="text-slate-300">{turnsLeft}턴</b> 남음 · 실제 응시에서는 무제한으로 AI와 대화하며 파일을 만듭니다
+                </div>
+              </>
+            ) : (
+              <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3 py-3 text-center">
+                <div className="text-[12.5px] font-medium text-slate-100">체험 3턴을 모두 사용했습니다</div>
+                <p className="mt-0.5 text-[11px] text-slate-400">실제 응시에서는 제한 없이 AI와 대화하며 산출물을 만들어 제출합니다.</p>
+                <div className="mt-2 flex justify-center gap-2">
+                  <Link to="/login?tab=signup"><Button size="sm" className="h-7 text-[12px]">회원가입</Button></Link>
+                  <a href="https://ai-hrd.com/#contact"><Button size="sm" variant="secondary" className="h-7 text-[12px]">도입 문의</Button></a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : (
