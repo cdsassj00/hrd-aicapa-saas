@@ -274,7 +274,7 @@ export default function ExamPage() {
           try {
             [eqsRes, ansRes] = await Promise.all([
               withRetry(async () => {
-                const r = await supabase.from('exam_questions').select('question_id, order_num').eq('exam_id', sess.exam_id).order('order_num');
+                const r = await supabase.from('exam_questions').select('question_id, sort_order').eq('exam_id', sess.exam_id).order('sort_order');
                 if (r.error) throw r.error;
                 return r;
               }, 'exam_questions'),
@@ -308,7 +308,7 @@ export default function ExamPage() {
               return;
             }
             if (qs) {
-              const orderMap = new Map<string, number>(eqs.map((eq: any) => [eq.question_id, eq.order_num as number]));
+              const orderMap = new Map<string, number>(eqs.map((eq: any) => [eq.question_id, eq.sort_order as number]));
               qs.sort((a: any, b: any) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
               const sanitized = qs.map((q: any) => ({ ...q, correct_answer: null }));
               setQuestions(sanitized);
