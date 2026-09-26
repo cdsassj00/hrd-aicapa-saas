@@ -35,8 +35,12 @@ declare
   --   업로드할 때 storage.objects INSERT 정책이 이 함수를 호출한다. RLS 정책은
   --   호출 롤로 평가되므로 anon EXECUTE 가 필요하다. 반환값은 "그 세션이 진행 중인가"
   --   불리언뿐이라 정보 노출이 없다(설계문서 §6, 0017).
+  -- get_invitation_by_code: 미인증 응시자가 초대코드로 게스트 진입할 때 로그인
+  --   화면에서 호출한다. 코드(평문)를 해싱해 대조하므로 코드를 아는 사람만
+  --   자기 초대 1건을 보고, 반환값은 표시용 최소 정보뿐이다(0025).
   _exempt_anon_exec text[] := array[
-    'storage_session_writable'
+    'storage_session_writable',
+    'get_invitation_by_code'
   ];
 
   -- public=true 여도 되는 Storage 버킷. public 버킷은 URL 만 알면 누구나 읽으므로
