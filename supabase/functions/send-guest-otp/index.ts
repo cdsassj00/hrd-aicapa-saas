@@ -28,12 +28,13 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Validate invite code (test mode 시험은 is_used 무시)
-    const { data: inv } = await serviceClient
-      .from("exam_invitations")
-      .select("id, email, exam_id, is_used, exams(is_test_mode)")
-      .eq("invite_code", invite_code.toUpperCase())
-      .maybeSingle();
+    // 초대코드 조회 — 평문 코드는 저장하지 않으므로 해싱 대조 RPC 를 쓴다(0025).
+    // is_used(=accepted_at), is_test_mode(=exams.status) 도 RPC 가 투영해 준다.
+    const { data: invRows } = await serviceClient
+      .rpc("get_invitation_by_code", { p_code: invite_code });
+    const inv = (Array.isArray(invRows) ? invRows[0] : null) as
+      | { id: string; email: string; exam_id: string; is_used: boolean; is_test_mode: boolean }
+      | null;
 
     if (!inv) {
       return new Response(JSON.stringify({ error: "유효하지 않은 초대코드입니다." }), {
@@ -42,7 +43,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const isTestMode = (inv as any).exams?.is_test_mode === true;
+    const isTestMode = inv.is_test_mode === true;
 
     // 본인 active session 있으면 재접속 허용 (튕긴 응시자 복귀)
     let hasActiveSession = false;
