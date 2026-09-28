@@ -185,9 +185,6 @@ Deno.serve(async (req) => {
         const displayName = name || inv.name || email.split("@")[0];
         await serviceClient.from("profiles").insert({ id: userId, name: displayName });
 
-        // Set role to applicant
-        await serviceClient.rpc("set_user_role", { _user_id: userId, _role: "applicant" });
-
         // Sign in
         const { data: signInData, error: signInErr } = await anonClient.auth.signInWithPassword({
           email,
@@ -202,6 +199,20 @@ Deno.serve(async (req) => {
         }
         accessToken = signInData.session.access_token;
         refreshToken = signInData.session.refresh_token;
+      }
+    }
+
+    // 조직 멤버십 부여 — 역할은 전역이 아니라 조직별이다(org_members).
+    // 원본의 전역 set_user_role() 은 새 테넌시 모델에 맞지 않아 이걸로 대체한다.
+    // 기존 사용자가 다른 조직 시험에 초대된 경우도 있으므로 분기 밖에서 한 번 처리한다.
+    {
+      const { data: examOrg } = await serviceClient
+        .from("exams").select("org_id").eq("id", inv.exam_id).single();
+      if (examOrg?.org_id) {
+        await serviceClient.from("org_members").upsert(
+          { org_id: examOrg.org_id, user_id: userId, role: "applicant", status: "active" },
+          { onConflict: "org_id,user_id,role" },
+        );
       }
     }
 
