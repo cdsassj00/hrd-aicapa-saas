@@ -35,12 +35,12 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Validate invite code (test mode 시험은 is_used 무시)
-    const { data: inv } = await serviceClient
-      .from("exam_invitations")
-      .select("id, email, exam_id, name, is_used, exams(is_test_mode)")
-      .eq("invite_code", invite_code.toUpperCase())
-      .maybeSingle();
+    // 초대코드 조회 — 평문 코드는 저장하지 않으므로 해싱 대조 RPC 를 쓴다(0025).
+    const { data: invRows } = await serviceClient
+      .rpc("get_invitation_by_code", { p_code: invite_code });
+    const inv = (Array.isArray(invRows) ? invRows[0] : null) as
+      | { id: string; email: string; exam_id: string; name: string | null; is_used: boolean; is_test_mode: boolean }
+      | null;
 
     if (!inv) {
       return new Response(JSON.stringify({ success: false, error: "유효하지 않은 초대코드입니다." }), {
@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const isTestMode = (inv as any).exams?.is_test_mode === true;
+    const isTestMode = inv.is_test_mode === true;
 
     // 본인 active session 있으면 재접속 허용 (튕긴 응시자 복귀)
     let hasActiveSession = false;
@@ -185,9 +185,6 @@ Deno.serve(async (req) => {
         const displayName = name || inv.name || email.split("@")[0];
         await serviceClient.from("profiles").insert({ id: userId, name: displayName });
 
-        // Set role to applicant
-        await serviceClient.rpc("set_user_role", { _user_id: userId, _role: "applicant" });
-
         // Sign in
         const { data: signInData, error: signInErr } = await anonClient.auth.signInWithPassword({
           email,
@@ -202,6 +199,20 @@ Deno.serve(async (req) => {
         }
         accessToken = signInData.session.access_token;
         refreshToken = signInData.session.refresh_token;
+      }
+    }
+
+    // 조직 멤버십 부여 — 역할은 전역이 아니라 조직별이다(org_members).
+    // 원본의 전역 set_user_role() 은 새 테넌시 모델에 맞지 않아 이걸로 대체한다.
+    // 기존 사용자가 다른 조직 시험에 초대된 경우도 있으므로 분기 밖에서 한 번 처리한다.
+    {
+      const { data: examOrg } = await serviceClient
+        .from("exams").select("org_id").eq("id", inv.exam_id).single();
+      if (examOrg?.org_id) {
+        await serviceClient.from("org_members").upsert(
+          { org_id: examOrg.org_id, user_id: userId, role: "applicant", status: "active" },
+          { onConflict: "org_id,user_id,role" },
+        );
       }
     }
 
@@ -240,9 +251,10 @@ Deno.serve(async (req) => {
 
     // Mark invitation as used (테스트 모드 시험은 재사용 가능하므로 마킹 스킵)
     if (!isTestMode) {
+      // 사용 완료 표시 — 새 스키마에는 is_used 가 없고 accepted_at 으로 판정한다(0025).
       await serviceClient
         .from("exam_invitations")
-        .update({ is_used: true, session_id: examSessionId })
+        .update({ accepted_at: new Date().toISOString(), session_id: examSessionId })
         .eq("id", inv.id);
     }
 
