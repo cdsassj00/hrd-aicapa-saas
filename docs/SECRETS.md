@@ -35,12 +35,25 @@
 
 | 키 | 값 | 위치 |
 |---|---|---|
-| `VITE_SUPABASE_URL` | `https://eoeiqpgzoyltrawfflhj.supabase.co` | 빌드 변수 + `.env` |
+| `VITE_SUPABASE_URL` | `https://auth.ai-hrd.com` (커스텀 도메인, 아래 참고) | 빌드 변수 + `.env` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` | 빌드 변수 + `.env` |
 | `VITE_SUPABASE_PROJECT_ID` | `eoeiqpgzoyltrawfflhj` | 빌드 변수 + `.env` |
 
 `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` 는
 **등록할 필요가 없습니다.** Supabase 가 Edge Function 에 자동 주입합니다.
+
+### Supabase 커스텀 도메인 — `auth.ai-hrd.com` (2026-10-13 활성화)
+
+구글·카카오 동의 화면과 비밀번호 재설정 메일 링크에 `eoeiqpgzoyltrawfflhj.supabase.co` 대신
+`auth.ai-hrd.com` 이 보이게 하려고 붙였다. 기존 supabase.co 주소도 계속 동작한다.
+
+| 위치 | 설정 |
+|---|---|
+| Cloudflare DNS | `auth` CNAME → `eoeiqpgzoyltrawfflhj.supabase.co` (**DNS only, 회색 구름** — 프록시면 인증서 발급 실패), `_acme-challenge.auth` TXT |
+| Google OAuth 클라이언트 | 승인된 리디렉션 URI `https://auth.ai-hrd.com/auth/v1/callback` |
+| 카카오 앱(REST 키 `299b366f…`) | 카카오 로그인 리다이렉트 URI `https://auth.ai-hrd.com/auth/v1/callback` |
+
+OAuth 공급자를 새로 붙이면 리다이렉트 URI 는 반드시 `auth.ai-hrd.com` 쪽으로 등록한다.
 
 ## 2. 다음 차례 — 초대 메일
 
@@ -105,6 +118,24 @@ DNS 반영에 시간이 걸리니 미리 걸어두세요. 네임서버를 Cloudf
 정리하고 하나만 남기시길 권합니다.
 
 ---
+
+## 7. 결제 — 토스페이먼츠 빌링(카드 정기결제)
+
+| 키 | 발급처 | 위치 | 비고 |
+|---|---|---|---|
+| `VITE_TOSS_CLIENT_KEY` | 토스 개발자센터 → API 키 → 클라이언트 키 | Cloudflare **빌드 변수** + `.env` | 브라우저에 노출돼도 되는 키. 비어 있으면 결제 버튼이 비활성화된다 |
+| `TOSS_SECRET_KEY` | 같은 화면 → 시크릿 키 | **Supabase Edge Function Secrets 만** | 빌링키 발급·결제 승인용. `.env`·Cloudflare 에 절대 넣지 말 것 |
+
+**반드시 빌링 계약 MID(신청 건 `bill_aihrdye9r`)의 키를 쓴다.** 일반결제 MID(`lrealvttu2`)나
+다른 신청 건의 키를 넣으면 결제·정산이 엉뚱한 상점으로 연결된다. 두 키는 같은 MID 의
+한 쌍이어야 하며, 테스트(`test_ck_`/`test_sk_`) → 운영(`live_ck_`/`live_sk_`) 전환 시에도 둘을 같이 바꾼다.
+
+Cloudflare 의 `hrd-aicapa-saas` 는 정적 자산 Worker 라 런타임 시크릿을 둘 곳이 없다. 클라이언트 키만
+빌드 변수(`VITE_*`)로 번들에 들어가고, 시크릿 키는 결제를 처리하는 Edge Function(`billing-subscribe`)이
+도는 Supabase 에만 둔다. `TOSS_SECRET_KEY` 를 `VITE_` 이름으로 만들면 그 순간 브라우저에 노출된다.
+
+빌링 MID 의 키는 빌링 계약이 진행된 뒤에야 개발자센터 키 목록에 나타난다(추가 계약마다 MID·키 세트가
+새로 발급). 목록에 없으면 다른 MID 키로 대체하지 말고 계약 상태부터 확인한다.
 
 ## 요약 — 서비스별 "추가로 만들어야 하는 것"
 

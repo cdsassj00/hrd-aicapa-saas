@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/sidebar';
 import {
   BookOpen, ClipboardList, Monitor, Users, BarChart3,
-  AlertTriangle, Home, CheckSquare, UserCog, Settings, ScanFace, Video, Shield,
+  AlertTriangle, Home, CheckSquare, UserCog, Settings, ScanFace, Video, Shield, CreditCard,
 } from 'lucide-react';
 
 const menuConfig = {
@@ -27,6 +27,7 @@ const menuConfig = {
     { title: '멤버 · 초대', url: '/admin/members', icon: UserCog },
     { title: '인증자 DB', url: '/admin/certifications', icon: Users },
     { title: '통계', url: '/admin/stats', icon: BarChart3 },
+    { title: '구독 · 결제', url: '/admin/billing', icon: CreditCard },
     { title: '시스템 설정', url: '/admin/settings', icon: Settings },
     { title: '얼굴 대조 테스트', url: '/admin/face-compare-test', icon: ScanFace },
   ],

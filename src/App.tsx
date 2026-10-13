@@ -23,6 +23,7 @@ import CertificationsPage from "@/pages/admin/CertificationsPage";
 import StatsPage from "@/pages/admin/StatsPage";
 import OrgMembersPage from "@/pages/admin/OrgMembersPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
+import BillingPage from "@/pages/admin/BillingPage";
 import FaceCompareTestPage from "@/pages/admin/FaceCompareTestPage";
 import PlatformDashboard from "@/pages/platform/PlatformDashboard";
 import { PlatformRoute } from "@/components/PlatformRoute";
@@ -87,6 +88,7 @@ function AuthGate() {
         <Route path="/admin/certifications" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner', 'viewer']}><CertificationsPage /></ProtectedRoute>} />
         <Route path="/admin/stats" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner', 'viewer']}><StatsPage /></ProtectedRoute>} />
         <Route path="/admin/members" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><OrgMembersPage /></ProtectedRoute>} />
+        <Route path="/admin/billing" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><BillingPage /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><SettingsPage /></ProtectedRoute>} />
         <Route path="/admin/recordings" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><RecordingReviewPage /></ProtectedRoute>} />
         <Route path="/admin/face-compare-test" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><FaceCompareTestPage /></ProtectedRoute>} />
