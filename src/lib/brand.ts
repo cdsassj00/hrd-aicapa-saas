@@ -31,18 +31,17 @@ export const ORG_DOMAIN_SUFFIX = import.meta.env.VITE_ORG_DOMAIN_SUFFIX?.trim() 
 
 /**
  * 법적 고지. 운영 주체는 원본과 같은 **한국데이터사이언티스트협회(CDSA)** 입니다.
- * 제품이 둘로 갈린 것이지 사업자가 갈린 것이 아니므로 표기를 유지합니다.
+ * 제품이 둘로 갈린 것이지 사업자가 갈린 것이 아니므로 운영자 표기는 유지합니다.
  *
- * 다만 개인정보처리방침 본문은 확인이 필요합니다. 이 서비스는 원본과 달리
- * 고객사 지원자·재직자의 데이터를 처리하고, 원격 감독 녹화까지 수집합니다.
- * 방침에 그 처리 목적·보관 기간·수탁자(R2·Daily·Rekognition 등)가 들어가
- * 있지 않으면 링크만으로는 고지 의무가 충족되지 않습니다.
+ * 약관·개인정보처리방침은 이 서비스 전용 문서(public/terms.html·privacy.html)를 가리킨다.
+ * 원본(aicapa.kr)용 cdsa.kr 문서에는 고객사 응시자 데이터·감독 녹화·수탁자 고지가 없고,
+ * 결제 심사도 "서비스 도메인의 약관"을 대조하므로 다른 도메인으로 보내면 안 된다.
  *
  * 빈 문자열이면 해당 항목은 렌더링하지 않습니다.
  */
 export const LEGAL = {
-  privacyUrl: 'https://cdsa.kr/privacy',
-  termsUrl: 'https://cdsa.kr/terms',
+  privacyUrl: 'https://ai-hrd.com/privacy',
+  termsUrl: 'https://ai-hrd.com/terms',
   operator: '한국데이터사이언티스트협회(CDSA)',
   operatorUrl: 'https://cdsa.kr',
 } as const;
