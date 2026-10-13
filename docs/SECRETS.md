@@ -35,12 +35,25 @@
 
 | 키 | 값 | 위치 |
 |---|---|---|
-| `VITE_SUPABASE_URL` | `https://eoeiqpgzoyltrawfflhj.supabase.co` | 빌드 변수 + `.env` |
+| `VITE_SUPABASE_URL` | `https://auth.ai-hrd.com` (커스텀 도메인, 아래 참고) | 빌드 변수 + `.env` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` | 빌드 변수 + `.env` |
 | `VITE_SUPABASE_PROJECT_ID` | `eoeiqpgzoyltrawfflhj` | 빌드 변수 + `.env` |
 
 `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` 는
 **등록할 필요가 없습니다.** Supabase 가 Edge Function 에 자동 주입합니다.
+
+### Supabase 커스텀 도메인 — `auth.ai-hrd.com` (2026-10-13 활성화)
+
+구글·카카오 동의 화면과 비밀번호 재설정 메일 링크에 `eoeiqpgzoyltrawfflhj.supabase.co` 대신
+`auth.ai-hrd.com` 이 보이게 하려고 붙였다. 기존 supabase.co 주소도 계속 동작한다.
+
+| 위치 | 설정 |
+|---|---|
+| Cloudflare DNS | `auth` CNAME → `eoeiqpgzoyltrawfflhj.supabase.co` (**DNS only, 회색 구름** — 프록시면 인증서 발급 실패), `_acme-challenge.auth` TXT |
+| Google OAuth 클라이언트 | 승인된 리디렉션 URI `https://auth.ai-hrd.com/auth/v1/callback` |
+| 카카오 앱(REST 키 `299b366f…`) | 카카오 로그인 리다이렉트 URI `https://auth.ai-hrd.com/auth/v1/callback` |
+
+OAuth 공급자를 새로 붙이면 리다이렉트 URI 는 반드시 `auth.ai-hrd.com` 쪽으로 등록한다.
 
 ## 2. 다음 차례 — 초대 메일
 
