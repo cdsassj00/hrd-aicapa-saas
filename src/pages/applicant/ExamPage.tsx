@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
 
 import { supabase } from '@/integrations/supabase/client';
+import { toLegacySet } from '@/lib/questionShape';
 import { inheritOrg } from '@/lib/inheritedOrg';
 import DailyProctor from '@/components/DailyProctor';
 import ExamBlackScreen from '@/components/exam/ExamBlackScreen';
@@ -275,7 +276,7 @@ export default function ExamPage() {
           try {
             [eqsRes, ansRes] = await Promise.all([
               withRetry(async () => {
-                const r = await supabase.from('exam_questions').select('question_id, sort_order').eq('exam_id', sess.exam_id).order('sort_order');
+                const r = await supabase.from('exam_questions').select('question_id, order_num').eq('exam_id', sess.exam_id).order('order_num');
                 if (r.error) throw r.error;
                 return r;
               }, 'exam_questions'),
@@ -309,7 +310,7 @@ export default function ExamPage() {
               return;
             }
             if (qs) {
-              const orderMap = new Map<string, number>(eqs.map((eq: any) => [eq.question_id, eq.sort_order as number]));
+              const orderMap = new Map<string, number>(eqs.map((eq: any) => [eq.question_id, eq.order_num as number]));
               qs.sort((a: any, b: any) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
               const sanitized = qs.map((q: any) => ({ ...q, correct_answer: null }));
               setQuestions(sanitized);
@@ -319,7 +320,7 @@ export default function ExamPage() {
                 const { data: rawSets } = await supabase.from('question_sets').select('*').in('id', setIds);
                 if (rawSets) {
                   const map: Record<string, QuestionSet> = {};
-                  rawSets.forEach((s: any) => {
+                  rawSets.map(toLegacySet).forEach((s: any) => {
                     map[s.id] = {
                       id: s.id,
                       exam_id: s.exam_id ?? null,

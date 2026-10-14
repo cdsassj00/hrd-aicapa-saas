@@ -11,6 +11,7 @@ import { QuestionType, QuestionDifficulty } from '@/types';
 import { Search, GripVertical, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { QUESTION_SELECT, toLegacyQuestion, toLegacySet } from '@/lib/questionShape';
 import { inheritOrg } from '@/lib/inheritedOrg';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -129,12 +130,12 @@ export function QuestionPickerDialog({ open, onOpenChange, examId, onSaved }: Qu
     if (!open || !examId) return;
     const load = async () => {
       const [{ data: qs }, { data: eqs }, { data: ss }] = await Promise.all([
-        supabase.from('questions').select('*').order('created_at', { ascending: false }),
+        supabase.from('questions').select(QUESTION_SELECT).order('created_at', { ascending: false }),
         supabase.from('exam_questions').select('question_id, order_num').eq('exam_id', examId).order('order_num'),
         supabase.from('question_sets').select('*').order('created_at', { ascending: false }),
       ]);
-      if (qs) setAllQuestions(qs);
-      if (ss) setAllSets(ss);
+      if (qs) setAllQuestions(qs.map(toLegacyQuestion));
+      if (ss) setAllSets(ss.map(toLegacySet));
       setOrderedIds((eqs || []).map((eq: any) => eq.question_id));
     };
     load();

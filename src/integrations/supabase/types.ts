@@ -1802,38 +1802,53 @@ export type Database = {
       }
       question_sets: {
         Row: {
+          attachments: Json
+          category: string | null
           code: string
           created_at: string
           description: string | null
+          difficulty: Database["public"]["Enums"]["question_difficulty"]
+          grade: string | null
           id: string
           is_active: boolean
           name: string
           org_id: string | null
           proctoring_disabled: boolean
+          tags: Json
           updated_at: string
           visibility: Database["public"]["Enums"]["question_visibility"]
         }
         Insert: {
+          attachments?: Json
+          category?: string | null
           code: string
           created_at?: string
           description?: string | null
+          difficulty?: Database["public"]["Enums"]["question_difficulty"]
+          grade?: string | null
           id?: string
           is_active?: boolean
           name: string
           org_id?: string | null
           proctoring_disabled?: boolean
+          tags?: Json
           updated_at?: string
           visibility?: Database["public"]["Enums"]["question_visibility"]
         }
         Update: {
+          attachments?: Json
+          category?: string | null
           code?: string
           created_at?: string
           description?: string | null
+          difficulty?: Database["public"]["Enums"]["question_difficulty"]
+          grade?: string | null
           id?: string
           is_active?: boolean
           name?: string
           org_id?: string | null
           proctoring_disabled?: boolean
+          tags?: Json
           updated_at?: string
           visibility?: Database["public"]["Enums"]["question_visibility"]
         }

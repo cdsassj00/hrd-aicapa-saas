@@ -345,3 +345,15 @@ revoke all on function public.normalize_exam_invitation_email() from public, ano
 create trigger exam_invitations_normalize_email
   before insert or update of email on public.exam_invitations
   for each row execute function public.normalize_exam_invitation_email();
+
+-- ===========================================================================
+-- 11. 문항세트 — 시나리오 첨부·분류 (화면의 세트 편집 항목)
+-- ===========================================================================
+-- 세트 이름·시나리오는 name/description 을 그대로 쓴다(화면 어댑터 questionShape.ts 가 title/scenario 로 펼침).
+-- 재설계 때 빠진 세트 단위 첨부·분류만 들인다.
+alter table public.question_sets
+  add column attachments jsonb not null default '[]'::jsonb,
+  add column tags        jsonb not null default '[]'::jsonb,
+  add column category    text,
+  add column grade       text,
+  add column difficulty  public.question_difficulty not null default 'medium';
