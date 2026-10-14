@@ -79,3 +79,126 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
   if (typeof text !== "string") throw new Error("AI 응답에서 본문을 찾지 못했습니다");
   return text;
 }
+
+// ---------------------------------------------------------------------------
+// 도구 호출(tool calling) — 시험 에이전트가 쓴다.
+//
+// chatCompletion 은 본문 문자열만 돌려주므로 도구 호출을 표현할 수 없다.
+// 형식은 OpenAI 호환 그대로 두어 공급자 교체 지점을 한 곳으로 유지한다.
+// ---------------------------------------------------------------------------
+
+export interface ToolSpec {
+  name: string;
+  description: string;
+  /** JSON Schema. 공급자에 그대로 전달된다 */
+  parameters: Record<string, unknown>;
+}
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  /** 모델이 만든 인자. JSON 파싱 실패 가능성을 호출부가 다룬다 */
+  rawArguments: string;
+}
+
+/** 대화 이력의 한 항목. tool 역할은 tool_call_id 가 반드시 있어야 한다 */
+export type ToolChatMessage =
+  | { role: "system" | "user"; content: string }
+  | { role: "assistant"; content: string | null; toolCalls?: ToolCall[] }
+  | { role: "tool"; toolCallId: string; content: string };
+
+export interface ToolTurn {
+  content: string | null;
+  toolCalls: ToolCall[];
+  usage: { prompt: number; completion: number };
+}
+
+function toWire(m: ToolChatMessage): Record<string, unknown> {
+  if (m.role === "tool") {
+    return { role: "tool", tool_call_id: m.toolCallId, content: m.content };
+  }
+  if (m.role === "assistant") {
+    return {
+      role: "assistant",
+      content: m.content,
+      ...(m.toolCalls?.length
+        ? {
+            tool_calls: m.toolCalls.map((c) => ({
+              id: c.id,
+              type: "function",
+              function: { name: c.name, arguments: c.rawArguments },
+            })),
+          }
+        : {}),
+    };
+  }
+  return { role: m.role, content: m.content };
+}
+
+export async function chatWithTools(opts: {
+  messages: ToolChatMessage[];
+  tools: ToolSpec[];
+  model?: string;
+  maxTokens?: number;
+}): Promise<ToolTurn> {
+  const apiKey = Deno.env.get("AI_API_KEY");
+  if (!apiKey) throw new Error("AI_API_KEY is not configured");
+
+  const baseUrl = (Deno.env.get("AI_BASE_URL") ?? "https://api.openai.com/v1")
+    .replace(/\/+$/, "");
+  const model = opts.model ?? Deno.env.get("AI_MODEL") ?? "gpt-4o-mini";
+
+  const body = (tokenParam: "max_tokens" | "max_completion_tokens") => ({
+    model,
+    messages: opts.messages.map(toWire),
+    tools: opts.tools.map((t) => ({
+      type: "function",
+      function: { name: t.name, description: t.description, parameters: t.parameters },
+    })),
+    tool_choice: "auto",
+    ...(opts.maxTokens !== undefined ? { [tokenParam]: opts.maxTokens } : {}),
+  });
+
+  const call = (tokenParam: "max_tokens" | "max_completion_tokens") =>
+    fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(body(tokenParam)),
+    });
+
+  let res = await call("max_tokens");
+  if (res.status === 400 && opts.maxTokens !== undefined) {
+    const detail = await res.clone().text().catch(() => "");
+    if (detail.includes("max_completion_tokens") || detail.includes("max_tokens")) {
+      res = await call("max_completion_tokens");
+    }
+  }
+
+  if (res.status === 429) throw new AiRateLimitError("AI 요청이 한도를 초과했습니다");
+  if (res.status === 402) throw new AiPaymentRequiredError("AI 크레딧이 부족합니다");
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`AI ${res.status}: ${detail || res.statusText}`);
+  }
+
+  const data = await res.json();
+  const msg = data?.choices?.[0]?.message ?? {};
+  const calls: ToolCall[] = Array.isArray(msg.tool_calls)
+    ? msg.tool_calls
+        .filter((c: Record<string, unknown>) => c?.function)
+        .map((c: Record<string, never>) => ({
+          id: String(c.id ?? crypto.randomUUID()),
+          name: String((c.function as Record<string, unknown>).name ?? ""),
+          rawArguments: String((c.function as Record<string, unknown>).arguments ?? "{}"),
+        }))
+    : [];
+
+  return {
+    content: typeof msg.content === "string" ? msg.content : null,
+    toolCalls: calls,
+    usage: {
+      prompt: Number(data?.usage?.prompt_tokens ?? 0),
+      completion: Number(data?.usage?.completion_tokens ?? 0),
+    },
+  };
+}

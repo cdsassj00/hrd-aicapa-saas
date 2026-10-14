@@ -21,6 +21,7 @@ import { ExamCustomTexts } from '@/lib/defaultCustomTexts';
 import McAnswerSelector from '@/components/exam/McAnswerSelector';
 import ExamChatPanel from '@/components/exam/ExamChatPanel';
 import FaceMonitor from '@/components/exam/FaceMonitor';
+import ExamAgentPanel from '@/components/exam/ExamAgentPanel';
 
 import { trackAction, flushActions } from '@/lib/userActions';
 import SetScenarioCard from '@/components/exam/SetScenarioCard';
@@ -1262,6 +1263,17 @@ export default function ExamPage() {
         isTaskQuestion={question?.type === 'work_based' || question?.type === 'file_upload'}
         enabled={!proctoringDisabledForSet && !isSubmitting && question?.type !== 'work_based' && question?.type !== 'file_upload'}
       />
+
+      {/* 시험 에이전트: 샌드박스를 요구하는 문항에서만 띄운다.
+          tool_req 는 get_exam_questions_for_session 이 answer_key.meta 에서 꺼내 준다(0030).
+          대화·실행·생성 파일은 서버에 기록되어 채점 근거가 된다. */}
+      {sessionId && question?.id && question?.tool_req === 'code_sandbox' && (
+        <ExamAgentPanel
+          sessionId={sessionId}
+          questionId={question.id}
+          questionLabel={`${currentQ + 1}번 문항`}
+        />
+      )}
 
       {/* AI 감독: 안면 이탈 감지 (세트 옵션으로 비활성 가능, 시험 알림설정 화이트리스트 적용) */}
       <FaceMonitor
