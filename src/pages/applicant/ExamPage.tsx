@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
 
 import { supabase } from '@/integrations/supabase/client';
+import { inheritOrg } from '@/lib/inheritedOrg';
 import DailyProctor from '@/components/DailyProctor';
 import ExamBlackScreen from '@/components/exam/ExamBlackScreen';
 import ExamPolicyBanner, { questionTypeLabels } from '@/components/exam/ExamPolicyBanner';
@@ -672,7 +673,7 @@ export default function ExamPage() {
       try {
         const { error } = await supabase
           .from('answers')
-          .upsert(payload, { onConflict: 'session_id,question_id' });
+          .upsert(inheritOrg<'answers'>(payload), { onConflict: 'session_id,question_id' });
         if (!error) {
           trackAction('answer_save', { questionId, length: content.length }, sessionId);
           return;
@@ -729,7 +730,7 @@ export default function ExamPage() {
       try {
         const { error } = await supabase
           .from('answers')
-          .upsert(payload, { onConflict: 'session_id,question_id' });
+          .upsert(inheritOrg<'answers'>(payload), { onConflict: 'session_id,question_id' });
         if (!error) {
           trackAction('answer_save', { questionId, slots: Object.keys(sv).length }, sessionId);
           return;
@@ -770,7 +771,7 @@ export default function ExamPage() {
         const { kind, ...payload } = item;
         const { error } = await supabase
           .from('answers')
-          .upsert(payload, { onConflict: 'session_id,question_id' });
+          .upsert(inheritOrg<'answers'>(payload), { onConflict: 'session_id,question_id' });
         if (error) remaining.push(item);
       } catch {
         remaining.push(item);
@@ -1536,7 +1537,7 @@ export default function ExamPage() {
                         await supabase
                           .from('answers')
                           .upsert(
-                            { session_id: sessionId, question_id: question.id, content: answers[question.id] || '', file_url: path, submitted_at: new Date().toISOString() },
+                            inheritOrg<'answers'>({ session_id: sessionId, question_id: question.id, content: answers[question.id] || '', file_url: path, submitted_at: new Date().toISOString() }),
                             { onConflict: 'session_id,question_id' }
                           );
                         toast({ title: '파일 업로드 완료', description: file.name });

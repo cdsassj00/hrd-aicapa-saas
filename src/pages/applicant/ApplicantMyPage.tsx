@@ -10,6 +10,7 @@ import { GradeBadge } from '@/components/GradeBadge';
 import { CalendarDays, Clock, Users, BookOpen, CheckCircle2, Info, RotateCcw, KeyRound } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { inheritOrg } from '@/lib/inheritedOrg';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -90,7 +91,7 @@ export default function ApplicantMyPage() {
     // Create new session (also handles retake: previous session was submitted/passed/failed)
     const { data: session, error } = await supabase
       .from('exam_sessions')
-      .insert({ exam_id: inv.exam_id, applicant_id: user!.id })
+      .insert(inheritOrg<'exam_sessions'>({ exam_id: inv.exam_id, applicant_id: user!.id }))
       .select()
       .single();
 
@@ -199,7 +200,7 @@ export default function ApplicantMyPage() {
 
     const { data, error } = await supabase
       .from('exam_sessions')
-      .insert({ exam_id: selectedExamId, applicant_id: user.id })
+      .insert(inheritOrg<'exam_sessions'>({ exam_id: selectedExamId, applicant_id: user.id }))
       .select()
       .single();
 

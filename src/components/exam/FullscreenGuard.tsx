@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Maximize, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { inheritOrg } from '@/lib/inheritedOrg';
 
 interface FullscreenGuardProps {
   enabled: boolean;
@@ -61,10 +62,10 @@ export default function FullscreenGuard({ enabled, sessionId, onViolation, maxVi
       const next = prev + 1;
       onViolation(next);
 
-      supabase.from('monitoring_events').insert({
+      supabase.from('monitoring_events').insert(inheritOrg<'monitoring_events'>({
         session_id: sessionId,
-        event_type: 'tab_switch' as any,
-      }).then();
+        event_type: 'tab_switch',
+      })).then();
 
       supabase.from('exam_sessions').update({ is_flagged: true }).eq('id', sessionId).then();
 

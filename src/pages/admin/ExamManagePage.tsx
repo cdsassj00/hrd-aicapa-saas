@@ -18,6 +18,7 @@ import { InvitationManager } from '@/components/InvitationManager';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { questionTypeLabels } from '@/components/question-bank/questionTypes';
 import ExamCustomTextsEditor from '@/components/admin/ExamCustomTextsEditor';
 import { ExamCustomTexts } from '@/lib/defaultCustomTexts';
@@ -46,6 +47,7 @@ export default function ExamManagePage() {
   const [polishing, setPolishing] = useState(false);
   const [customTextsOpen, setCustomTextsOpen] = useState(false);
   const { toast } = useToast();
+  const { activeOrgId, user } = useAuth();
 
   const DEFAULT_INSTRUCTIONS = `1. 평가 시작 후 추가시간은 제공되지 않으며, 정해진 종료 시각에 시험이 자동 종료됩니다.
 2. 시험 중 웹캠은 반드시 켜진 상태를 유지해야 하며, 얼굴 전체가 화면에 보여야 합니다.
@@ -55,14 +57,16 @@ export default function ExamManagePage() {
 6. 모든 답안 작성 후 최종 제출 버튼을 누르시어, 최종 제출해야 합니다.
 7. 부정행위 적발 시 해당 시험은 무효 처리되며, 향후 응시가 제한될 수 있습니다.`;
 
-  useEffect(() => { fetchExams(); }, []);
+  useEffect(() => { fetchExams(); }, [activeOrgId]);
 
+  // 여러 조직에 속한 사용자는 RLS 상 모든 소속 조직의 회차가 보인다 — 현재 조직으로 좁힌다.
   const fetchExams = async () => {
-    const { data } = await supabase.from('exams').select('*').order('exam_date', { ascending: false });
+    if (!activeOrgId) { setExams([]); return; }
+    const { data } = await supabase.from('exams').select('*').eq('org_id', activeOrgId).order('exam_date', { ascending: false });
     if (data) setExams(data);
 
     // Fetch question counts per exam
-    const { data: eqData } = await supabase.from('exam_questions').select('exam_id');
+    const { data: eqData } = await supabase.from('exam_questions').select('exam_id').eq('org_id', activeOrgId);
     if (eqData) {
       const counts: Record<string, number> = {};
       eqData.forEach((eq: any) => { counts[eq.exam_id] = (counts[eq.exam_id] || 0) + 1; });
@@ -152,7 +156,12 @@ export default function ExamManagePage() {
       const { error } = await supabase.from('exams').update(payload).eq('id', editExam.id);
       if (error) { toast({ title: '수정 실패', description: error.message, variant: 'destructive' }); return; }
     } else {
-      const { data, error } = await supabase.from('exams').insert(payload).select().single();
+      if (!activeOrgId) { toast({ title: '생성 실패', description: '조직을 먼저 선택해 주세요.', variant: 'destructive' }); return; }
+      const { data, error } = await supabase
+        .from('exams')
+        .insert({ ...payload, org_id: activeOrgId, created_by: user?.id ?? null })
+        .select()
+        .single();
       if (error) { toast({ title: '생성 실패', description: error.message, variant: 'destructive' }); return; }
 
       if (data) {
@@ -181,7 +190,7 @@ export default function ExamManagePage() {
   const handleDuplicate = async (exam: any) => {
     if (!confirm(`"${exam.title}" 시험을 복사하시겠습니까?\n(설정만 복사되며 문제/초대코드/응시 데이터는 비어 있는 상태로 생성됩니다)`)) return;
     const {
-      id, created_at, current_participants, daily_room_name, daily_room_url,
+      id, created_at, updated_at, current_participants, daily_room_name, daily_room_url,
       ...rest
     } = exam;
     const payload = {

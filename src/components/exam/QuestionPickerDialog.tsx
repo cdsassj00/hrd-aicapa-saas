@@ -11,6 +11,7 @@ import { QuestionType, QuestionDifficulty } from '@/types';
 import { Search, GripVertical, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { inheritOrg } from '@/lib/inheritedOrg';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import {
@@ -295,7 +296,7 @@ export function QuestionPickerDialog({ open, onOpenChange, examId, onSaved }: Qu
       order_num: i + 1,
     }));
     if (inserts.length > 0) {
-      const { error } = await supabase.from('exam_questions').insert(inserts);
+      const { error } = await supabase.from('exam_questions').insert(inheritOrg<'exam_questions'>(inserts));
       if (error) { toast({ title: '저장 실패', description: error.message, variant: 'destructive' }); return; }
     }
     toast({ title: `${inserts.length}개 문제가 시험에 배정되었습니다.` });
