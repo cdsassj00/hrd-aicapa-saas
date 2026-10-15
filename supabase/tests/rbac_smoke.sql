@@ -666,14 +666,31 @@ exception
   when insufficient_privilege then null;
 end $$;
 
+-- Supabase default privileges 때문에 "정책 없음"만으로는 UPDATE 가 거부되지 않고
+-- 대상 행 0건으로 조용히 통과한다. 0030 이 권한을 회수했는지와, 설령 통과해도
+-- 내용이 바뀌지 않았는지를 둘 다 본다.
 do $$
 begin
   update public.exam_agent_events set content = '{"text":"변조"}'
    where agent_id = 'ff000000-0000-0000-0000-000000000001';
-  raise exception 'RBAC 검증 실패: 응시자가 과정 로그를 수정함';
+  raise exception 'RBAC 검증 실패: 응시자가 과정 로그 UPDATE 를 통과함';
 exception
   when insufficient_privilege then null;
 end $$;
+
+do $$
+begin
+  delete from public.exam_agent_events
+   where agent_id = 'ff000000-0000-0000-0000-000000000001';
+  raise exception 'RBAC 검증 실패: 응시자가 과정 로그 DELETE 를 통과함';
+exception
+  when insufficient_privilege then null;
+end $$;
+
+select pg_temp.assert(
+  (select content ->> 'text' from public.exam_agent_events
+    where agent_id = 'ff000000-0000-0000-0000-000000000001') = '안녕',
+  '과정 로그 내용이 바뀌었음');
 
 -- 다른 조직 사람에게는 보이지 않는다
 set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';

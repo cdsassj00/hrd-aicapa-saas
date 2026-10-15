@@ -154,6 +154,18 @@ alter table public.exam_agent_events    enable row level security;
 alter table public.exam_agent_artifacts enable row level security;
 
 -- 읽기만 준다. 쓰기는 service_role(엣지 함수)뿐 — 과정 로그의 무결성이 제품의 근거다.
+-- Supabase 는 default privileges 로 public 스키마 테이블에 anon·authenticated
+-- ALL 을 미리 준다. 그래서 "정책을 두지 않음"만으로는 쓰기가 거부되지 않는다 —
+-- INSERT 는 RLS with check 에 막히지만(42501), UPDATE·DELETE 는 정책이 없어
+-- "대상 행 0건"으로 조용히 통과한다. 지금은 피해가 없지만 나중에 UPDATE 정책을
+-- 하나 잘못 달면 과정 로그가 수정 가능해진다. 권한 자체를 회수해 둔다.
+revoke insert, update, delete, truncate
+    on public.exam_agent_sessions, public.exam_agent_events,
+       public.exam_agent_artifacts from anon, authenticated;
+revoke select
+    on public.exam_agent_sessions, public.exam_agent_events,
+       public.exam_agent_artifacts from anon;
+
 grant select on public.exam_agent_sessions, public.exam_agent_events,
                 public.exam_agent_artifacts to authenticated;
 grant all    on public.exam_agent_sessions, public.exam_agent_events,
