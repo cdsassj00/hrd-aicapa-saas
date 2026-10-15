@@ -7,7 +7,7 @@
  * 어느 교육 모듈을 측정하려던 것인지 추적할 수 있어야 한다.
  *
  * 이 스크립트는 SQL 을 표준출력으로 내보낸다. 마이그레이션을 다시 만들 때:
- *   node scripts/gen-question-seed.mjs > supabase/migrations/0028_seed_platform_question_bank.sql
+ *   node scripts/gen-question-seed.mjs > supabase/migrations/0029_seed_platform_question_bank.sql
  *
  * 문항 내용을 고치려면 이 파일을 고치고 다시 생성한다. 생성된 SQL 을 직접
  * 고치면 다음 생성에서 덮어써진다.
@@ -600,12 +600,12 @@ const setRows = SETS.map((s) => `    (${lit(s.code)}, ${lit(s.name)}, ${lit(s.de
 
 const counts = SETS.map((s) => `${s.code} ${q.filter((x) => x.set === s.code).length}문항`).join(' · ');
 
-process.stdout.write(`-- 0028_seed_platform_question_bank.sql
+process.stdout.write(`-- 0029_seed_platform_question_bank.sql
 --
 -- 플랫폼 문제은행 시드. ${counts}.
 --
 -- 생성 파일이다. 직접 고치지 말고 scripts/gen-question-seed.mjs 를 고친 뒤
---   node scripts/gen-question-seed.mjs > supabase/migrations/0028_seed_platform_question_bank.sql
+--   node scripts/gen-question-seed.mjs > supabase/migrations/0029_seed_platform_question_bank.sql
 -- 로 다시 만든다.
 --
 -- 출제 근거는 cdsassj00/vibestack \`curriculum/data.js\` 의 AI 업무활용 역량 모듈이다.

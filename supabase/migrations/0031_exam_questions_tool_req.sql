@@ -1,4 +1,4 @@
--- 0030_exam_questions_tool_req.sql
+-- 0031_exam_questions_tool_req.sql
 -- 응시 화면이 문항별 작업 환경(tool_req)을 알아야 한다.
 --
 -- 0022 가 문항 메타를 answer_key.meta 에 표준화했다(sector·job_roles·tool_req·level).

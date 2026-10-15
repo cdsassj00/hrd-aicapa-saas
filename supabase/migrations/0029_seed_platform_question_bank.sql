@@ -1,9 +1,9 @@
--- 0028_seed_platform_question_bank.sql
+-- 0029_seed_platform_question_bank.sql
 --
 -- 플랫폼 문제은행 시드. ai-lit-screening 20문항 · ai-cap-core 18문항.
 --
 -- 생성 파일이다. 직접 고치지 말고 scripts/gen-question-seed.mjs 를 고친 뒤
---   node scripts/gen-question-seed.mjs > supabase/migrations/0028_seed_platform_question_bank.sql
+--   node scripts/gen-question-seed.mjs > supabase/migrations/0029_seed_platform_question_bank.sql
 -- 로 다시 만든다.
 --
 -- 출제 근거는 cdsassj00/vibestack `curriculum/data.js` 의 AI 업무활용 역량 모듈이다.
