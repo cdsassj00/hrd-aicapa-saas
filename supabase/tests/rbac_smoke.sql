@@ -627,6 +627,82 @@ select pg_temp.assert(
   not exists (select 1 from public.exams where status = 'draft'),
   '작성 중(draft) 회차가 응시자에게 보이면 안 됨');
 
+-- ===========================================================================
+-- 시험 에이전트 과정 로그 (0029) — 추가 전용이어야 한다
+-- ===========================================================================
+-- 과정 로그가 채점 근거다. 응시자가 자기 로그를 고칠 수 있으면 근거가 무너진다.
+-- 쓰기는 service_role(엣지 함수)만 하고, 응시자에게는 읽기만 준다.
+reset role;
+set local role service_role;
+insert into public.exam_agent_sessions (id, session_id, question_id, sandbox_id, status)
+values ('ff000000-0000-0000-0000-000000000001',
+        'ee000000-0000-0000-0000-000000000001', null, 'sbx-test', 'active');
+insert into public.exam_agent_events (agent_id, seq, role, kind, content)
+values ('ff000000-0000-0000-0000-000000000001', 1, 'user', 'message', '{"text":"안녕"}');
+
+-- org_id 는 트리거가 세션에서 상속한다
+select pg_temp.assert(
+  (select org_id from public.exam_agent_events
+    where agent_id = 'ff000000-0000-0000-0000-000000000001')
+  = 'aaaaaaaa-0000-0000-0000-000000000001',
+  '에이전트 이벤트가 org_id 를 상속하지 못함');
+
+reset role;
+set local role authenticated;
+
+-- 응시자(66666666)는 자기 세션의 로그를 읽을 수 있다
+set local request.jwt.claims = '{"sub":"66666666-6666-6666-6666-666666666666","role":"authenticated"}';
+select pg_temp.assert(
+  (select count(*) from public.exam_agent_events) = 1,
+  '응시자가 자기 에이전트 로그를 못 읽음');
+
+-- 그러나 쓰지도 고치지도 못한다 (정책 자체가 없다)
+do $$
+begin
+  insert into public.exam_agent_events (agent_id, seq, role, kind, content)
+  values ('ff000000-0000-0000-0000-000000000001', 2, 'assistant', 'message', '{"text":"조작"}');
+  raise exception 'RBAC 검증 실패: 응시자가 과정 로그를 추가함';
+exception
+  when insufficient_privilege then null;
+end $$;
+
+-- Supabase default privileges 때문에 "정책 없음"만으로는 UPDATE 가 거부되지 않고
+-- 대상 행 0건으로 조용히 통과한다. 0030 이 권한을 회수했는지와, 설령 통과해도
+-- 내용이 바뀌지 않았는지를 둘 다 본다.
+do $$
+begin
+  update public.exam_agent_events set content = '{"text":"변조"}'
+   where agent_id = 'ff000000-0000-0000-0000-000000000001';
+  raise exception 'RBAC 검증 실패: 응시자가 과정 로그 UPDATE 를 통과함';
+exception
+  when insufficient_privilege then null;
+end $$;
+
+do $$
+begin
+  delete from public.exam_agent_events
+   where agent_id = 'ff000000-0000-0000-0000-000000000001';
+  raise exception 'RBAC 검증 실패: 응시자가 과정 로그 DELETE 를 통과함';
+exception
+  when insufficient_privilege then null;
+end $$;
+
+select pg_temp.assert(
+  (select content ->> 'text' from public.exam_agent_events
+    where agent_id = 'ff000000-0000-0000-0000-000000000001') = '안녕',
+  '과정 로그 내용이 바뀌었음');
+
+-- 다른 조직 사람에게는 보이지 않는다
+set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
+select pg_temp.assert(
+  (select count(*) from public.exam_agent_events) = 0,
+  '타 조직에 에이전트 로그가 보임');
+
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+select pg_temp.assert(
+  (select count(*) from public.exam_agent_events) = 1,
+  '같은 조직 스태프가 에이전트 로그를 못 읽음');
+
 reset role;
 select '✅ RBAC 스모크 테스트 통과' as result;
 

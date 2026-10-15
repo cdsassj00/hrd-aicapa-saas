@@ -21,6 +21,7 @@ import { ExamCustomTexts } from '@/lib/defaultCustomTexts';
 import McAnswerSelector from '@/components/exam/McAnswerSelector';
 import ExamChatPanel from '@/components/exam/ExamChatPanel';
 import FaceMonitor from '@/components/exam/FaceMonitor';
+import ExamAgentPanel from '@/components/exam/ExamAgentPanel';
 
 import { trackAction, flushActions } from '@/lib/userActions';
 import SetScenarioCard from '@/components/exam/SetScenarioCard';
@@ -310,7 +311,27 @@ export default function ExamPage() {
             if (qs) {
               const orderMap = new Map<string, number>(eqs.map((eq: any) => [eq.question_id, eq.sort_order as number]));
               qs.sort((a: any, b: any) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
-              const sanitized = qs.map((q: any) => ({ ...q, correct_answer: null }));
+
+              // 문항별 작업 환경(tool_req). 시험 에이전트를 띄울지 판단하는 데만 쓴다.
+              // 별도 RPC 인 이유: 문제 로딩 함수(get_exam_questions_for_session)는 응시
+              // 경로의 유일한 출제 조회 경로라 시그니처를 건드리지 않는다(0031).
+              // 실패해도 응시는 계속되어야 하므로 기본값 chat 으로 떨어뜨린다.
+              const toolMap = new Map<string, string>();
+              try {
+                const tr = await supabase.rpc('get_exam_question_tools', { _session_id: sessionId });
+                if (tr.error) throw tr.error;
+                (tr.data as any[] | null)?.forEach((row: any) => {
+                  toolMap.set(row.question_id, row.tool_req ?? 'chat');
+                });
+              } catch (e) {
+                console.warn('[ExamPage] tool_req fetch failed, defaulting to chat', e);
+              }
+
+              const sanitized = qs.map((q: any) => ({
+                ...q,
+                correct_answer: null,
+                tool_req: toolMap.get(q.id) ?? 'chat',
+              }));
               setQuestions(sanitized);
 
               const setIds = Array.from(new Set(qs.map((q: any) => q.set_id).filter(Boolean))) as string[];
@@ -1262,6 +1283,17 @@ export default function ExamPage() {
         isTaskQuestion={question?.type === 'work_based' || question?.type === 'file_upload'}
         enabled={!proctoringDisabledForSet && !isSubmitting && question?.type !== 'work_based' && question?.type !== 'file_upload'}
       />
+
+      {/* 시험 에이전트: 샌드박스를 요구하는 문항에서만 띄운다.
+          tool_req 는 get_exam_question_tools RPC 가 answer_key.meta 에서 꺼내 준다(0031).
+          대화·실행·생성 파일은 서버에 기록되어 채점 근거가 된다. */}
+      {sessionId && question?.id && question?.tool_req === 'code_sandbox' && (
+        <ExamAgentPanel
+          sessionId={sessionId}
+          questionId={question.id}
+          questionLabel={`${currentQ + 1}번 문항`}
+        />
+      )}
 
       {/* AI 감독: 안면 이탈 감지 (세트 옵션으로 비활성 가능, 시험 알림설정 화이트리스트 적용) */}
       <FaceMonitor
