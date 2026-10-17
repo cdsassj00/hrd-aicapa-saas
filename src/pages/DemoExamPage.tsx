@@ -284,11 +284,11 @@ export default function DemoExamPage() {
         </div>
       </main>
 
-      {/* 플로팅 AI 창 — 독립 AI 서비스(ChatGPT) 같은 느낌 */}
+      {/* 플로팅 AI 창 — 문항 옆 보조 패널. 밝은 톤으로 시험 화면과 한 몸처럼 (Gemini Notebook·Base44 참고) */}
       {chatOpen ? (
         <div
           style={{ width: dims.w, height: dims.h, maxWidth: 'calc(100vw - 1.5rem)', maxHeight: 'calc(100vh - 5rem)' }}
-          className="fixed bottom-4 right-4 z-30 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0f1117] text-slate-100 shadow-2xl ring-1 ring-black/40"
+          className="fixed bottom-4 right-4 z-30 flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl ring-1 ring-slate-900/5"
         >
           {/* 좌상단 크기조절 핸들 */}
           <div
@@ -296,31 +296,28 @@ export default function DemoExamPage() {
             title="드래그해서 크기 조절"
             className="absolute left-0 top-0 z-10 flex h-5 w-5 cursor-nwse-resize items-start justify-start p-1"
           >
-            <span className="h-2 w-2 rounded-full border-l-2 border-t-2 border-slate-500" />
+            <span className="h-2 w-2 rounded-full border-l-2 border-t-2 border-slate-300" />
           </div>
 
-          {/* 창 크롬 (신호등 + 타이틀 + 모델칩) */}
-          <div className="flex items-center gap-2 border-b border-white/10 bg-[#171922] px-4 py-2.5 pl-6">
-            <span className="flex gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-            </span>
-            <div className="ml-1 flex items-center gap-1.5 text-[12.5px] font-medium">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-400" /> AI 어시스턴트
+          {/* 헤더 (타이틀 + 상태칩) */}
+          <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50/80 px-4 py-2.5 pl-6">
+            <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-slate-800">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-500" /> AI 어시스턴트
             </div>
-            <span className="hidden rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-slate-300 sm:inline">샌드박스 연결됨</span>
+            <span className="hidden items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-600/15 sm:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> 샌드박스 연결됨
+            </span>
             <div className="ml-auto flex items-center gap-0.5">
               <button
                 onClick={toggleExpand}
-                className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-slate-100"
+                className="rounded-md p-1 text-slate-400 hover:bg-slate-200/70 hover:text-slate-700"
                 aria-label="넓게 보기 / 기본 크기"
               >
                 {dims.w > 520 ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </button>
               <button
                 onClick={() => setChatOpen(false)}
-                className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-slate-100"
+                className="rounded-md p-1 text-slate-400 hover:bg-slate-200/70 hover:text-slate-700"
                 aria-label="AI 창 접기"
               >
                 <Minus className="h-4 w-4" />
@@ -339,8 +336,8 @@ export default function DemoExamPage() {
                 </div>
               ) : (
                 <div key={i} className="flex gap-2.5">
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-[11px] font-bold text-[#0f1117]">AI</span>
-                  <div className="max-w-[82%] whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-[#1c1f2a] px-3.5 py-2.5 text-[12.5px] leading-relaxed text-slate-100">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-[11px] font-bold text-white">AI</span>
+                  <div className="max-w-[82%] whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-slate-800">
                     {m.content}
                   </div>
                 </div>
@@ -348,8 +345,8 @@ export default function DemoExamPage() {
             ))}
             {sending && (
               <div className="flex gap-2.5">
-                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-[11px] font-bold text-[#0f1117]">AI</span>
-                <div className="rounded-2xl rounded-tl-sm bg-[#1c1f2a] px-3.5 py-3">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-[11px] font-bold text-white">AI</span>
+                <div className="rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-3">
                   <span className="flex gap-1">
                     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '0ms' }} />
                     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '120ms' }} />
@@ -359,15 +356,15 @@ export default function DemoExamPage() {
               </div>
             )}
             {chatErr && (
-              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] text-red-300">{chatErr}</div>
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{chatErr}</div>
             )}
           </div>
 
           {/* 입력 바 — 3턴 체험 */}
-          <div className="border-t border-white/10 bg-[#171922] p-3">
+          <div className="border-t border-slate-200 bg-white p-3">
             {turnsLeft > 0 ? (
               <>
-                <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[#0f1117] px-3 py-2">
+                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-100">
                   <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -375,7 +372,7 @@ export default function DemoExamPage() {
                     disabled={sending}
                     maxLength={1000}
                     placeholder="AI에게 지시를 입력하세요…"
-                    className="min-w-0 flex-1 bg-transparent text-[12.5px] text-slate-200 placeholder:text-slate-500 focus:outline-none disabled:opacity-50"
+                    className="min-w-0 flex-1 bg-transparent text-[12.5px] text-slate-800 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"
                   />
                   <button
                     onClick={() => void sendMsg()}
@@ -386,14 +383,14 @@ export default function DemoExamPage() {
                     <ArrowUp className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="mt-1.5 text-center text-[10.5px] text-slate-500">
-                  체험 <b className="text-slate-300">{turnsLeft}턴</b> 남음 · 실제 응시에서는 무제한으로 AI와 대화하며 파일을 만듭니다
+                <div className="mt-1.5 text-center text-[10.5px] text-slate-400">
+                  체험 <b className="text-slate-600">{turnsLeft}턴</b> 남음 · 실제 응시에서는 무제한으로 AI와 대화하며 파일을 만듭니다
                 </div>
               </>
             ) : (
-              <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3 py-3 text-center">
-                <div className="text-[12.5px] font-medium text-slate-100">체험 3턴을 모두 사용했습니다</div>
-                <p className="mt-0.5 text-[11px] text-slate-400">실제 응시에서는 제한 없이 AI와 대화하며 산출물을 만들어 제출합니다.</p>
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-3 text-center">
+                <div className="text-[12.5px] font-medium text-slate-900">체험 3턴을 모두 사용했습니다</div>
+                <p className="mt-0.5 text-[11px] text-slate-500">실제 응시에서는 제한 없이 AI와 대화하며 산출물을 만들어 제출합니다.</p>
                 <div className="mt-2 flex justify-center gap-2">
                   <Link to="/login?tab=signup"><Button size="sm" className="h-7 text-[12px]">회원가입</Button></Link>
                   <a href="https://ai-hrd.com/#contact"><Button size="sm" variant="secondary" className="h-7 text-[12px]">도입 문의</Button></a>
