@@ -34,6 +34,7 @@ import {
   questionTypeColors,
 } from '@/components/question-bank/questionTypes';
 import { TagFilterPopover, collectTagStats } from '@/components/question-bank/TagControls';
+import { deriveMetaTags, mergeTags } from '@/lib/questionTags';
 
 const defaultNewQuestion = {
   category: '생성형AI활용',
@@ -68,11 +69,18 @@ const SortBtn = ({ k, label, sortKey, sortDir, onToggle }: {
 // category/grade/tags/options/correct_answer/allow_file_upload 는 answer_key 안, 배점은 points.
 function normalizeQuestion(q: any) {
   const ak = (q && q.answer_key) || {};
+  const { question_competencies, ...rest } = q || {};
+  const competencyNames: string[] = ((question_competencies || []) as { competencies?: { name?: string } | null }[])
+    .map(qc => qc?.competencies?.name ?? '')
+    .filter(Boolean);
+  const tags: string[] = q.tags ?? ak.tags ?? [];
   return {
-    ...q,
+    ...rest,
     category: q.category ?? ak.category ?? null,
     grade: q.grade ?? ak.grade ?? null,
-    tags: q.tags ?? ak.tags ?? [],
+    tags,
+    // 목록 표시·검색·필터용. 직접 태그 + 메타(섹터·도구·역량) 자동 태그. 저장하지 않는다.
+    viewTags: mergeTags(tags, deriveMetaTags(ak, competencyNames)),
     max_score: q.max_score ?? q.points ?? 0,
     allow_file_upload: q.allow_file_upload ?? ak.allow_file_upload ?? false,
     options: q.options ?? ak.options ?? null,
@@ -271,14 +279,17 @@ export default function QuestionBankPage() {
   const fetchQuestions = async () => {
     const { data } = await supabase
       .from('questions')
-      .select('*')
+      .select('*, question_competencies(competencies(name))')
       .order('created_at', { ascending: false });
     if (data) setQuestions(data.map(normalizeQuestion));
   };
 
   // 태그 통계는 단독 문제(문제은행 탭 대상)만 기준으로 집계
   const standaloneQuestions = useMemo(() => questions.filter(q => !q.set_id), [questions]);
-  const tagStats = useMemo(() => collectTagStats(standaloneQuestions), [standaloneQuestions]);
+  const tagStats = useMemo(
+    () => collectTagStats(standaloneQuestions.map(q => ({ tags: q.viewTags }))),
+    [standaloneQuestions],
+  );
 
   const filtered = useMemo(() => {
     const search = searchText.toLowerCase();
@@ -289,11 +300,12 @@ export default function QuestionBankPage() {
       if (diffFilter !== 'all' && q.difficulty !== diffFilter) return false;
       if (typeFilter !== 'all' && q.type !== typeFilter) return false;
       if (tagFilter.length > 0) {
-        const qTags = (q.tags || []) as string[];
+        const qTags = (q.viewTags || []) as string[];
         if (!tagFilter.some(t => qTags.includes(t))) return false;
       }
       if (search && !q.content.toLowerCase().includes(search) &&
-          !(q.tags || []).some((t: string) => t.toLowerCase().includes(search))) return false;
+          !(q.code || '').toLowerCase().includes(search) &&
+          !(q.viewTags || []).some((t: string) => t.toLowerCase().includes(search))) return false;
       return true;
     });
   }, [questions, catFilter, gradeFilter, diffFilter, typeFilter, tagFilter, searchText]);
@@ -309,7 +321,7 @@ export default function QuestionBankPage() {
         case 'category': return q.category || '';
         case 'difficulty': return diffOrder[q.difficulty] || 99;
         case 'content': return (q.content || '').toLowerCase();
-        case 'tags': return ((q.tags || []) as string[]).join(',').toLowerCase();
+        case 'tags': return ((q.viewTags || []) as string[]).join(',').toLowerCase();
         case 'max_score': return q.max_score || 0;
         case 'created_at': return new Date(q.created_at).getTime();
         case 'code': return q.code || '';
@@ -575,7 +587,7 @@ export default function QuestionBankPage() {
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="검색 (내용, 태그)"
+            placeholder="검색 (내용, 코드, 태그)"
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
             className="pl-8 w-[200px] text-[12px] h-8"
@@ -666,7 +678,7 @@ export default function QuestionBankPage() {
                 </TableCell>
                 <TableCell className="py-2">
                   <div className="flex gap-1 flex-wrap">
-                    {((q.tags || []) as string[]).slice(0, 3).map((t: string) => (
+                    {((q.viewTags || []) as string[]).slice(0, 3).map((t: string) => (
                       <button
                         key={t}
                         onClick={() => setTagFilter(prev => prev.includes(t) ? prev : [...prev, t])}
@@ -677,10 +689,10 @@ export default function QuestionBankPage() {
                         </Badge>
                       </button>
                     ))}
-                    {(q.tags || []).length > 3 && (
-                      <span className="text-[9px] text-muted-foreground self-center">+{(q.tags || []).length - 3}</span>
+                    {(q.viewTags || []).length > 3 && (
+                      <span className="text-[9px] text-muted-foreground self-center" title={(q.viewTags || []).slice(3).join(', ')}>+{(q.viewTags || []).length - 3}</span>
                     )}
-                    {(q.tags || []).length === 0 && <span className="text-[10px] text-muted-foreground">-</span>}
+                    {(q.viewTags || []).length === 0 && <span className="text-[10px] text-muted-foreground">-</span>}
                   </div>
                 </TableCell>
                 <TableCell className="text-[12px] py-2 text-center">{q.max_score}점</TableCell>

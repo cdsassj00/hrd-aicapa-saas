@@ -568,11 +568,21 @@ select pg_temp.assert(
 -- 응시자는 자기 세션의 점수·등급을 조작할 수 없다 (0014 트리거가 막는다)
 do $$
 begin
-  update public.exam_sessions set score = 100
+  update public.exam_sessions set score_total = 100
    where id = 'ee000000-0000-0000-0000-000000000001';
   raise exception 'RBAC 검증 실패: 응시자가 자기 점수를 조작함';
 exception
   when check_violation then null;   -- 트리거가 막음 = 기대 동작
+end $$;
+
+-- 합격 판정도 채점 결과다 — 응시자가 자기 세션을 passed 로 바꿀 수 없다 (0029)
+do $$
+begin
+  update public.exam_sessions set status = 'passed'
+   where id = 'ee000000-0000-0000-0000-000000000001';
+  raise exception 'RBAC 검증 실패: 응시자가 자기 합격 판정을 조작함';
+exception
+  when check_violation then null;
 end $$;
 
 -- 응시자는 자기 답안의 채점 결과(점수)를 조작할 수 없다
@@ -586,7 +596,7 @@ exception
 end $$;
 
 -- 그러나 상태 전이(제출)와 답안 내용 수정은 여전히 가능해야 한다
-update public.exam_sessions set status = 'submitted', submitted_at = now()
+update public.exam_sessions set status = 'submitted', submit_time = now()
  where id = 'ee000000-0000-0000-0000-000000000001';
 select pg_temp.assert(
   (select status from public.exam_sessions where id = 'ee000000-0000-0000-0000-000000000001')
@@ -605,10 +615,10 @@ end $$;
 
 -- 감독관(스태프)은 채점 결과를 매길 수 있다 (0014 트리거가 채점 주체는 통과시킨다)
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
-update public.exam_sessions set score = 88, max_score = 100
+update public.exam_sessions set score_total = 88, max_score = 100
  where id = 'ee000000-0000-0000-0000-000000000001';
 select pg_temp.assert(
-  (select score from public.exam_sessions where id = 'ee000000-0000-0000-0000-000000000001') = 88,
+  (select score_total from public.exam_sessions where id = 'ee000000-0000-0000-0000-000000000001') = 88,
   '감독관은 점수를 매길 수 있어야 함');
 
 -- 다른 조직 사람에게는 회차도 답안도 보이지 않는다

@@ -7,6 +7,7 @@
  */
 import JSZip from 'jszip';
 import { supabase } from '@/integrations/supabase/client';
+import { QUESTION_SELECT, toLegacyQuestion, toLegacySet } from '@/lib/questionShape';
 import { normalizeQuestion, getSlotValues, type NormalizedQuestion } from '@/lib/examStructure';
 
 const csvEscape = (v: any) => {
@@ -179,7 +180,7 @@ export async function downloadAnswerBundle(params: {
   if (qIds.length > 0) {
     for (let i = 0; i < qIds.length; i += 200) {
       const chunk = qIds.slice(i, i + 200);
-      const { data: qs } = await supabase.from('questions').select('*').in('id', chunk);
+      const { data: qs } = await supabase.from('questions').select(QUESTION_SELECT).in('id', chunk);
       (qs || []).forEach((q: any) => questionsMap.set(q.id, normalizeQuestion(q)));
     }
   }
@@ -207,9 +208,9 @@ export async function downloadAnswerBundle(params: {
   if (allSetIds.length > 0) {
     const { data: setsData } = await supabase
       .from('question_sets')
-      .select('id, title, scenario, attachments, total_score, category, grade, difficulty')
+      .select('*')
       .in('id', allSetIds);
-    (setsData || []).forEach((s: any) => setMap.set(s.id, s));
+    (setsData || []).forEach((s: any) => setMap.set(s.id, toLegacySet(s)));
   }
 
   // 시험명 폴더는 중복 처리
@@ -394,8 +395,8 @@ export async function downloadAnswerKey(examId: string, examTitle: string) {
   if (list.length === 0) throw new Error('시험에 등록된 문항이 없습니다.');
 
   const qIds = list.map((r: any) => r.question_id);
-  const { data: qs } = await supabase.from('questions').select('*').in('id', qIds);
-  const byId = new Map<string, any>((qs || []).map((q: any) => [q.id, q]));
+  const { data: qs } = await supabase.from('questions').select(QUESTION_SELECT).in('id', qIds);
+  const byId = new Map<string, any>((qs || []).map((q: any) => [q.id, toLegacyQuestion(q)]));
 
   const ordered = list.map((eq: any, idx: number) => {
     const raw = byId.get(eq.question_id);
@@ -867,9 +868,9 @@ export async function importScoresCsv(csvText: string): Promise<ImportScoresResu
     const { data: eqs } = await supabase.from('exam_questions').select('question_id').eq('exam_id', sess.exam_id);
     const qIds = (eqs || []).map((e: any) => e.question_id);
     const { data: qs } = qIds.length > 0
-      ? await supabase.from('questions').select('id, max_score, submission_slots').in('id', qIds)
+      ? await supabase.from('questions').select('id, type, points, answer_key').in('id', qIds)
       : { data: [] as any[] };
-    const maxPossible = (qs || []).reduce((sum: number, q: any) => {
+    const maxPossible = (qs || []).map(toLegacyQuestion).reduce((sum: number, q: any) => {
       const slots = Array.isArray(q.submission_slots) ? q.submission_slots : [];
       const slotSum = slots.reduce((a: number, s: any) => a + (Number(s.max_score) || 0), 0);
       return sum + (slotSum > 0 ? slotSum : (q.max_score || 0));
