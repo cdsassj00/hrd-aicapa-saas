@@ -53,6 +53,7 @@ export interface ExamSandbox {
   readonly id: string;
   runCommand(cmd: string): Promise<CommandOutcome>;
   writeFile(path: string, content: string): Promise<void>;
+  writeBytes(path: string, bytes: Uint8Array): Promise<void>;
   readFile(path: string): Promise<string>;
   listFiles(path?: string): Promise<SandboxFile[]>;
   downloadFile(path: string): Promise<Uint8Array>;
@@ -110,6 +111,11 @@ function wrap(sbx: Sandbox): ExamSandbox {
 
     async writeFile(path: string, content: string) {
       await sbx.files.write(resolveWorkPath(path), content);
+    },
+
+    async writeBytes(path: string, bytes: Uint8Array) {
+      // 응시자가 올린 파일. 텍스트로 가정하면 xlsx·zip 이 깨진다.
+      await sbx.files.write(resolveWorkPath(path), bytes.buffer as ArrayBuffer);
     },
 
     async readFile(path: string) {

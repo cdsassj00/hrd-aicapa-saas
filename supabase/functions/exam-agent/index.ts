@@ -45,6 +45,8 @@ const json = (body: unknown, status = 200) =>
 const MAX_TURNS_PER_QUESTION = 60;
 /** 제출 가능한 파일 크기 상한 */
 const MAX_SUBMIT_BYTES = 20 * 1024 * 1024;
+/** 응시자가 올릴 수 있는 파일 크기 상한. base64 로 실려 오므로 더 낮게 잡는다 */
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 /** 과정 로그 기록기. seq 를 서버가 매겨 순서를 보장한다 */
 function makeRecorder(service: SupabaseClient, agentId: string, startSeq: number) {
@@ -157,6 +159,24 @@ Deno.serve(async (req) => {
           fixtureLog = r.log;
           if (!r.ok) console.error("[exam-agent] fixture failed", code, r.log);
         }
+
+        // 문서 픽스처(question_fixtures)도 작업 폴더에 넣어 준다. 응시자가 받아
+        // 다시 올리게 하면 과제와 무관한 수고만 늘어난다.
+        const { data: docs } = await service
+          .from("question_fixtures")
+          .select("path, content")
+          .eq("question_id", questionId)
+          .order("sort_order");
+        for (const d of docs ?? []) {
+          try {
+            await sandbox.writeFile(String(d.path), String(d.content));
+          } catch (e) {
+            console.error("[exam-agent] doc fixture write failed", d.path, e);
+          }
+        }
+        if (docs?.length) {
+          fixtureLog = [fixtureLog, `문서 ${docs.length}건 배치`].filter(Boolean).join(" · ");
+        }
       }
 
       if (agent) {
@@ -222,6 +242,52 @@ Deno.serve(async (req) => {
       const path = typeof body.path === "string" ? body.path : undefined;
       const files = await sandbox.listFiles(path);
       return json({ files });
+    }
+
+    if (action === "upload") {
+      // 응시자가 자기 PC 파일을 작업 폴더로 올린다. 과제 자료를 직접 들고
+      // 오는 문항이 있고, 그걸 못 하면 샌드박스가 반쪽이 된다.
+      const name = String(body.name ?? "").trim();
+      const b64 = String(body.content_base64 ?? "");
+      if (!name || !b64) return json({ error: "name 과 content_base64 가 필요합니다." }, 400);
+
+      let bytes: Uint8Array;
+      try {
+        const bin = atob(b64);
+        bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+      } catch {
+        return json({ error: "파일 인코딩이 올바르지 않습니다." }, 400);
+      }
+      if (bytes.byteLength > MAX_UPLOAD_BYTES) {
+        return json({ error: "업로드 파일이 너무 큽니다(10MB 초과)." }, 400);
+      }
+
+      // 경로 탈출은 resolveWorkPath 가 막지만, 올라온 이름에서 디렉터리 성분을
+      // 먼저 떼어 낸다 — 업로드가 작업 폴더 구조를 헤집을 이유가 없다.
+      const safe = (name.split("/").pop() || "upload.bin").replace(/[^\w.\-]/g, "_");
+      try {
+        await sandbox.writeBytes(`uploads/${safe}`, bytes);
+      } catch (e) {
+        return json(
+          { error: e instanceof SandboxPathError ? e.message : "파일을 쓰지 못했습니다." },
+          400,
+        );
+      }
+
+      // 올린 사실도 과정 기록이다 — 무엇을 들고 왔는지가 채점에 쓰인다.
+      const { data: last } = await service
+        .from("exam_agent_events").select("seq")
+        .eq("agent_id", agent.id).order("seq", { ascending: false }).limit(1).maybeSingle();
+      await service.from("exam_agent_events").insert({
+        agent_id: agent.id,
+        seq: Number(last?.seq ?? 0) + 1,
+        role: "user",
+        kind: "file_write",
+        content: { uploaded: `uploads/${safe}`, bytes: bytes.byteLength },
+      });
+
+      const files = await sandbox.listFiles().catch(() => []);
+      return json({ ok: true, path: `uploads/${safe}`, bytes: bytes.byteLength, files });
     }
 
     if (action === "submit") {
@@ -303,6 +369,23 @@ Deno.serve(async (req) => {
     const lastSeq = events?.length ? Number(events[events.length - 1].seq) : 0;
     const recorder = makeRecorder(service, agent.id, lastSeq);
     const history = historyFromEvents(events ?? []);
+
+    // 에이전트가 작업 폴더 상태를 알고 시작해야 "무슨 파일이 있나요" 왕복이 준다.
+    ctx.files = (await sandbox.listFiles().catch(() => []))
+      .filter((f) => !f.isDir)
+      .map((f) => f.path.replace(`${WORK_DIR}/`, ""))
+      .slice(0, 40);
+
+    // 스킬: 이 조직이 에이전트에게 따르게 할 추가 지시문. 없으면 생략한다.
+    const { data: skills } = await service
+      .from("org_agent_skills")
+      .select("name, body")
+      .eq("org_id", session.org_id)
+      .eq("is_active", true)
+      .order("sort_order");
+    if (skills?.length) {
+      ctx.skills = skills.map((k) => ({ name: String(k.name), body: String(k.body) }));
+    }
 
     const result = await runTurn({ ctx, history, userText, sandbox, recorder });
 

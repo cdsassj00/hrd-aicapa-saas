@@ -47,6 +47,14 @@ export interface AgentContext {
   questionType: string;
   /** 남은 시험 시간(분). 모르면 undefined */
   minutesLeft?: number;
+  /**
+   * 스킬 — 이 회차에서 에이전트가 따를 추가 지시문.
+   * 조직의 문서 서식 규칙, 용어 사전, 보고 양식 같은 것을 넣는다.
+   * 채점 기준은 절대 넣지 않는다(응시자에게 답을 넘기는 셈이다).
+   */
+  skills?: Array<{ name: string; body: string }>;
+  /** 작업 폴더에 미리 놓인 파일 목록. 에이전트가 처음부터 알고 시작한다 */
+  files?: string[];
 }
 
 const SANDBOX_TOOLS: ToolSpec[] = [
@@ -181,9 +189,19 @@ export function systemPrompt(ctx: AgentContext): string {
     "",
     `작업 폴더: ${WORK_DIR}`,
     ctx.minutesLeft !== undefined ? `남은 시간: 약 ${ctx.minutesLeft}분` : "",
+    ctx.files?.length
+      ? `작업 폴더에 이미 있는 파일: ${ctx.files.join(", ")}`
+      : "",
     "",
     "응시자에게 주어진 과제",
     ctx.questionContent,
+    ...(ctx.skills?.length
+      ? [
+          "",
+          "이 기관에서 따라야 하는 규칙",
+          ...ctx.skills.map((sk) => `## ${sk.name}\n${sk.body}`),
+        ]
+      : []),
   ]
     .filter(Boolean)
     .join("\n");

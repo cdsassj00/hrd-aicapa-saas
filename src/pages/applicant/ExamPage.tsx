@@ -23,6 +23,9 @@ import ExamChatPanel from '@/components/exam/ExamChatPanel';
 import FaceMonitor from '@/components/exam/FaceMonitor';
 import ExamAgentPanel from '@/components/exam/ExamAgentPanel';
 
+/** 문항 실습 자료. DB(question_fixtures)에 있고 세션 소유권으로 잠겨 있다 */
+type QuestionFixture = { question_id: string; path: string; mime_type: string; content: string };
+
 import { trackAction, flushActions } from '@/lib/userActions';
 import SetScenarioCard from '@/components/exam/SetScenarioCard';
 import SlotAnswerPanel from '@/components/exam/SlotAnswerPanel';
@@ -55,6 +58,7 @@ export default function ExamPage() {
   const [confirmUnanswered, setConfirmUnanswered] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [violationCount, setViolationCount] = useState(0);
+  const [fixtures, setFixtures] = useState<Record<string, QuestionFixture[]>>({});
   const [questions, setQuestions] = useState<any[]>([]);
   const [session, setSession] = useState<any>(null);
   const [examTitle, setExamTitle] = useState('');
@@ -333,6 +337,21 @@ export default function ExamPage() {
                 tool_req: toolMap.get(q.id) ?? 'chat',
               }));
               setQuestions(sanitized);
+
+              // 실습 자료(question_fixtures). 문항 상당수가 "자료가 주어집니다"를
+              // 전제하므로 이게 없으면 문항을 풀 수 없다. 실패해도 응시는
+              // 계속되어야 하므로 비워 둔 채 진행한다.
+              try {
+                const fr = await supabase.rpc('get_question_fixtures', { _session_id: sessionId });
+                if (fr.error) throw fr.error;
+                const byQ: Record<string, QuestionFixture[]> = {};
+                (fr.data as QuestionFixture[] | null)?.forEach((f) => {
+                  (byQ[f.question_id] ||= []).push(f);
+                });
+                setFixtures(byQ);
+              } catch (e) {
+                console.warn('[ExamPage] fixture fetch failed', e);
+              }
 
               const setIds = Array.from(new Set(qs.map((q: any) => q.set_id).filter(Boolean))) as string[];
               if (setIds.length > 0) {
@@ -1453,6 +1472,46 @@ export default function ExamPage() {
               <MarkdownView content={question.content} variant="question" className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0" />
             </div>
 
+
+            {/* 실습 자료 (question_fixtures). 첨부파일과 달리 Storage 가 아니라
+                DB 에 있고 세션 소유권으로 잠겨 있다 — public 버킷에 두면 문제가
+                유출된다(0032). 내용을 그대로 내려받게 한다. */}
+            {(fixtures[question.id] ?? []).length > 0 && (
+              <div className="space-y-1.5 p-3 rounded-md bg-sky-50 border border-sky-200 dark:bg-sky-950/30 dark:border-sky-900">
+                <p className="text-[11px] font-medium text-sky-700 dark:text-sky-300">
+                  실습 자료 {(fixtures[question.id] ?? []).length}건
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(fixtures[question.id] ?? []).map((f) => (
+                    <Button
+                      key={f.path}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-[11px]"
+                      onClick={() => {
+                        const blob = new Blob([f.content], { type: `${f.mime_type};charset=utf-8` });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = f.path.split('/').pop() || f.path;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      {f.path}
+                    </Button>
+                  ))}
+                </div>
+                {question.tool_req === 'code_sandbox' && (
+                  <p className="text-[10.5px] text-sky-700/80 dark:text-sky-300/80">
+                    같은 자료가 AI 작업 공간의 작업 폴더에도 들어 있습니다.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* 문제 첨부파일 다운로드 */}
             {question.attachments && (question.attachments as any[]).length > 0 && (

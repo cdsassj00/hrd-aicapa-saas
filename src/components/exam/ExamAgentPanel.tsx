@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Bot, ChevronDown, Loader2, Maximize2, Minimize2, Play, RefreshCw, Send, Upload,
+  Bot, ChevronDown, Loader2, Maximize2, Minimize2, Paperclip, Play, RefreshCw, Send, Upload,
 } from 'lucide-react';
 
 type Msg = { role: 'user' | 'assistant'; text: string };
@@ -47,6 +47,8 @@ export default function ExamAgentPanel({ sessionId, questionId, questionLabel }:
   const [files, setFiles] = useState<SandboxFile[]>([]);
   const [turnsLeft, setTurnsLeft] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [dims, setDims] = useState(() => ({
     w: 520,
@@ -147,6 +149,37 @@ export default function ExamAgentPanel({ sessionId, questionId, questionLabel }:
         });
       } finally {
         setSubmitting(null);
+      }
+    },
+    [call, toast],
+  );
+
+  // 응시자 PC 파일을 작업 폴더로. 과제 자료를 직접 들고 오는 문항이 있다.
+  const uploadFile = useCallback(
+    async (file: File) => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: '파일이 너무 큽니다', description: '10MB 이하만 올릴 수 있습니다.', variant: 'destructive' });
+        return;
+      }
+      setUploading(true);
+      try {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        // btoa 는 문자열만 받는다. 큰 파일에서 스택이 터지지 않게 끊어서 만든다.
+        let bin = '';
+        for (let i = 0; i < buf.length; i += 0x8000) {
+          bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+        }
+        const data = await call({ action: 'upload', name: file.name, content_base64: btoa(bin) });
+        if (Array.isArray(data.files)) setFiles(data.files as SandboxFile[]);
+        setMsgs((m) => [...m, { role: 'assistant', text: `${data.path} 를 작업 폴더에 올렸습니다.` }]);
+      } catch (e) {
+        toast({
+          title: '업로드 실패',
+          description: e instanceof Error ? e.message : '다시 시도해 주세요.',
+          variant: 'destructive',
+        });
+      } finally {
+        setUploading(false);
       }
     },
     [call, toast],
@@ -302,6 +335,26 @@ export default function ExamAgentPanel({ sessionId, questionId, questionLabel }:
 
       <div className="shrink-0 border-t border-white/10 bg-[#15171f] p-3">
         <div className="flex items-end gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void uploadFile(f);
+              e.target.value = '';
+            }}
+          />
+          <Button
+            onClick={() => fileRef.current?.click()}
+            disabled={!agentId || busy || uploading}
+            size="icon"
+            variant="outline"
+            title="파일 올리기"
+            className="h-[52px] w-11 shrink-0 border-white/10 bg-white/5 hover:bg-white/10"
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+          </Button>
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
