@@ -9,13 +9,16 @@
 //     생각하고 타이핑한다 — 실제 CPU 사용은 몇 분뿐이다. 수명만 걸어 두면
 //     "끊긴 브라우저가 30분을 태우는" 구조가 된다. 일시정지는 컴퓨트 과금을
 //     끊고 디스크를 남기며, connect 가 다시 깨운다.
-//   · 외부 송신 기본 차단. 응시 중 샌드박스가 열린 인터넷으로 나갈 수 있으면
-//     그게 곧 부정행위 통로다 — 전체화면 감독·탭 전환 감지를 전부 우회한다.
-//     허용할 호스트는 SANDBOX_ALLOW_OUT 로만 연다.
+//   · 외부 송신은 허용목록 방식. 전면 차단이 아니다 — 이 시험의 평가 대상이
+//     "AI 를 써서 일을 끝내는 것"이므로 작업에 필요한 송신을 막으면 시험 자체가
+//     성립하지 않는다. 막아야 하는 것은 형평성을 깨는 통로뿐이다:
+//     다른 AI 서비스를 따로 쓰는 것, 메신저로 사람에게 물어보는 것.
+//     E2B 는 거부 목록에 도메인을 쓸 수 없고 허용 목록에만 쓸 수 있으므로,
+//     "필요한 곳만 연다"가 그 둘을 막는 유일한 방법이다.
 //   · 작업 디렉터리를 WORK_DIR 하나로 고정하고 경로를 그 밖으로 못 나가게 막는다.
 //   · 명령 실행에 개별 타임아웃을 건다.
 
-import { ALL_TRAFFIC, Sandbox } from "npm:e2b@2.55.0";
+import { Sandbox } from "npm:e2b@2.55.0";
 
 /** 응시자 작업 디렉터리. 산출물 수집도 이 아래만 훑는다 */
 export const WORK_DIR = "/home/user/work";
@@ -144,20 +147,55 @@ function wrap(sbx: Sandbox): ExamSandbox {
 }
 
 /**
- * 외부 송신 정책. 기본은 전면 차단이다.
+ * 작업에 필요한 기본 허용 호스트.
  *
- * SANDBOX_ALLOW_OUT 에 쉼표로 호스트·IP·CIDR 을 적으면 그것만 열린다.
- * 값이 없으면 아무 데도 못 나간다 — 시험 환경의 기본값은 이쪽이어야 한다.
+ * 패키지 저장소와 공개 데이터 출처다. 응시자가 실제 업무처럼 자료를 받아
+ * 쓰는 것은 평가 대상이므로 막지 않는다.
  *
- * 전면 차단이면 시험 중 `pip install` 도 막힌다. 그래서 응시에 필요한 패키지
- * (pandas·matplotlib·openpyxl)와 한글 폰트는 커스텀 템플릿에 미리 넣고
- * E2B_TEMPLATE 로 지정한다. 시험 중에 네트워크로 받아 쓰게 두면 부정행위
- * 통로와 구분이 되지 않는다.
+ * 여기에 **없는** 것이 통제의 핵심이다. 다른 AI 서비스(api.openai.com,
+ * api.anthropic.com, generativelanguage.googleapis.com, chatgpt.com,
+ * claude.ai, gemini.google.com)와 메신저·협업도구(telegram, kakao, slack,
+ * discord)는 허용목록에 없으므로 자동으로 막힌다. 전자는 형평성 문제이고
+ * (우리 에이전트 대신 다른 AI 를 쓰면 같은 조건의 평가가 아니다), 후자는
+ * 사람에게 물어보는 통로다.
+ *
+ * 웹 검색이 필요한 문항은 샌드박스에서 직접 나가게 하지 않는다 — 에이전트의
+ * web_search 도구로 서버를 거치게 해서 질의와 결과를 과정 로그에 남긴다
+ * (_shared/examAgent.ts). 그래야 무엇을 찾아봤는지가 채점 자료가 된다.
+ */
+const DEFAULT_ALLOW_OUT = [
+  // 패키지 — 커스텀 템플릿에 없는 것을 응시 중 설치할 수 있게 둔다
+  "pypi.org",
+  "files.pythonhosted.org",
+  // 공개 데이터·법령·통계
+  "www.data.go.kr",
+  "data.go.kr",
+  "kosis.kr",
+  "www.law.go.kr",
+  "law.go.kr",
+  "kostat.go.kr",
+];
+
+/**
+ * 외부 송신 정책.
+ *
+ * SANDBOX_EGRESS=open  허용목록을 걷는다. 리서치 문항처럼 열린 웹이 필요한
+ *                      회차용이다. 이 모드에서는 다른 AI 서비스·메신저를
+ *                      도메인으로 막을 수 없다(E2B 거부목록은 IP·CIDR 만
+ *                      받는다) — 형평성은 감독·과정 로그로만 본다.
+ * 그 밖(기본)           DEFAULT_ALLOW_OUT + SANDBOX_ALLOW_OUT 만 열린다.
+ *
+ * SANDBOX_ALLOW_OUT 은 쉼표로 호스트·IP·CIDR 을 더한다(기본 목록을 덮지 않고
+ * 추가한다). 도메인 매칭은 HTTP(:80) Host 헤더와 TLS(:443) SNI 로 동작하므로
+ * 다른 포트를 열려면 IP·CIDR 로 적어야 한다.
  */
 function networkPolicy() {
-  const raw = (Deno.env.get("SANDBOX_ALLOW_OUT") ?? "").trim();
-  const allow = raw ? raw.split(",").map((h) => h.trim()).filter(Boolean) : [];
-  return allow.length > 0 ? { allowOut: allow } : { denyOut: [ALL_TRAFFIC] };
+  if ((Deno.env.get("SANDBOX_EGRESS") ?? "").trim().toLowerCase() === "open") {
+    return {};
+  }
+  const extra = (Deno.env.get("SANDBOX_ALLOW_OUT") ?? "")
+    .split(",").map((h) => h.trim()).filter(Boolean);
+  return { allowOut: [...new Set([...DEFAULT_ALLOW_OUT, ...extra])] };
 }
 
 /** 새 샌드박스를 띄운다. metadata 는 E2B 대시보드에서 추적용 */

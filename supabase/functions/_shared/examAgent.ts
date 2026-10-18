@@ -49,7 +49,7 @@ export interface AgentContext {
   minutesLeft?: number;
 }
 
-export const TOOLS: ToolSpec[] = [
+const SANDBOX_TOOLS: ToolSpec[] = [
   {
     name: "run_command",
     description:
@@ -98,6 +98,71 @@ export const TOOLS: ToolSpec[] = [
   },
 ];
 
+/**
+ * 웹 검색 도구.
+ *
+ * 샌드박스에서 직접 인터넷에 나가게 하지 않고 서버를 거친다. 이유 두 가지.
+ *   · 질의와 결과가 과정 로그에 남는다 — 응시자가 무엇을 찾아봤는지가
+ *     채점 자료가 된다. 샌드박스에서 curl 로 나가면 아무 기록도 남지 않는다.
+ *   · 형평성 통제를 한 곳에 모은다. 다른 AI 서비스로 질문을 넘기는 것과
+ *     자료를 찾는 것은 여기서 갈라진다.
+ */
+const WEB_SEARCH_TOOL: ToolSpec = {
+  name: "web_search",
+  description:
+    "웹에서 자료를 검색합니다. 근거가 필요한 수치·법령·기관 자료를 찾을 때 씁니다. " +
+    "결과의 출처 주소를 응시자에게 함께 알려 주십시오.",
+  parameters: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "검색어" },
+    },
+    required: ["query"],
+    additionalProperties: false,
+  },
+};
+
+/** 검색 공급자가 구성돼 있는지. 없으면 도구를 아예 노출하지 않는다 */
+export function searchEnabled(): boolean {
+  return !!Deno.env.get("SEARCH_API_URL") && !!Deno.env.get("SEARCH_API_KEY");
+}
+
+/** 이 회차에서 에이전트가 쓸 수 있는 도구 목록 */
+export function buildTools(): ToolSpec[] {
+  return searchEnabled() ? [...SANDBOX_TOOLS, WEB_SEARCH_TOOL] : [...SANDBOX_TOOLS];
+}
+
+/**
+ * 검색 실행. Brave Search 호환 형태(GET ?q=, X-Subscription-Token)를 기본으로
+ * 두되 공급자를 환경변수로 갈아 끼울 수 있게 한다 — ai.ts 와 같은 이식성 방어선.
+ */
+export async function runWebSearch(query: string): Promise<string> {
+  const url = Deno.env.get("SEARCH_API_URL");
+  const key = Deno.env.get("SEARCH_API_KEY");
+  if (!url || !key) return "검색이 구성되지 않았습니다.";
+
+  const q = query.trim().slice(0, 300);
+  if (!q) return "검색어가 비었습니다.";
+
+  const res = await fetch(`${url}${url.includes("?") ? "&" : "?"}q=${encodeURIComponent(q)}`, {
+    headers: { Accept: "application/json", "X-Subscription-Token": key },
+  });
+  if (!res.ok) return `검색 실패 (${res.status})`;
+
+  const data = await res.json().catch(() => null);
+  const items = data?.web?.results ?? data?.results ?? [];
+  if (!Array.isArray(items) || items.length === 0) return "검색 결과가 없습니다.";
+
+  return items
+    .slice(0, 5)
+    .map((r: Record<string, unknown>, i: number) =>
+      `${i + 1}. ${String(r.title ?? "")}\n   ${String(r.url ?? "")}\n   ${String(
+        r.description ?? r.snippet ?? "",
+      ).replace(/<[^>]*>/g, "").slice(0, 300)}`,
+    )
+    .join("\n");
+}
+
 export function systemPrompt(ctx: AgentContext): string {
   return [
     "당신은 AI 활용 역량평가 시험 중인 응시자를 돕는 작업 도우미입니다.",
@@ -110,6 +175,9 @@ export function systemPrompt(ctx: AgentContext): string {
     "- 응시자가 무엇을 하려는지 불명확하면 먼저 한 가지만 되물으십시오.",
     "- 과제의 정답이나 채점 기준은 당신도 모릅니다. 모르는 것을 아는 척하지 마십시오.",
     "- 답변은 한국어로, 짧고 실무적으로 씁니다.",
+    searchEnabled()
+      ? "- 근거가 필요하면 web_search 로 찾고 출처 주소를 함께 알려 주십시오."
+      : "",
     "",
     `작업 폴더: ${WORK_DIR}`,
     ctx.minutesLeft !== undefined ? `남은 시간: 약 ${ctx.minutesLeft}분` : "",
@@ -182,6 +250,10 @@ export async function runTool(
           : "(빈 폴더)";
         return { ...base, output: clip(listing), ok: true };
       }
+      case "web_search": {
+        const out = await runWebSearch(String(args.query ?? ""));
+        return { ...base, output: clip(out), ok: true };
+      }
       default:
         return { ...base, output: `알 수 없는 도구: ${name}`, ok: false };
     }
@@ -234,7 +306,7 @@ export async function runTurn(args: {
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const turn = await chatWithTools({
       messages,
-      tools: TOOLS,
+      tools: buildTools(),
       model: args.model,
       maxTokens: 1500,
     });

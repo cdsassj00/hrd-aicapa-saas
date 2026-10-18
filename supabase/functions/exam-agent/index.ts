@@ -21,6 +21,7 @@ import {
   type EventKind,
   type EventRole,
 } from "../_shared/examAgent.ts";
+import { hasFixture, writeFixtures } from "../_shared/fixtures.ts";
 import {
   connectSandbox,
   createSandbox,
@@ -143,6 +144,21 @@ Deno.serve(async (req) => {
         org_id: String(session.org_id),
       });
 
+      // 실습 데이터. 문항 상당수는 "파일이 주어집니다"가 전제이고, 그 파일이
+      // 없으면 문항을 풀 수가 없다. 샌드박스 안에서 바로 생성한다(Storage 경유
+      // 없음) — supabase/fixtures/fixtures.py 참고.
+      let fixtureLog = "";
+      if (questionId) {
+        const { data: q } = await service
+          .from("questions").select("code").eq("id", questionId).maybeSingle();
+        const code = q?.code ?? null;
+        if (hasFixture(code)) {
+          const r = await writeFixtures(sandbox, String(code));
+          fixtureLog = r.log;
+          if (!r.ok) console.error("[exam-agent] fixture failed", code, r.log);
+        }
+      }
+
       if (agent) {
         const { error } = await service
           .from("exam_agent_sessions")
@@ -153,7 +169,7 @@ Deno.serve(async (req) => {
           })
           .eq("id", agent.id);
         if (error) throw error;
-        return json({ agent_id: agent.id, reused: false });
+        return json({ agent_id: agent.id, reused: false, fixture: fixtureLog || null });
       }
 
       const { data: created, error } = await service
@@ -168,7 +184,7 @@ Deno.serve(async (req) => {
         .select("id")
         .single();
       if (error || !created) throw error ?? new Error("작업 공간 생성 실패");
-      return json({ agent_id: created.id, reused: false });
+      return json({ agent_id: created.id, reused: false, fixture: fixtureLog || null });
     }
 
     // start 외의 동작은 모두 기존 작업 공간이 있어야 한다.
