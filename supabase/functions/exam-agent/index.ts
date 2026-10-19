@@ -17,11 +17,13 @@ import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supa
 import {
   historyFromEvents,
   runTurn,
+  searchEnabled,
   type AgentContext,
   type EventKind,
   type EventRole,
 } from "../_shared/examAgent.ts";
 import { hasFixture, writeFixtures } from "../_shared/fixtures.ts";
+import { listTools, type McpServerConfig, type McpTool } from "../_shared/mcp.ts";
 import {
   connectSandbox,
   createSandbox,
@@ -63,6 +65,63 @@ function makeRecorder(service: SupabaseClient, agentId: string, startSeq: number
       return seq;
     },
   };
+}
+
+/** 작업 공간이 열린 환경을 기록한다. 실패해도 시험은 계속되어야 한다 */
+async function snapshotEnv(
+  service: SupabaseClient,
+  agentId: string,
+  env: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await service
+    .from("exam_agent_sessions")
+    .update({ env_snapshot: env })
+    .eq("id", agentId);
+  if (error) console.error("[exam-agent] env snapshot failed", error);
+}
+
+/**
+ * 회차에 연결할 MCP 서버를 모은다.
+ *
+ * exams.agent_env.mcp 에 이름이 적혀 있으면 그것만, 없으면 조직의 활성 서버
+ * 전부. 한 서버가 죽어도 시험을 막지 않는다 — 건너뛰고 로그만 남긴다.
+ * (회차 도중 외부 서버 장애로 응시가 중단되는 것이 더 나쁘다.)
+ */
+async function loadMcp(
+  service: SupabaseClient,
+  orgId: string,
+  allow: string[] | null,
+): Promise<{ tools: McpTool[]; servers: Map<string, McpServerConfig>; failed: string[] }> {
+  const servers = new Map<string, McpServerConfig>();
+  const tools: McpTool[] = [];
+  const failed: string[] = [];
+
+  let q = service
+    .from("org_mcp_servers")
+    .select("name, url, secret_env")
+    .eq("org_id", orgId)
+    .eq("is_active", true)
+    .order("sort_order");
+  if (allow?.length) q = q.in("name", allow);
+
+  const { data } = await q;
+  for (const row of data ?? []) {
+    const cfg: McpServerConfig = {
+      name: String(row.name),
+      url: String(row.url),
+      secretEnv: row.secret_env ? String(row.secret_env) : null,
+    };
+    try {
+      const { tools: ts } = await listTools(cfg);
+      if (!ts.length) continue;
+      servers.set(cfg.name, cfg);
+      tools.push(...ts);
+    } catch (e) {
+      failed.push(cfg.name);
+      console.error("[exam-agent] mcp listTools failed", cfg.name, e);
+    }
+  }
+  return { tools, servers, failed };
 }
 
 Deno.serve(async (req) => {
@@ -140,11 +199,18 @@ Deno.serve(async (req) => {
         }
       }
 
-      sandbox = await createSandbox({
-        session_id: sessionId,
-        question_id: questionId ?? "",
-        org_id: String(session.org_id),
-      });
+      const { data: exam } = await service
+        .from("exams").select("agent_env").eq("id", session.exam_id).maybeSingle();
+      const env = (exam?.agent_env ?? {}) as Record<string, unknown>;
+
+      sandbox = await createSandbox(
+        {
+          session_id: sessionId,
+          question_id: questionId ?? "",
+          org_id: String(session.org_id),
+        },
+        typeof env.egress === "string" ? env.egress : undefined,
+      );
 
       // 실습 데이터. 문항 상당수는 "파일이 주어집니다"가 전제이고, 그 파일이
       // 없으면 문항을 풀 수가 없다. 샌드박스 안에서 바로 생성한다(Storage 경유
@@ -179,6 +245,19 @@ Deno.serve(async (req) => {
         }
       }
 
+      // 이 작업 공간이 실제로 어떤 환경에서 열렸는지. 채점·이의제기 때 근거다.
+      const mcpAllow = Array.isArray(env.mcp) ? (env.mcp as string[]) : null;
+      const loaded = await loadMcp(service, String(session.org_id), mcpAllow);
+      const service_env = {
+        egress: typeof env.egress === "string" ? env.egress : "open",
+        web_search: searchEnabled(),
+        mcp: [...loaded.servers.keys()],
+        mcp_failed: loaded.failed,
+        mcp_tools: loaded.tools.map((t) => t.exposedName),
+        template: Deno.env.get("E2B_TEMPLATE") ? "custom" : "base",
+        at: new Date().toISOString(),
+      };
+
       if (agent) {
         const { error } = await service
           .from("exam_agent_sessions")
@@ -189,6 +268,7 @@ Deno.serve(async (req) => {
           })
           .eq("id", agent.id);
         if (error) throw error;
+        await snapshotEnv(service, agent.id, service_env);
         return json({ agent_id: agent.id, reused: false, fixture: fixtureLog || null });
       }
 
@@ -204,6 +284,7 @@ Deno.serve(async (req) => {
         .select("id")
         .single();
       if (error || !created) throw error ?? new Error("작업 공간 생성 실패");
+      await snapshotEnv(service, created.id, service_env);
       return json({ agent_id: created.id, reused: false, fixture: fixtureLog || null });
     }
 
@@ -387,7 +468,17 @@ Deno.serve(async (req) => {
       ctx.skills = skills.map((k) => ({ name: String(k.name), body: String(k.body) }));
     }
 
-    const result = await runTurn({ ctx, history, userText, sandbox, recorder });
+    const { data: exam } = await service
+      .from("exams").select("agent_env").eq("id", session.exam_id).maybeSingle();
+    const env = (exam?.agent_env ?? {}) as Record<string, unknown>;
+    const mcp = await loadMcp(
+      service,
+      String(session.org_id),
+      Array.isArray(env.mcp) ? (env.mcp as string[]) : null,
+    );
+    if (mcp.servers.size) ctx.mcpServers = [...mcp.servers.keys()];
+
+    const result = await runTurn({ ctx, history, userText, sandbox, recorder, mcp });
 
     // 산출물 목록 갱신(제출 전 상태). 실패해도 대화는 성공으로 돌려준다 —
     // 과정 로그는 이미 남았고, 목록은 files 로 다시 받을 수 있다.

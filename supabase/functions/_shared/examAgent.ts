@@ -12,6 +12,7 @@ import {
   type ToolChatMessage,
   type ToolSpec,
 } from "./ai.ts";
+import { callTool, type McpServerConfig, type McpTool } from "./mcp.ts";
 import {
   MAX_FILE_BYTES,
   SandboxPathError,
@@ -55,6 +56,8 @@ export interface AgentContext {
   skills?: Array<{ name: string; body: string }>;
   /** 작업 폴더에 미리 놓인 파일 목록. 에이전트가 처음부터 알고 시작한다 */
   files?: string[];
+  /** 이 회차에 연결된 MCP 서버 이름. 응시자에게도 보이는 정보다 */
+  mcpServers?: string[];
 }
 
 const SANDBOX_TOOLS: ToolSpec[] = [
@@ -135,9 +138,23 @@ export function searchEnabled(): boolean {
   return !!Deno.env.get("SEARCH_API_URL") && !!Deno.env.get("SEARCH_API_KEY");
 }
 
-/** 이 회차에서 에이전트가 쓸 수 있는 도구 목록 */
-export function buildTools(): ToolSpec[] {
-  return searchEnabled() ? [...SANDBOX_TOOLS, WEB_SEARCH_TOOL] : [...SANDBOX_TOOLS];
+/**
+ * 이 회차에서 에이전트가 쓸 수 있는 도구 목록.
+ *
+ * MCP 도구는 회차가 전원에게 동일하게 제공한다. 응시자가 각자 들고 오는 구조면
+ * 측정되는 것이 능력이 아니라 준비물이 된다(0034 참고).
+ */
+export function buildTools(mcpTools: McpTool[] = []): ToolSpec[] {
+  const tools: ToolSpec[] = [...SANDBOX_TOOLS];
+  if (searchEnabled()) tools.push(WEB_SEARCH_TOOL);
+  for (const t of mcpTools) {
+    tools.push({
+      name: t.exposedName,
+      description: `[${t.server}] ${t.description}`,
+      parameters: t.inputSchema,
+    });
+  }
+  return tools;
 }
 
 /**
@@ -192,6 +209,9 @@ export function systemPrompt(ctx: AgentContext): string {
     ctx.files?.length
       ? `작업 폴더에 이미 있는 파일: ${ctx.files.join(", ")}`
       : "",
+    ctx.mcpServers?.length
+      ? `연결된 외부 도구: ${ctx.mcpServers.join(", ")} (mcp_ 로 시작하는 도구들)`
+      : "",
     "",
     "응시자에게 주어진 과제",
     ctx.questionContent,
@@ -228,9 +248,23 @@ export async function runTool(
   sandbox: ExamSandbox,
   name: string,
   args: Record<string, unknown>,
+  mcp: { tools: McpTool[]; servers: Map<string, McpServerConfig> } = {
+    tools: [],
+    servers: new Map(),
+  },
 ): Promise<ToolExecution> {
   const base = { name, args };
   try {
+    // MCP 도구는 이름으로 먼저 가른다 — 샌드박스 도구와 이름이 겹칠 일이 없도록
+    // exposedToolName 이 mcp_ 접두사를 붙여 둔다.
+    const mt = mcp.tools.find((t) => t.exposedName === name);
+    if (mt) {
+      const cfg = mcp.servers.get(mt.server);
+      if (!cfg) return { ...base, output: `MCP 서버를 찾지 못했습니다: ${mt.server}`, ok: false };
+      const r = await callTool(cfg, mt.remoteName, args);
+      return { ...base, output: clip(r.text), ok: r.ok };
+    }
+
     switch (name) {
       case "run_command": {
         const cmd = String(args.command ?? "").trim();
@@ -306,8 +340,10 @@ export async function runTurn(args: {
   sandbox: ExamSandbox;
   recorder: Recorder;
   model?: string;
+  mcp?: { tools: McpTool[]; servers: Map<string, McpServerConfig> };
 }): Promise<TurnResult> {
   const { ctx, sandbox, recorder } = args;
+  const mcp = args.mcp ?? { tools: [], servers: new Map<string, McpServerConfig>() };
   const userText = args.userText.slice(0, MAX_USER_CHARS);
 
   await recorder.record("user", "message", { text: userText });
@@ -324,7 +360,7 @@ export async function runTurn(args: {
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const turn = await chatWithTools({
       messages,
-      tools: buildTools(),
+      tools: buildTools(mcp.tools),
       model: args.model,
       maxTokens: 1500,
     });
@@ -352,7 +388,7 @@ export async function runTurn(args: {
 
       await recorder.record("assistant", "tool_call", { tool: call.name, args: parsed });
 
-      const exec = await runTool(sandbox, call.name, parsed);
+      const exec = await runTool(sandbox, call.name, parsed, mcp);
 
       await recorder.record("tool", exec.ok ? "tool_result" : "error", {
         tool: call.name,
