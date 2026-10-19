@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     // (2) 세션 소유·상태 확인. 끝난 시험에서는 에이전트를 쓸 수 없다.
     const { data: session } = await service
       .from("exam_sessions")
-      .select("id, org_id, exam_id, applicant_id, status, started_at")
+      .select("id, org_id, exam_id, applicant_id, status, start_time")
       .eq("id", sessionId)
       .maybeSingle();
     if (!session) return json({ error: "시험 세션을 찾을 수 없습니다." }, 404);

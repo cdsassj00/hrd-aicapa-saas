@@ -279,7 +279,7 @@ export default function ExamPage() {
           try {
             [eqsRes, ansRes] = await Promise.all([
               withRetry(async () => {
-                const r = await supabase.from('exam_questions').select('question_id, sort_order').eq('exam_id', sess.exam_id).order('sort_order');
+                const r = await supabase.from('exam_questions').select('question_id, order_num').eq('exam_id', sess.exam_id).order('order_num');
                 if (r.error) throw r.error;
                 return r;
               }, 'exam_questions'),
@@ -313,7 +313,7 @@ export default function ExamPage() {
               return;
             }
             if (qs) {
-              const orderMap = new Map<string, number>(eqs.map((eq: any) => [eq.question_id, eq.sort_order as number]));
+              const orderMap = new Map<string, number>(eqs.map((eq: any) => [eq.question_id, eq.order_num as number]));
               qs.sort((a: any, b: any) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
 
               // 문항별 작업 환경(tool_req). 시험 에이전트를 띄울지 판단하는 데만 쓴다.

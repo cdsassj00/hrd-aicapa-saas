@@ -144,7 +144,7 @@ begin
     q.type,
     q.difficulty,
     coalesce(eq.points_override, q.points)                  as max_score,
-    eq.sort_order                                           as order_num,
+    eq.order_num                                            as order_num,
     q.answer_key ->> 'category'                             as category,
     q.answer_key ->> 'grade'                                as grade,
     coalesce(q.answer_key -> 'tags',    '[]'::jsonb)        as tags,
@@ -155,7 +155,7 @@ begin
   from public.exam_questions eq
   join public.questions q on q.id = eq.question_id
   where eq.exam_id = _sess.exam_id
-  order by eq.sort_order;
+  order by eq.order_num;
 end $$;
 
 comment on function public.get_exam_questions_for_session(uuid) is
