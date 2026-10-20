@@ -26,6 +26,12 @@ export const MAX_TOOL_ROUNDS = 8;
 export const MAX_TOOL_OUTPUT_CHARS = 6000;
 /** 사용자 입력 한 건의 상한 */
 export const MAX_USER_CHARS = 4000;
+/**
+ * 모델 호출 한 번의 출력 상한. 에이전트는 여러 줄짜리 파이썬을 도구 인자로
+ * 통째로 써 내려가므로 1500 으로는 호출 중간에 잘린다 — 잘리면 tool_calls 도
+ * content 도 없는 빈 턴이 돌아온다.
+ */
+export const MAX_TURN_TOKENS = 4000;
 
 export type EventRole = "user" | "assistant" | "tool" | "system";
 export type EventKind =
@@ -362,12 +368,24 @@ export async function runTurn(args: {
       messages,
       tools: buildTools(mcp.tools),
       model: args.model,
-      maxTokens: 1500,
+      maxTokens: MAX_TURN_TOKENS,
     });
     usage.prompt += turn.usage.prompt;
     usage.completion += turn.usage.completion;
 
     if (!turn.toolCalls.length) {
+      // 빈 응답의 거의 유일한 원인은 토큰 상한에 걸려 잘린 것이다.
+      // 그대로 "못 찾았습니다" 라고 하면 응시자도 채점자도 원인을 못 본다.
+      if (!turn.content?.trim() && turn.finishReason === "length") {
+        const notice =
+          "응답이 길이 제한에 걸려 잘렸습니다. 작업을 더 작은 단계로 나눠 다시 지시해 주십시오.";
+        await recorder.record("system", "notice", {
+          reason: "length_truncated",
+          max_tokens: MAX_TURN_TOKENS,
+        });
+        await recorder.record("assistant", "message", { text: notice });
+        return { reply: notice, createdPaths, usage, truncated: true };
+      }
       const reply = turn.content?.trim() || "처리할 내용을 찾지 못했습니다.";
       await recorder.record("assistant", "message", { text: reply });
       return { reply, createdPaths, usage, truncated: false };

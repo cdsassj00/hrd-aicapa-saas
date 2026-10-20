@@ -111,6 +111,8 @@ export interface ToolTurn {
   content: string | null;
   toolCalls: ToolCall[];
   usage: { prompt: number; completion: number };
+  /** 모델이 왜 멈췄는지. "length" 면 토큰 상한에 잘린 것이다 */
+  finishReason: string | null;
 }
 
 function toWire(m: ToolChatMessage): Record<string, unknown> {
@@ -182,7 +184,8 @@ export async function chatWithTools(opts: {
   }
 
   const data = await res.json();
-  const msg = data?.choices?.[0]?.message ?? {};
+  const choice = data?.choices?.[0] ?? {};
+  const msg = choice.message ?? {};
   const calls: ToolCall[] = Array.isArray(msg.tool_calls)
     ? msg.tool_calls
         .filter((c: Record<string, unknown>) => c?.function)
@@ -200,5 +203,6 @@ export async function chatWithTools(opts: {
       prompt: Number(data?.usage?.prompt_tokens ?? 0),
       completion: Number(data?.usage?.completion_tokens ?? 0),
     },
+    finishReason: typeof choice.finish_reason === "string" ? choice.finish_reason : null,
   };
 }
