@@ -3,7 +3,7 @@
 --
 -- exam_sessions 의 'session update self'(0007:444) 와 answers 의 'answer write self'(0007:458)
 -- 정책은 응시자가 자기 행을 UPDATE 하도록 허용한다. RLS 는 컬럼 단위 제한을 못 하므로,
--- 응시자가 PostgREST 로 score/max_score/grade_level_id(및 answers 의 채점 결과 컬럼)를
+-- 응시자가 PostgREST 로 score_total/max_score/grade_level_id(및 answers 의 채점 결과 컬럼)를
 -- 직접 써넣을 수 있었다. 0007 주석은 "점수·등급은 못 건드린다"고 했으나 실제 보호 장치가
 -- 없었다 — 제품의 핵심 가치(평가 무결성)를 무너뜨리는 구멍.
 --
@@ -13,7 +13,7 @@
 -- (SECURITY DEFINER 면 소유자로 바뀌어 판별이 무의미해진다). is_org_examiner 는
 -- 그 자체가 SECURITY DEFINER 라 여기서 호출해도 org_members RLS 재귀가 없다.
 
--- ── exam_sessions: score / max_score / grade_level_id 는 채점 결과 ──
+-- ── exam_sessions: score_total / max_score / grade_level_id 는 채점 결과 ──
 create or replace function public.guard_exam_session_scoring()
 returns trigger
 language plpgsql
@@ -21,7 +21,7 @@ security invoker
 set search_path = public, pg_temp
 as $$
 begin
-  if new.score          is distinct from old.score
+  if new.score_total    is distinct from old.score_total
      or new.max_score      is distinct from old.max_score
      or new.grade_level_id is distinct from old.grade_level_id
   then

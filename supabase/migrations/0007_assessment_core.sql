@@ -136,7 +136,7 @@ create table public.exam_questions (
   exam_id         uuid not null references public.exams(id) on delete cascade,
   question_id     uuid not null references public.questions(id) on delete restrict,
   org_id          uuid not null references public.organizations(id) on delete cascade,
-  sort_order      int not null default 0,
+  order_num       int not null default 0,
   points_override int,
   created_at      timestamptz not null default now(),
 
@@ -203,10 +203,10 @@ create table public.exam_sessions (
   user_id        uuid references auth.users(id) on delete set null,
   status         public.session_status not null default 'waiting',
 
-  started_at     timestamptz,
-  submitted_at   timestamptz,
+  start_time     timestamptz,
+  submit_time    timestamptz,
 
-  score          numeric(6,2),
+  score_total    numeric(6,2),
   max_score      numeric(6,2),
   grade_level_id uuid references public.grade_levels(id) on delete set null,
 
@@ -214,9 +214,9 @@ create table public.exam_sessions (
   updated_at     timestamptz not null default now(),
 
   constraint exam_sessions_score_range
-    check (score is null or score >= 0),
+    check (score_total is null or score_total >= 0),
   constraint exam_sessions_submitted_after_start
-    check (submitted_at is null or started_at is null or submitted_at >= started_at)
+    check (submit_time is null or start_time is null or submit_time >= start_time)
 );
 
 comment on table public.exam_sessions is
