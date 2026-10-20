@@ -5,3 +5,9 @@ project_id = "eoeiqpgzoyltrawfflhj"
 # 누구나 이 URL 로 POST 해서 문자를 보낼 수 있다.
 [functions.send-sms-hook]
 verify_jwt = false
+
+# exam-agent 는 함수 안에서 JWT 로 호출자 신원을 직접 확인하고(본인 세션인지,
+# 진행 중인 시험인지) 거기에 맞춰 거절한다. 그래도 플랫폼 단에서 한 겹 더
+# 막는 쪽이 낫다 — 토큰 없는 요청이 함수 본문에 닿을 이유가 없다.
+[functions.exam-agent]
+verify_jwt = true
