@@ -1,30 +1,54 @@
 #!/usr/bin/env node
 /**
- * supabase/fixtures/fixtures.py 를 엣지 함수가 쓸 TS 상수로 감싼다.
+ * supabase/fixtures/fixtures.py 를 DB 시드 SQL 로 감싼다.
  *
- * 왜 생성 단계를 두는가: 파이썬 원본에는 마크다운 인라인 코드의 백틱과 따옴표가
- * 섞여 있어 TS 템플릿 리터럴에 그대로 넣을 수 없다. JSON.stringify 로 감싸면
- * 어떤 문자가 들어와도 깨지지 않고, 원본은 python3 으로 바로 돌려 검증할 수 있다.
+ *   node scripts/gen-fixture-module.mjs > supabase/migrations/0036_agent_scripts.sql
  *
- *   node scripts/gen-fixture-module.mjs
+ * 왜 DB 인가: 엣지 함수 번들에 14KB 파이썬을 굽지 않기 위해서다. 픽스처를
+ * 고칠 때 함수를 다시 배포하지 않아도 되고, 배포 페이로드도 그만큼 작아진다.
+ * SQL 은 달러 인용($py$)을 써서 파이썬을 한 글자도 escape 하지 않는다 —
+ * 중간 단계에서 escape 가 어긋나면 생성기가 조용히 깨진다.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 
 const SRC = 'supabase/fixtures/fixtures.py';
-const OUT = 'supabase/functions/_shared/fixtureScript.ts';
-
 const py = readFileSync(SRC, 'utf8');
 
-// 셸 heredoc 구분자와 충돌하면 샌드박스 전송이 깨진다. 생성 단계에서 막는다.
-if (py.includes('HRD_FIXTURE_EOF')) {
-  throw new Error(`${SRC}: heredoc 구분자(HRD_FIXTURE_EOF)가 본문에 있습니다`);
-}
+if (py.includes('$py$')) throw new Error(`${SRC}: 달러 인용 구분자와 충돌합니다`);
+if (py.includes('HRD_FIXTURE_EOF')) throw new Error(`${SRC}: heredoc 구분자가 본문에 있습니다`);
 
-writeFileSync(
-  OUT,
-  `// 생성 파일 — 직접 고치지 마십시오.\n` +
-    `// 원본: ${SRC}\n` +
-    `// 다시 만들기: node scripts/gen-fixture-module.mjs\n` +
-    `export const FIXTURE_SCRIPT = ${JSON.stringify(py)};\n`,
+process.stdout.write(`-- 0036_agent_scripts.sql
+--
+-- 에이전트가 샌드박스 안에서 실행하는 스크립트를 담는다.
+-- 생성 파일이다 — 원본은 ${SRC} 이고, 고친 뒤 다시 만든다:
+--   node scripts/gen-fixture-module.mjs > supabase/migrations/0036_agent_scripts.sql
+--
+-- 왜 테이블인가: 엣지 함수 번들에 14KB 파이썬을 굽지 않기 위해서다. 픽스처를
+-- 고칠 때 함수를 다시 배포하지 않아도 되고, 배포 페이로드도 작아진다.
+--
+-- 조직 자산이 아니라 플랫폼 운영 자산이므로 org_id 를 두지 않는다
+-- (테넌시 가드 예외 목록에 등록한다). 읽기는 service_role 전용 —
+-- 이 스크립트에는 심어 둔 결함의 위치, 즉 채점 기준이 들어 있다.
+
+create table if not exists public.agent_scripts (
+  name       text primary key,
+  content    text not null,
+  updated_at timestamptz not null default now(),
+  constraint agent_scripts_content_not_blank check (length(btrim(content)) > 0)
 );
-console.log(`${OUT} (${py.length} bytes of python)`);
+
+comment on table public.agent_scripts is
+  '에이전트가 샌드박스에서 실행하는 스크립트. 채점 기준(심어 둔 결함 위치)이 들어 있어 service_role 만 읽는다.';
+
+alter table public.agent_scripts enable row level security;
+
+-- Supabase default privileges 가 anon·authenticated 에 ALL 을 준다(0030 참고).
+-- 정책을 두지 않는 것만으로는 막히지 않으므로 권한을 회수한다.
+revoke all on public.agent_scripts from anon, authenticated;
+grant all on public.agent_scripts to service_role;
+-- 정책을 두지 않는다 — service_role 외 전면 거부.
+
+insert into public.agent_scripts (name, content) values ('fixtures.py', $py$${py}$py$)
+on conflict (name) do update
+  set content = excluded.content, updated_at = now();
+`);

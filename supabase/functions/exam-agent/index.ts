@@ -221,7 +221,11 @@ Deno.serve(async (req) => {
           .from("questions").select("code").eq("id", questionId).maybeSingle();
         const code = q?.code ?? null;
         if (hasFixture(code)) {
-          const r = await writeFixtures(sandbox, String(code));
+          const r = await writeFixtures(sandbox, String(code), async (n) => {
+            const { data } = await service
+              .from("agent_scripts").select("content").eq("name", n).maybeSingle();
+            return data?.content ?? null;
+          });
           fixtureLog = r.log;
           if (!r.ok) console.error("[exam-agent] fixture failed", code, r.log);
         }
