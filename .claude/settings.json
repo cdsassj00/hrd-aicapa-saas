@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": [
+      "mcp__Supabase",
+      "mcp__github",
+      "mcp__Claude_Code_Remote",
+      "Bash(git *)",
+      "Bash(npx *)",
+      "Bash(npm *)",
+      "Bash(node *)",
+      "Bash(curl *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(sed *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(find *)",
+      "Bash(wc *)",
+      "Bash(python3 *)",
+      "Bash(jq *)",
+      "Read",
+      "Edit(src/**)",
+      "Edit(supabase/**)",
+      "Edit(scripts/**)",
+      "Edit(docs/**)",
+      "Edit(.github/**)",
+      "Edit(.claude/**)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(git push --force origin main*)",
+      "Bash(git push -f origin main*)"
+    ]
+  }
+}
