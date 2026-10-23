@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toLegacyQuestion } from '@/lib/questionShape';
 import { useToast } from '@/hooks/use-toast';
 
 type QType = 'multiple_choice' | 'short_answer' | 'essay' | 'file_upload' | 'work_based';
@@ -90,9 +91,9 @@ export default function CrossTableDialog({ open, onOpenChange, sessions, exams, 
 
         const allQids = [...new Set((eqs || []).map((eq: any) => eq.question_id))];
         const { data: qs } = allQids.length > 0
-          ? await supabase.from('questions').select('id,content,type,max_score,order_num').in('id', allQids)
+          ? await supabase.from('questions').select('id, content, type, points, answer_key').in('id', allQids)
           : { data: [] as any[] };
-        setQuestions(qs || []);
+        setQuestions((qs || []).map(toLegacyQuestion));
 
         const sMap = new Map<string, Map<string, number>>();
         (ans || []).forEach((a: any) => {

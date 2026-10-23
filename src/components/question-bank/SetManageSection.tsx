@@ -15,6 +15,7 @@ import { Paperclip, Trash2, Eye, Search, Loader2, ExternalLink, ArrowUpDown, Che
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { toDbQuestion } from '@/lib/questionShape';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { GradeBadge } from '@/components/GradeBadge';
@@ -221,8 +222,9 @@ export function SetManageSection({ refreshKey }: { refreshKey: number }) {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      // delete child questions first, then the set
-      await supabase.from('questions').delete().eq('set_id', deleteTarget.id);
+      // 소속 문항을 먼저 지우고 세트를 지운다 (세트 소속은 question_set_items 로 연결)
+      const childIds = (questionsBySet[deleteTarget.id] || []).map((q: any) => q.id);
+      if (childIds.length > 0) await supabase.from('questions').delete().in('id', childIds);
       const { error } = await supabase.from('question_sets').delete().eq('id', deleteTarget.id);
       if (error) throw error;
       toast({ title: '세트 삭제 완료', description: `"${deleteTarget.title}" 및 소속 문제 모두 삭제` });
@@ -311,8 +313,8 @@ export function SetManageSection({ refreshKey }: { refreshKey: number }) {
     setSetSaving(true);
     try {
       const payload = {
-        title: editingSet.title,
-        scenario: editingSet.scenario,
+        name: editingSet.title,
+        description: editingSet.scenario,
         category: editingSet.category || null,
         grade: editingSet.grade || null,
         difficulty: editingSet.difficulty || 'medium',
@@ -691,44 +693,44 @@ export function SetManageSection({ refreshKey }: { refreshKey: number }) {
     setJsonOverwriteApplying(true);
     try {
       const setId = editingSet.id;
-      const setUpdate: any = {
-        title: parsed.title,
-        scenario: parsed.scenario ?? '',
+      const setUpdate = {
+        name: parsed.title,
+        description: parsed.scenario ?? '',
         category: parsed.category ?? null,
         grade: parsed.grade ?? null,
         difficulty: parsed.difficulty ?? 'medium',
         tags: parsed.tags ?? [],
-        order_num: parsed.order_num ?? editingSet.order_num ?? 1,
         attachments: parsed.attachments ?? [],
-        total_score: parsed.questions.reduce((s: number, q: any) => s + (q.max_score || 0), 0),
       };
       const { error: setErr } = await supabase.from('question_sets').update(setUpdate).eq('id', setId);
       if (setErr) throw setErr;
 
-      // 기존 문제 삭제 (답안은 ON DELETE에 따라 정리됨)
-      const { error: delErr } = await supabase.from('questions').delete().eq('set_id', setId);
-      if (delErr) throw delErr;
+      // 기존 문제 삭제 (세트 연결 question_set_items 는 문항과 함께 정리됨)
+      const oldIds = (questionsBySet[setId] || []).map((q: any) => q.id);
+      if (oldIds.length > 0) {
+        const { error: delErr } = await supabase.from('questions').delete().in('id', oldIds);
+        if (delErr) throw delErr;
+      }
 
-      // 새 문제 일괄 삽입
-      const rows = parsed.questions.map((q: any, idx: number) => ({
-        set_id: setId,
-        set_order: q.set_order ?? idx + 1,
-        order_num: idx + 1,
-        content: q.content || '',
-        type: q.type || 'work_based',
-        category: q.category ?? parsed.category ?? '생성형AI활용',
-        grade: q.grade ?? parsed.grade ?? null,
-        difficulty: q.difficulty ?? 'medium',
-        max_score: q.max_score ?? 0,
-        tags: q.tags ?? [],
-        allow_file_upload: q.allow_file_upload ?? true,
-        options: q.options ?? null,
-        correct_answer: q.correct_answer ?? null,
-        attachments: q.attachments ?? [],
-        submission_slots: q.submission_slots ?? null,
-      }));
-      const { error: insErr } = await supabase.from('questions').insert(rows);
+      // 새 문제 일괄 삽입 → 세트에 연결
+      const { data: { user } } = await supabase.auth.getUser();
+      const rows = parsed.questions.map((q: any) => toDbQuestion(
+        { ...q, category: q.category ?? parsed.category ?? null, grade: q.grade ?? parsed.grade ?? null },
+        editingSet.org_id,
+        user?.id ?? null,
+      ));
+      const { data: inserted, error: insErr } = await supabase.from('questions').insert(rows).select('id');
       if (insErr) throw insErr;
+      const items = (inserted || []).map((r: { id: string }, idx: number) => ({
+        set_id: setId,
+        question_id: r.id,
+        org_id: editingSet.org_id,
+        sort_order: parsed.questions[idx]?.set_order ?? idx + 1,
+      }));
+      if (items.length > 0) {
+        const { error: linkErr } = await supabase.from('question_set_items').insert(items);
+        if (linkErr) throw linkErr;
+      }
 
       toast({ title: 'JSON 덮어쓰기 완료', description: `문제 ${rows.length}개 재생성됨` });
       setJsonOverwriteOpen(false);

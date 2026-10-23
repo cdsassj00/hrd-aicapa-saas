@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
 
     // Mark invitation as used (테스트 모드 시험은 재사용 가능하므로 마킹 스킵)
     if (!isTestMode) {
-      // 사용 완료 표시 — 새 스키마에는 is_used 가 없고 accepted_at 으로 판정한다(0025).
+      // 사용 완료 표시 — accepted_at 을 쓰면 트리거가 is_used 도 맞춘다(0029).
       await serviceClient
         .from("exam_invitations")
         .update({ accepted_at: new Date().toISOString(), session_id: examSessionId })

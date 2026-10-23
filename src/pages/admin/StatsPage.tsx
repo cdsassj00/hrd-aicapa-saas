@@ -131,8 +131,13 @@ export default function StatsPage() {
     let answersQuery = supabase.from('answers').select('question_id, score, session_id');
     if (sessionIds) answersQuery = answersQuery.in('session_id', sessionIds);
     const { data: answers } = await answersQuery;
-    const { data: questions } = await supabase.from('questions').select('id, category, max_score');
-    if (!answers || !questions) return;
+    // 문항 분류는 answer_key(0022 이후 표준) 에 있다. 구 화면의 category/max_score 형태로 펼친다.
+    const { data: qRows } = await supabase.from('questions').select('id, points, answer_key');
+    if (!answers || !qRows) return;
+    const questions = qRows.map(q => {
+      const ak = (q.answer_key ?? {}) as { category?: string };
+      return { id: q.id, category: ak.category || '미분류', max_score: q.points ?? 0 };
+    });
 
     const qMap = Object.fromEntries(questions.map(q => [q.id, q]));
     const catAcc: Record<string, { total: number; count: number; maxTotal: number }> = {};

@@ -575,6 +575,16 @@ exception
   when check_violation then null;   -- 트리거가 막음 = 기대 동작
 end $$;
 
+-- 합격 판정도 채점 결과다 — 응시자가 자기 세션을 passed 로 바꿀 수 없다 (0029)
+do $$
+begin
+  update public.exam_sessions set status = 'passed'
+   where id = 'ee000000-0000-0000-0000-000000000001';
+  raise exception 'RBAC 검증 실패: 응시자가 자기 합격 판정을 조작함';
+exception
+  when check_violation then null;
+end $$;
+
 -- 응시자는 자기 답안의 채점 결과(점수)를 조작할 수 없다
 do $$
 begin

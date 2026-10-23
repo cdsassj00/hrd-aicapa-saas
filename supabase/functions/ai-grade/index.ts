@@ -1,12 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AiPaymentRequiredError, AiRateLimitError, chatCompletion } from "../_shared/ai.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { QUESTION_SELECT, toLegacyQuestion } from "../_shared/questionShape.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -46,13 +50,15 @@ async function performGrading(jobId: string, session_id: string) {
       .order("order_num");
     const qIds = (eqs || []).map((eq: any) => eq.question_id);
 
-    const [{ data: answers }, { data: questions }] = await Promise.all([
+    const [{ data: answers }, { data: rawQuestions }] = await Promise.all([
       supabase.from("answers").select("*").eq("session_id", session_id),
       qIds.length > 0
-        ? supabase.from("questions").select("*").in("id", qIds)
+        ? supabase.from("questions").select(QUESTION_SELECT).in("id", qIds)
         : Promise.resolve({ data: [] as any[] }),
     ]);
-    if (!answers || !questions) throw new Error("Failed to fetch data");
+    if (!answers || !rawQuestions) throw new Error("Failed to fetch data");
+    // 문항은 조직 문제은행 구조(points·answer_key) → 채점 로직이 쓰는 형태로 펼친다.
+    const questions = rawQuestions.map(toLegacyQuestion);
 
     await updateJob(jobId, { progress: 15 });
 
@@ -304,6 +310,28 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const supabase = getClient();
+
+    // 호출자 권한: 채점 대상 세션들이 속한 조직의 감독관(또는 플랫폼 운영자)만.
+    // 이 함수는 service_role 로 점수를 쓰므로, 여기서 막지 않으면 누구나 채점을 돌릴 수 있다.
+    const auth = req.headers.get("Authorization");
+    if (!auth) return json({ error: "unauthorized" }, 401);
+    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: auth } },
+    });
+    const { data: userData } = await userClient.auth.getUser();
+    if (!userData?.user) return json({ error: "unauthorized" }, 401);
+    const requested: string[] = Array.isArray(body?.session_ids) ? body.session_ids : body?.session_id ? [body.session_id] : [];
+    if (requested.length === 0) throw new Error("session_id or session_ids is required");
+    const { data: sessRows } = await supabase.from("exam_sessions").select("id, org_id").in("id", requested);
+    const orgIds = [...new Set((sessRows || []).map((r: any) => r.org_id))];
+    if ((sessRows || []).length !== requested.length) return json({ error: "세션을 찾을 수 없습니다." }, 404);
+    const { data: isPlatformAdmin } = await userClient.rpc("is_platform_admin");
+    if (!isPlatformAdmin) {
+      for (const orgId of orgIds) {
+        const { data: ok } = await userClient.rpc("is_org_examiner", { _org_id: orgId });
+        if (!ok) return json({ error: "채점 권한이 없습니다." }, 403);
+      }
+    }
 
     // Bulk mode: { session_ids: [...] }
     if (Array.isArray(body?.session_ids) && body.session_ids.length > 0) {

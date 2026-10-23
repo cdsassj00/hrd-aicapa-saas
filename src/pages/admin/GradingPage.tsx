@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Eye, Send, Bot, Loader2, Zap, Download, Search, Table2, ExternalLink, FileDown, Check, X, Package, Upload } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
+import { QUESTION_SELECT, toLegacyQuestion } from '@/lib/questionShape';
+import { inheritOrg } from '@/lib/inheritedOrg';
 import { useToast } from '@/hooks/use-toast';
 import CrossTableDialog from '@/components/grading/CrossTableDialog';
 import { normalizeQuestion, getSlotValues, type SubmissionSlot, type NormalizedQuestion } from '@/lib/examStructure';
@@ -109,12 +111,12 @@ export default function GradingPage() {
     const [{ data: ans }, { data: qs }] = await Promise.all([
       supabase.from('answers').select('*').eq('session_id', sessionId),
       qIds.length > 0
-        ? supabase.from('questions').select('*').in('id', qIds)
+        ? supabase.from('questions').select(QUESTION_SELECT).in('id', qIds)
         : Promise.resolve({ data: [] }),
     ]);
 
     const answerList = ans || [];
-    const questionList = qs || [];
+    const questionList = (qs || []).map(toLegacyQuestion);
     setAnswers(answerList);
     setQuestions(questionList);
 
@@ -262,14 +264,14 @@ export default function GradingPage() {
           slot_scores: slotMap as any,
         }).eq('id', row.answer.id);
       } else if (row.question?.id) {
-        await supabase.from('answers').insert({
+        await supabase.from('answers').insert(inheritOrg<'answers'>({
           session_id: selectedSession,
           question_id: row.question.id,
           content: '',
           score: total,
           feedback: fb || '(미응답 - 0점 처리)',
           slot_scores: slotMap as any,
-        });
+        }));
       }
     }
     const rawTotal = detailRows.reduce((sum, r) => {
