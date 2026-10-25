@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
     const findAgent = async () => {
       const q = service
         .from("exam_agent_sessions")
-        .select("id, sandbox_id, status, turn_count, question_id")
+        .select("id, sandbox_id, status, turn_count, question_id, prompt_tokens, completion_tokens")
         .eq("session_id", sessionId);
       const { data } = questionId
         ? await q.eq("question_id", questionId).maybeSingle()
@@ -502,8 +502,8 @@ Deno.serve(async (req) => {
       .from("exam_agent_sessions")
       .update({
         turn_count: (agent.turn_count ?? 0) + 1,
-        prompt_tokens: result.usage.prompt,
-        completion_tokens: result.usage.completion,
+        prompt_tokens: (agent.prompt_tokens ?? 0) + result.usage.prompt,
+        completion_tokens: (agent.completion_tokens ?? 0) + result.usage.completion,
         last_active_at: new Date().toISOString(),
       })
       .eq("id", agent.id);

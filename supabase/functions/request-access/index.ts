@@ -45,12 +45,18 @@ Deno.serve(async (req) => {
 
     const name = String(b.name ?? profile?.name ?? "").trim() || (user.email?.split("@")[0] ?? "");
     const org = String(b.org ?? "").trim();
+    // 회사명은 필수다. 조직을 개설해 주는 승인이므로 소속이 없으면 승인할 대상이
+    // 특정되지 않는다. 빈 값을 "(개인 가입자)" 로 받아 두면 승인 단계에서
+    // 운영자가 판단할 근거가 사라진다.
+    if (!org) {
+      return json({ error: "회사·기관명을 입력해 주십시오." }, 400);
+    }
     const headcount = String(b.headcount ?? "").trim();
     const phone = String(b.phone ?? profile?.phone ?? "").trim();
     const message = String(b.message ?? "").trim();
 
     const input = {
-      company: org || "(개인 가입자)",
+      company: org,
       contact_name: name || null,
       email: user.email ?? null,
       phone: phone || null,
