@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { UserPlus, Copy, Trash2, Upload, Send, Loader2, RefreshCw, RotateCcw, Camera, Monitor } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { inheritOrg } from '@/lib/inheritedOrg';
 import { useToast } from '@/hooks/use-toast';
 import { siteUrl, siteLink } from '@/lib/siteUrl';
 
@@ -65,8 +66,8 @@ export function InvitationManager({ examId, examTitle, open, onOpenChange }: Pro
     const { data } = await supabase.rpc('get_user_emails');
     if (data) {
       const map = new Map<string, string>();
-      data.forEach((row: { email: string; user_id: string }) => {
-        if (row.email) map.set(row.email.toLowerCase(), row.user_id);
+      data.forEach((row: { email: string; id: string }) => {
+        if (row.email) map.set(row.email.toLowerCase(), row.id);
       });
       setRegisteredEmails(map);
     }
@@ -86,11 +87,11 @@ export function InvitationManager({ examId, examTitle, open, onOpenChange }: Pro
   const addSingle = async () => {
     const email = singleEmail.trim();
     if (!email) return;
-    const { error } = await supabase.from('exam_invitations').insert({
+    const { error } = await supabase.from('exam_invitations').insert(inheritOrg<'exam_invitations'>({
       exam_id: examId,
       email,
       name: singleName.trim(),
-    });
+    }));
     if (error) {
       toast({ title: error.message.includes('duplicate') ? '이미 등록된 이메일입니다' : '추가 실패', variant: 'destructive' });
       return;
@@ -109,7 +110,7 @@ export function InvitationManager({ examId, examTitle, open, onOpenChange }: Pro
 
     if (entries.length === 0) { toast({ title: '유효한 이메일이 없습니다', variant: 'destructive' }); return; }
 
-    const { error } = await supabase.from('exam_invitations').insert(entries);
+    const { error } = await supabase.from('exam_invitations').insert(inheritOrg<'exam_invitations'>(entries));
     if (error) {
       toast({ title: '일괄 추가 실패', description: error.message, variant: 'destructive' });
       return;
@@ -143,7 +144,7 @@ export function InvitationManager({ examId, examTitle, open, onOpenChange }: Pro
     // Create a new invitation record for the same person with a fresh code
     const { data: newInv, error: invError } = await supabase
       .from('exam_invitations')
-      .insert({ exam_id: examId, email: inv.email, name: inv.name || '' })
+      .insert(inheritOrg<'exam_invitations'>({ exam_id: examId, email: inv.email, name: inv.name || '' }))
       .select()
       .single();
     if (invError) {

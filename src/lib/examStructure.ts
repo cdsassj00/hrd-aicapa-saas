@@ -14,6 +14,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { QUESTION_SELECT, toLegacyQuestion, toLegacySet } from '@/lib/questionShape';
 import type {
   Question,
   QuestionType,
@@ -112,7 +113,8 @@ export interface ExamStructure {
 // ──────────────────────────────────────────────────────────
 
 /** raw question row → NormalizedQuestion */
-export function normalizeQuestion(raw: any): NormalizedQuestion {
+export function normalizeQuestion(input: any): NormalizedQuestion {
+  const raw = toLegacyQuestion(input);
   const slots = parseSlots(raw.submission_slots, raw.type, raw.max_score);
   const effective_max_score = slots.reduce((s, x) => s + (x.max_score || 0), 0);
 
@@ -180,7 +182,8 @@ function parseSlots(raw: unknown, qtype: string, max_score: number): SubmissionS
   }
 }
 
-function normalizeSet(raw: any, questions: NormalizedQuestion[]): QuestionSet {
+function normalizeSet(input: any, questions: NormalizedQuestion[]): QuestionSet {
+  const raw = toLegacySet(input);
   const computed = questions.reduce((s, q) => s + q.effective_max_score, 0);
   return {
     id: raw.id,
@@ -195,6 +198,7 @@ function normalizeSet(raw: any, questions: NormalizedQuestion[]): QuestionSet {
     grade: raw.grade ?? null,
     difficulty: raw.difficulty ?? 'medium',
     tags: Array.isArray(raw.tags) ? raw.tags : [],
+    proctoring_disabled: !!raw.proctoring_disabled,
   };
 }
 
@@ -227,7 +231,7 @@ export async function loadExamStructure(examId: string): Promise<ExamStructure> 
   // 2) 문항 로드 (set_id, submission_slots, set_order 포함)
   const { data: rawQuestions, error: qErr } = await supabase
     .from('questions')
-    .select('*')
+    .select(QUESTION_SELECT)
     .in('id', qIds);
   if (qErr) throw qErr;
 

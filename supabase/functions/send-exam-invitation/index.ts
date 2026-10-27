@@ -1,7 +1,7 @@
 // 응시 초대 메일 발송.
 //
-// 초대코드는 "발송 시점에 발급"한다(0026): 평문은 이 메일에만 실리고 DB 에는
-// sha256 해시만 남는다. 재발송하면 새 코드로 교체된다.
+// 응시코드는 초대 생성 시 DB 가 발급한다(0029: invite_code, 관리자 화면에서 확인·복사·재발급).
+// 이 함수는 저장된 코드를 메일로 보내고 발송 시각만 남긴다 — 재발송해도 코드는 그대로다.
 // 권한: 해당 시험 조직의 관리자(또는 플랫폼 운영자)만 보낼 수 있다.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.99.1";
 import { sendEmail, renderNotifyEmail } from "../_shared/email.ts";
@@ -13,20 +13,6 @@ const corsHeaders = {
 };
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-// 사람이 받아 적는 코드라 혼동 문자(0/O, 1/I/L)를 뺀다.
-const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-function newCode(len = 8): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(len));
-  return Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join("");
-}
-
-// 0025 의 get_invitation_by_code 와 반드시 같은 규칙이어야 한다.
-async function hashCode(code: string): Promise<string> {
-  const buf = new TextEncoder().encode(code.trim().toUpperCase());
-  const digest = await crypto.subtle.digest("SHA-256", buf);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -65,7 +51,7 @@ Deno.serve(async (req) => {
 
     const { data: invitations } = await service
       .from("exam_invitations")
-      .select("id, email, name")
+      .select("id, email, name, invite_code")
       .eq("exam_id", examId)
       .in("id", invitationIds);
     if (!invitations?.length) return json({ error: "No invitations found" }, 404);
@@ -99,14 +85,13 @@ Deno.serve(async (req) => {
     const results: { email: string; success: boolean; error?: string }[] = [];
 
     for (const inv of invitations) {
-      const code = newCode();
+      const code = inv.invite_code;
       try {
-        // 코드 발급: 해시만 저장한다. 평문은 아래 메일에만 남는다.
         const { error: upErr } = await service
           .from("exam_invitations")
-          .update({ code_hash: await hashCode(code), sent_at: new Date().toISOString() })
+          .update({ sent_at: new Date().toISOString() })
           .eq("id", inv.id);
-        if (upErr) throw new Error(`코드 발급 실패: ${upErr.message}`);
+        if (upErr) throw new Error(`발송 기록 실패: ${upErr.message}`);
 
         await sendEmail({
           from,
@@ -124,7 +109,7 @@ Deno.serve(async (req) => {
             message:
               "별도 회원가입 없이 이메일 인증만으로 응시할 수 있습니다.\n아래 버튼을 누르면 인증코드가 발송되며, 코드 입력 후 바로 평가에 입장합니다.",
             cta: { label: "평가 응시하기", href: `${siteUrl}/login?invite=${code}` },
-            footnote: "응시코드는 본인 확인용입니다. 타인에게 공유하지 마세요. 재발송 시 이전 코드는 사용할 수 없습니다.",
+            footnote: "응시코드는 본인 확인용입니다. 타인에게 공유하지 마세요. 코드를 재발급하면 이전 코드는 사용할 수 없습니다.",
           }),
         });
         results.push({ email: inv.email, success: true });

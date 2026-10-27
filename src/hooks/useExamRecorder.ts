@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { inheritOrg } from '@/lib/inheritedOrg';
 
 interface Options {
   sessionId: string;
@@ -49,7 +50,7 @@ async function logDiag(sessionId: string, kind: Kind | 'system', stage: DiagStag
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from('recording_diagnostics').insert({
+    await supabase.from('recording_diagnostics').insert(inheritOrg<'recording_diagnostics'>({
       session_id: sessionId,
       applicant_id: user.id,
       kind,
@@ -57,7 +58,7 @@ async function logDiag(sessionId: string, kind: Kind | 'system', stage: DiagStag
       status,
       message: message?.slice(0, 1000) || null,
       meta: meta || null,
-    });
+    }));
   } catch (e) {
     console.warn('[recorder][diag] failed to log', e);
   }
