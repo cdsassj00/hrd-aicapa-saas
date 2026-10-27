@@ -27,8 +27,8 @@ export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) 
     const routes: Record<UserRole, string> = {
       applicant: '/applicant',
       examiner: '/examiner/monitor',
-      org_owner: '/admin/exams',
-      org_admin: '/admin/exams',
+      org_owner: '/admin',
+      org_admin: '/admin',
       viewer: '/admin/certifications',
     };
     return <Navigate to={routes[role]} replace />;

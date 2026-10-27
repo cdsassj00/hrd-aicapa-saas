@@ -26,6 +26,7 @@ import SettingsPage from "@/pages/admin/SettingsPage";
 import BillingPage from "@/pages/admin/BillingPage";
 import FaceCompareTestPage from "@/pages/admin/FaceCompareTestPage";
 import PlatformDashboard from "@/pages/platform/PlatformDashboard";
+import AdminHomePage from "@/pages/admin/AdminHomePage";
 import { PlatformRoute } from "@/components/PlatformRoute";
 import RecordingReviewPage from "@/pages/admin/RecordingReviewPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
@@ -40,8 +41,8 @@ const queryClient = new QueryClient();
 const routes = {
   applicant: '/applicant',
   examiner: '/examiner/monitor',
-  org_owner: '/admin/exams',
-  org_admin: '/admin/exams',
+  org_owner: '/admin',
+  org_admin: '/admin',
   viewer: '/admin/certifications',
 } as const;
 
@@ -82,6 +83,7 @@ function AuthGate() {
         <Route path="/examiner/monitor" element={<ProtectedRoute allowedRoles={['examiner', 'org_admin', 'org_owner']}><MonitorDashboard /></ProtectedRoute>} />
         <Route path="/examiner/events" element={<ProtectedRoute allowedRoles={['examiner', 'org_admin', 'org_owner']}><EventLogPage /></ProtectedRoute>} />
         {/* 관리자 */}
+        <Route path="/admin" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><AdminHomePage /></ProtectedRoute>} />
         <Route path="/admin/exams" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><ExamManagePage /></ProtectedRoute>} />
         <Route path="/admin/questions" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><QuestionBankPage /></ProtectedRoute>} />
         <Route path="/admin/grading" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><GradingPage /></ProtectedRoute>} />
