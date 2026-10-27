@@ -1104,6 +1104,10 @@ export type Database = {
         }
         Returns: string
       }
+      redeem_exam_invitation: {
+        Args: { _code: string }
+        Returns: string
+      }
       create_organization: {
         Args: { _name: string; _slug: string }
         Returns: {

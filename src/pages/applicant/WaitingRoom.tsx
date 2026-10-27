@@ -303,7 +303,11 @@ export default function WaitingRoom() {
       .eq('exam_id', exam.id)
       .in('status', ['in_progress', 'submitted']);
 
-    if (!countErr && count !== null && count >= exam.max_participants) {
+    // max_participants 가 비어 있으면 인원 제한이 없는 회차다. null 과 비교하면
+    // 자바스크립트가 null 을 0 으로 바꿔 `0 >= null` 이 참이 되므로, 제한 없는
+    // 회차가 전원 "입장 인원 초과" 로 막혔다(E2E 로 확인).
+    const cap = exam.max_participants;
+    if (!countErr && count !== null && cap != null && cap > 0 && count >= cap) {
       toast({
         title: '입장 인원 초과',
         description: `최대 ${exam.max_participants}명까지 입장 가능합니다. 관리자에게 문의하시거나 다른 평가에 응시해 주세요.`,

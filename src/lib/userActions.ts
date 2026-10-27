@@ -53,8 +53,12 @@ supabase.auth.onAuthStateChange((_e, session) => {
 async function flush(): Promise<void> {
   if (queue.length === 0) return;
   const batch = queue.splice(0, queue.length);
+  // 원본의 user_actions 테이블은 audit_logs 로 승격됐다. audit_logs 는
+  // 클라이언트가 직접 못 쓰므로 RPC 로 보낸다(0038). 세션 없는 행동은 버려진다.
+  const withSession = batch.filter(a => a.session_id);
+  if (withSession.length === 0) return;
   try {
-    await supabase.from('user_actions' as any).insert(batch);
+    await supabase.rpc('log_user_actions' as any, { _actions: withSession });
   } catch {
     // silent — 로깅 실패는 무시
   }
