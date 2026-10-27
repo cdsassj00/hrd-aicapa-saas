@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,13 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronLeft, ChevronRight, Clock, Upload, AlertTriangle, Video, VideoOff, Monitor, MonitorOff, WifiOff, SendHorizontal, Download, FileText, Megaphone, Bell } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Upload, AlertTriangle, Video, VideoOff, Monitor, MonitorOff, WifiOff, SendHorizontal, Download, FileText, Megaphone, Bell, CheckCircle2, Circle } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
 
 import { supabase } from '@/integrations/supabase/client';
+import { toLegacySet } from '@/lib/questionShape';
+import { inheritOrg } from '@/lib/inheritedOrg';
 import DailyProctor from '@/components/DailyProctor';
 import ExamBlackScreen from '@/components/exam/ExamBlackScreen';
 import ExamPolicyBanner, { questionTypeLabels } from '@/components/exam/ExamPolicyBanner';
@@ -358,7 +359,7 @@ export default function ExamPage() {
                 const { data: rawSets } = await supabase.from('question_sets').select('*').in('id', setIds);
                 if (rawSets) {
                   const map: Record<string, QuestionSet> = {};
-                  rawSets.forEach((s: any) => {
+                  rawSets.map(toLegacySet).forEach((s: any) => {
                     map[s.id] = {
                       id: s.id,
                       exam_id: s.exam_id ?? null,
@@ -712,7 +713,7 @@ export default function ExamPage() {
       try {
         const { error } = await supabase
           .from('answers')
-          .upsert(payload, { onConflict: 'session_id,question_id' });
+          .upsert(inheritOrg<'answers'>(payload), { onConflict: 'session_id,question_id' });
         if (!error) {
           trackAction('answer_save', { questionId, length: content.length }, sessionId);
           return;
@@ -769,7 +770,7 @@ export default function ExamPage() {
       try {
         const { error } = await supabase
           .from('answers')
-          .upsert(payload, { onConflict: 'session_id,question_id' });
+          .upsert(inheritOrg<'answers'>(payload), { onConflict: 'session_id,question_id' });
         if (!error) {
           trackAction('answer_save', { questionId, slots: Object.keys(sv).length }, sessionId);
           return;
@@ -810,7 +811,7 @@ export default function ExamPage() {
         const { kind, ...payload } = item;
         const { error } = await supabase
           .from('answers')
-          .upsert(payload, { onConflict: 'session_id,question_id' });
+          .upsert(inheritOrg<'answers'>(payload), { onConflict: 'session_id,question_id' });
         if (error) remaining.push(item);
       } catch {
         remaining.push(item);
@@ -964,6 +965,8 @@ export default function ExamPage() {
   const secs = timeLeft === null ? 0 : timeLeft % 60;
   const isWarning = timeLeft !== null && timeLeft <= 600;
   const question = questions[currentQ];
+  // 샌드박스 문항이면 오른쪽 칸에 AI 작업 공간을 연다
+  const hasAgent = !!question && question.tool_req === 'code_sandbox';
 
   // ─────────────────────────────────────────────────────────
   // 2단계 시험 (Phase 1: 독립 문항 → Phase 2: 세트 문항)
@@ -1303,17 +1306,6 @@ export default function ExamPage() {
         enabled={!proctoringDisabledForSet && !isSubmitting && question?.type !== 'work_based' && question?.type !== 'file_upload'}
       />
 
-      {/* 시험 에이전트: 샌드박스를 요구하는 문항에서만 띄운다.
-          tool_req 는 get_exam_question_tools RPC 가 answer_key.meta 에서 꺼내 준다(0031).
-          대화·실행·생성 파일은 서버에 기록되어 채점 근거가 된다. */}
-      {sessionId && question?.id && question?.tool_req === 'code_sandbox' && (
-        <ExamAgentPanel
-          sessionId={sessionId}
-          questionId={question.id}
-          questionLabel={`${currentQ + 1}번 문항`}
-        />
-      )}
-
       {/* AI 감독: 안면 이탈 감지 (세트 옵션으로 비활성 가능, 시험 알림설정 화이트리스트 적용) */}
       <FaceMonitor
         videoEl={webcamVideoEl}
@@ -1453,9 +1445,54 @@ export default function ExamPage() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left - question area */}
-        <div className="flex-[7] overflow-auto p-6 border-r">
-          <div className="max-w-[800px] space-y-4">
+        {/* 왼쪽 — 문항 목록 + 작성 체크 (Turo 방식) */}
+        <aside className="hidden md:flex w-56 shrink-0 flex-col border-r bg-card">
+          <div className="px-4 pt-4 pb-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {isPhasedExam ? (inPhase1 ? '1단계 문항' : '작업형 문항') : '문항'}
+            </div>
+            <div className="mt-1 text-[12px] text-muted-foreground tabular-nums">
+              작성 {answeredSet.size}/{questions.length}
+            </div>
+          </div>
+          <nav className="flex-1 overflow-y-auto px-2 pb-3 space-y-0.5">
+            {questions.map((q: any, i: number) => {
+              const allowed = isAllowedQ(q);
+              if (isPhasedExam && !allowed) return null;
+              const label = isPhasedExam
+                ? (inPhase1 ? phase1DisplayPos.get(q.id) : phase2DisplayPos.get(q.id)) ?? (i + 1)
+                : (i + 1);
+              const done = answeredSet.has(q.id);
+              const current = currentQ === i;
+              return (
+                <button
+                  key={q.id}
+                  type="button"
+                  disabled={!allowed}
+                  onClick={() => allowed && setCurrentQ(i)}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors disabled:opacity-40",
+                    current ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted",
+                  )}
+                >
+                  {done
+                    ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+                    : <Circle className={cn("h-4 w-4 shrink-0", current ? "text-primary" : "text-muted-foreground/40")} />}
+                  <span className="truncate">
+                    문항 {label}
+                    <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
+                      {questionTypeLabels[q.type] || ''}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* 가운데 — 문항 */}
+        <div className="flex-1 min-w-0 overflow-auto p-6">
+          <div className="max-w-[800px] mx-auto space-y-4">
             {currentSet && (
               <SetScenarioCard set={currentSet} questionPosition={setPosition} />
             )}
@@ -1627,7 +1664,7 @@ export default function ExamPage() {
                         await supabase
                           .from('answers')
                           .upsert(
-                            { session_id: sessionId, question_id: question.id, content: answers[question.id] || '', file_url: path, submitted_at: new Date().toISOString() },
+                            inheritOrg<'answers'>({ session_id: sessionId, question_id: question.id, content: answers[question.id] || '', file_url: path, submitted_at: new Date().toISOString() }),
                             { onConflict: 'session_id,question_id' }
                           );
                         toast({ title: '파일 업로드 완료', description: file.name });
@@ -1672,9 +1709,12 @@ export default function ExamPage() {
           </div>
         </div>
 
-        {/* Right panel */}
-        <div className="flex-[3] flex flex-col p-4 bg-muted/20 min-h-0">
-          <div className="flex-1 overflow-y-auto space-y-4 min-h-0 pr-1">
+        {/* 오른쪽 — 감독 화면 + AI 작업 공간.
+            감독 화면(DailyProctor)은 웹캠·화면공유 스트림을 쥐고 있어 문항이 바뀌어도 늘 마운트된 채로 위에 둔다.
+            시험 에이전트는 샌드박스 문항(tool_req === 'code_sandbox', get_exam_question_tools RPC·0031)에서만
+            아래 칸을 채운다. 대화·실행·생성 파일은 서버에 기록되어 채점 근거가 된다. */}
+        <div className={cn("shrink-0 flex flex-col border-l bg-muted/20 min-h-0", hasAgent ? "w-[440px]" : "w-[320px]")}>
+          <div className={cn("space-y-4 p-4", hasAgent ? "shrink-0" : "flex-1 overflow-y-auto min-h-0")}>
             {session?.exam_id && (
               <DailyProctor
                 examId={session.exam_id}
@@ -1693,75 +1733,58 @@ export default function ExamPage() {
               />
             )}
 
-            <Card>
-              <CardContent className="p-3">
-                <h3 className="mb-3 text-[12px]">
-                  {isPhasedExam ? (inPhase1 ? '1단계 문항' : '작업형 문항') : '문제 목록'}
-                </h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {questions.map((q: any, i: number) => {
-                    const allowed = isAllowedQ(q);
-                    if (isPhasedExam && !allowed) return null;
-                    const label = isPhasedExam
-                      ? (inPhase1 ? phase1DisplayPos.get(q.id) : phase2DisplayPos.get(q.id)) ?? (i + 1)
-                      : (i + 1);
-                    return (
-                      <Button
-                        key={q.id}
-                        variant={currentQ === i ? 'default' : 'outline'}
-                        size="sm"
-                        disabled={!allowed}
-                        className={cn("h-10 text-[13px] font-medium", answeredSet.has(q.id) && currentQ !== i && allowed && "bg-success/10 border-success/30 text-success")}
-                        onClick={() => allowed && setCurrentQ(i)}
-                      >
-                        {label}
-                      </Button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 flex gap-3 text-[11px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-primary" /> 현재</span>
-                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-success/30" /> 작성됨</span>
-                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm border" /> 미작성</span>
-                </div>
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  작성 현황: {answeredSet.size}/{questions.length}문제
-                </p>
-              </CardContent>
-            </Card>
+            {!hasAgent && (
+              <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
+                감독 화면은 시험 종료 시까지 켜 두세요. 문의는 상단 채팅으로 감독관에게 보낼 수 있습니다.
+              </p>
+            )}
           </div>
-
-          {(inPhase1 || canShowSubmit) && (
-            <div className="pt-3 mt-3 border-t bg-muted/20 space-y-2 shrink-0">
-              {inPhase1 && (
-                <>
-                  <Button
-                    className="w-full"
-                    disabled={phase1FsBlocked || phase1Completing}
-                    onClick={() => { setPhase1CompleteConfirm(false); setPhase1CompleteOpen(true); }}
-                  >
-                    1단계 완료하고 작업형 시작
-                  </Button>
-                  <p className="text-[11px] text-muted-foreground text-center">
-                    완료하면 1단계 답안은 수정할 수 없습니다
-                  </p>
-                </>
-              )}
-              {canShowSubmit && (
-                <Button
-                  variant="destructive"
-                  size="lg"
-                  className="w-full gap-2 text-[14px] font-bold"
-                  onClick={() => { setConfirmUnanswered(false); setSubmitOpen(true); }}
-                >
-                  <SendHorizontal className="h-5 w-5" />
-                  최종 제출
-                </Button>
-              )}
+          {hasAgent && sessionId && question?.id && (
+            <div className="min-h-0 flex-1 border-t">
+              <ExamAgentPanel
+                sessionId={sessionId}
+                questionId={question.id}
+                questionLabel={`${currentQ + 1}번 문항`}
+              />
             </div>
           )}
         </div>
 
+      </div>
+
+      {/* 하단 — 진행률 + 단계 완료 / 최종 제출 */}
+      <div className="flex h-14 shrink-0 items-center gap-4 border-t bg-card px-6">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">진행</span>
+        <div className="h-1.5 max-w-xs flex-1 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-500"
+            style={{ width: `${questions.length ? Math.round((answeredSet.size / questions.length) * 100) : 0}%` }}
+          />
+        </div>
+        <span className="text-[12px] tabular-nums text-muted-foreground">{answeredSet.size}/{questions.length}</span>
+        <div className="ml-auto flex items-center gap-2">
+          {inPhase1 && (
+            <Button
+              size="sm"
+              disabled={phase1FsBlocked || phase1Completing}
+              onClick={() => { setPhase1CompleteConfirm(false); setPhase1CompleteOpen(true); }}
+              title="완료하면 1단계 답안은 수정할 수 없습니다"
+            >
+              1단계 완료하고 작업형 시작
+            </Button>
+          )}
+          {canShowSubmit && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-1.5 font-semibold"
+              onClick={() => { setConfirmUnanswered(false); setSubmitOpen(true); }}
+            >
+              <SendHorizontal className="h-4 w-4" />
+              최종 제출
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* 1단계 조기 완료 확인 다이얼로그 */}

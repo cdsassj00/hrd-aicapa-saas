@@ -300,7 +300,7 @@ export async function commitPayload(
     if (!qs || qs.length === 0) return [];
     const rows = qs.map((q: any) => ({
       org_id: orgId,
-      visibility: 'org',
+      visibility: 'org' as const,
       type: q.type,
       content: q.content,
       difficulty: q.difficulty,
