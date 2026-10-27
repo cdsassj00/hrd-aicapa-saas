@@ -39,6 +39,12 @@ export default function OnboardingPage() {
   const [reqSent, setReqSent] = useState(false);
 
   const handleRequestAccess = async () => {
+    // 승인은 소속 기관 단위로 조직을 개설하는 일이다. 회사명이 없으면 무엇을
+    // 개설해야 할지 특정되지 않으므로 접수 단계에서 막는다(서버도 같이 막는다).
+    if (!reqOrg.trim()) {
+      toast.error('회사·기관명을 입력해 주십시오.');
+      return;
+    }
     setReqSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('request-access', {
@@ -234,7 +240,7 @@ export default function OnboardingPage() {
                   <p className="mt-1 text-muted-foreground">
                     담당자 검토 후 조직을 개설하고 권한을 부여해 드립니다. 승인 완료 안내를 받으면 다시 로그인해 주세요.
                   </p>
-                  <Button variant="outline" size="sm" className="mt-3 text-[13px]" disabled={reqSending} onClick={handleRequestAccess}>
+                  <Button variant="outline" size="sm" className="mt-3 text-[13px]" disabled={reqSending || !reqOrg.trim()} onClick={handleRequestAccess}>
                     한 번 더 독촉하기
                   </Button>
                 </div>
@@ -244,10 +250,10 @@ export default function OnboardingPage() {
                     <Mail className="h-4 w-4 text-primary" /> 승인 요청 · 독촉하기
                   </div>
                   <p className="mt-1 text-[12.5px] text-muted-foreground">
-                    담당자(sjshin@cdsa.kr)에게 승인 요청 메일이 전송됩니다. 소속·인원을 남기면 더 빨리 처리됩니다.
+                    담당자(sjshin@cdsa.kr)에게 승인 요청 메일이 전송됩니다. 승인은 소속 기관 단위로 조직을 개설해 드리므로 회사·기관명은 필수입니다.
                   </p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <Input value={reqOrg} onChange={e => setReqOrg(e.target.value)} placeholder="소속 기관/회사 (선택)" maxLength={80} />
+                    <Input value={reqOrg} onChange={e => setReqOrg(e.target.value)} placeholder="소속 기관/회사 (필수)" maxLength={80} />
                     <Input value={reqHeadcount} onChange={e => setReqHeadcount(e.target.value)} placeholder="예상 응시 인원 (선택)" maxLength={40} />
                   </div>
                   <textarea
@@ -258,7 +264,7 @@ export default function OnboardingPage() {
                     rows={2}
                     className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-[13px]"
                   />
-                  <Button className="mt-3 w-full text-[13px]" disabled={reqSending} onClick={handleRequestAccess}>
+                  <Button className="mt-3 w-full text-[13px]" disabled={reqSending || !reqOrg.trim()} onClick={handleRequestAccess}>
                     {reqSending ? '보내는 중...' : '승인 요청 메일 보내기'}
                   </Button>
                 </div>

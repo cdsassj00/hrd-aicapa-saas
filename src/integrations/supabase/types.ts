@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_scripts: {
+        Row: {
+          content: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       answers: {
         Row: {
           content: string | null
@@ -560,6 +578,7 @@ export type Database = {
         Row: {
           closed_at: string | null
           completion_tokens: number
+          env_snapshot: Json
           id: string
           last_active_at: string
           org_id: string
@@ -576,6 +595,7 @@ export type Database = {
         Insert: {
           closed_at?: string | null
           completion_tokens?: number
+          env_snapshot?: Json
           id?: string
           last_active_at?: string
           org_id: string
@@ -592,6 +612,7 @@ export type Database = {
         Update: {
           closed_at?: string | null
           completion_tokens?: number
+          env_snapshot?: Json
           id?: string
           last_active_at?: string
           org_id?: string
@@ -945,6 +966,7 @@ export type Database = {
       }
       exams: {
         Row: {
+          agent_env: Json
           alert_event_types: string[]
           allow_dual_monitor: boolean
           block_late_entry: boolean
@@ -981,6 +1003,7 @@ export type Database = {
           use_absolute_end: boolean
         }
         Insert: {
+          agent_env?: Json
           alert_event_types?: string[]
           allow_dual_monitor?: boolean
           block_late_entry?: boolean
@@ -1017,6 +1040,7 @@ export type Database = {
           use_absolute_end?: boolean
         }
         Update: {
+          agent_env?: Json
           alert_event_types?: string[]
           allow_dual_monitor?: boolean
           block_late_entry?: boolean
@@ -1360,6 +1384,50 @@ export type Database = {
           },
         ]
       }
+      org_agent_skills: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_agent_skills_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_branding: {
         Row: {
           cert_template: Json
@@ -1459,6 +1527,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "org_invitations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_mcp_servers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+          secret_env: string | null
+          sort_order: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+          secret_env?: string | null
+          sort_order?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          secret_env?: string | null
+          sort_order?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_mcp_servers_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1698,6 +1813,61 @@ export type Database = {
           },
           {
             foreignKeyName: "question_competencies_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_fixtures: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          mime_type: string
+          org_id: string | null
+          path: string
+          question_id: string
+          sort_order: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          mime_type?: string
+          org_id?: string | null
+          path: string
+          question_id: string
+          sort_order?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          mime_type?: string
+          org_id?: string | null
+          path?: string
+          question_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_fixtures_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_fixtures_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_fixtures_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions_public"
@@ -2271,6 +2441,14 @@ export type Database = {
         }
       }
       get_agent_workspace: { Args: { _agent_id: string }; Returns: Json }
+      get_exam_question_tools: {
+        Args: { _session_id: string }
+        Returns: {
+          meta: Json
+          question_id: string
+          tool_req: string
+        }[]
+      }
       get_exam_questions_for_session: {
         Args: { _session_id: string }
         Returns: {
@@ -2305,6 +2483,15 @@ export type Database = {
           name: string
         }[]
       }
+      get_question_fixtures: {
+        Args: { _session_id: string }
+        Returns: {
+          content: string
+          mime_type: string
+          path: string
+          question_id: string
+        }[]
+      }
       get_server_time: { Args: never; Returns: string }
       get_user_emails: {
         Args: never
@@ -2325,6 +2512,7 @@ export type Database = {
       is_org_member: { Args: { _org_id: string }; Returns: boolean }
       is_platform_admin: { Args: never; Returns: boolean }
       org_has_question_license: { Args: { _set_id: string }; Returns: boolean }
+      redeem_exam_invitation: { Args: { _code: string }; Returns: string }
       revoke_org_invitation: {
         Args: { _invitation_id: string }
         Returns: undefined

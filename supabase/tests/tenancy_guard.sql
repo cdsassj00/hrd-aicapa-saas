@@ -18,6 +18,9 @@ declare
   -- "이 테이블은 테넌트 경계 밖"이라고 보안 리뷰에서 선언하는 것과 같습니다.
   -- 사유 없이 추가하지 마세요.
   _exempt_org_id text[] := array[
+    -- 플랫폼 운영 자산(에이전트가 샌드박스에서 실행하는 스크립트). 조직 자산이
+    -- 아니라 org_id 가 없고, service_role 만 읽는다(0036).
+    'agent_scripts',
     'organizations',    -- 테넌시 루트 그 자체 (id 가 org_id)
     'org_branding',     -- org_id 가 PK (형식상 통과하지만 명시)
     'platform_admins',  -- 조직 밖 전역 운영자
