@@ -240,14 +240,20 @@ export default function ExamManagePage() {
                   {exam.is_test_mode && <Badge className="ml-2 text-[9px] bg-amber-500/15 text-amber-600 border-amber-500/20 border">테스트</Badge>}
                 </TableCell>
                 <TableCell><GradeBadge grade={exam.grade} /></TableCell>
+                {/* exam_date 는 NULL 허용(일정 미정 회차) — new Date(null) 은 1970-01-01 로 찍힌다 */}
                 <TableCell className="text-[12px]">
-                  {new Date(exam.exam_date).toLocaleDateString('ko-KR')}
+                  {exam.exam_date ? new Date(exam.exam_date).toLocaleDateString('ko-KR') : <span className="text-muted-foreground">미정</span>}
                 </TableCell>
                 <TableCell className="text-[12px]">
-                  {new Date(exam.exam_date).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                  {' ~ '}
-                  {new Date(new Date(exam.exam_date).getTime() + exam.duration_minutes * 60000).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                  {' '}({exam.duration_minutes}분)
+                  {exam.exam_date && (
+                    <>
+                      {new Date(exam.exam_date).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                      {' ~ '}
+                      {new Date(new Date(exam.exam_date).getTime() + exam.duration_minutes * 60000).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                      {' '}
+                    </>
+                  )}
+                  ({exam.duration_minutes}분)
                 </TableCell>
                 <TableCell className="text-[12px]">{exam.max_participants}</TableCell>
                 <TableCell>
