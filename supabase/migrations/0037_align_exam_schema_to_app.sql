@@ -1,4 +1,7 @@
--- 0029_align_exam_schema_to_app.sql
+-- 0037_align_exam_schema_to_app.sql (운영 적용 이름: align_exam_schema_to_app 외 4건, 2026-10-13~17)
+--
+-- 멱등으로 쓴다: #53 이 0007 을 운영 이름(start_time·order_num 등)으로 고쳐 빈 DB 에서는
+-- 이미 바뀐 상태로 들어오고, 운영 DB 에는 이 파일이 이미 적용돼 있다. 어느 쪽에서 돌아도 같은 결과.
 -- 시험 도메인 DB 를 화면(응시·감독·초대·채점)에 맞춘다.
 --
 -- 배경: 0001~ squash 재설계 때 시험 테이블을 새로 그리면서, 원본이 운영하며 쌓은
@@ -17,23 +20,26 @@
 -- 1. exams — 회차 운영 옵션
 -- ===========================================================================
 alter table public.exams
-  add column grade                text,                                   -- 표시용 등급(예: green/blue/black). 등급 체계는 grade_scale_id
-  add column pass_score           int     not null default 75,
-  add column is_test_mode         boolean not null default false,          -- 관리자 테스트 회차(재응시 허용·통계 제외)
-  add column skip_waiting_checks  boolean not null default false,
-  add column skip_face_match      boolean not null default false,
-  add column allow_dual_monitor   boolean not null default false,
-  add column alert_event_types    text[]  not null default '{}',           -- 빈 배열 = 감독 알림 OFF
-  add column use_absolute_end     boolean not null default false,          -- 종료 시각을 exam_date+duration 으로 고정
-  add column entry_start_minutes  int     not null default 30,             -- 시작 몇 분 전부터 입장
-  add column block_late_entry     boolean not null default false,
-  add column late_entry_minutes   int     not null default 10,
-  add column phased_enabled       boolean not null default false,          -- 2단계(1부/2부) 시험
-  add column phase1_minutes       int     not null default 30,
-  add column custom_texts         jsonb   not null default '{}'::jsonb,    -- 대기실·서약·제출 화면 문구
-  add column daily_room_name      text,
-  add column daily_room_url       text;
+  add column if not exists grade                text,                                   -- 표시용 등급(예: green/blue/black). 등급 체계는 grade_scale_id
+  add column if not exists pass_score           int     not null default 75,
+  add column if not exists is_test_mode         boolean not null default false,          -- 관리자 테스트 회차(재응시 허용·통계 제외)
+  add column if not exists skip_waiting_checks  boolean not null default false,
+  add column if not exists skip_face_match      boolean not null default false,
+  add column if not exists allow_dual_monitor   boolean not null default false,
+  add column if not exists alert_event_types    text[]  not null default '{}',           -- 빈 배열 = 감독 알림 OFF
+  add column if not exists use_absolute_end     boolean not null default false,          -- 종료 시각을 exam_date+duration 으로 고정
+  add column if not exists entry_start_minutes  int     not null default 30,             -- 시작 몇 분 전부터 입장
+  add column if not exists block_late_entry     boolean not null default false,
+  add column if not exists late_entry_minutes   int     not null default 10,
+  add column if not exists phased_enabled       boolean not null default false,          -- 2단계(1부/2부) 시험
+  add column if not exists phase1_minutes       int     not null default 30,
+  add column if not exists custom_texts         jsonb   not null default '{}'::jsonb,    -- 대기실·서약·제출 화면 문구
+  add column if not exists daily_room_name      text,
+  add column if not exists daily_room_url       text;
 
+alter table public.exams
+  drop constraint if exists exams_pass_score_range,
+  drop constraint if exists exams_minutes_non_negative;
 alter table public.exams
   add constraint exams_pass_score_range check (pass_score between 0 and 100),
   add constraint exams_minutes_non_negative
@@ -42,15 +48,27 @@ alter table public.exams
 -- ===========================================================================
 -- 2. exam_sessions — 화면 이름으로 + 감독 컬럼
 -- ===========================================================================
-alter table public.exam_sessions rename column started_at   to start_time;
-alter table public.exam_sessions rename column submitted_at to submit_time;
-alter table public.exam_sessions rename column score        to score_total;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'exam_sessions' and column_name = 'started_at') then
+    alter table public.exam_sessions rename column started_at to start_time;
+  end if;
+end $$;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'exam_sessions' and column_name = 'submitted_at') then
+    alter table public.exam_sessions rename column submitted_at to submit_time;
+  end if;
+end $$;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'exam_sessions' and column_name = 'score') then
+    alter table public.exam_sessions rename column score to score_total;
+  end if;
+end $$;
 
 alter table public.exam_sessions
-  add column is_flagged          boolean not null default false,
-  add column monitoring_notes    text,
-  add column phase1_completed_at timestamptz,
-  add column submit_reason       text;   -- manual / timeout / violation 등
+  add column if not exists is_flagged          boolean not null default false,
+  add column if not exists monitoring_notes    text,
+  add column if not exists phase1_completed_at timestamptz,
+  add column if not exists submit_reason       text;   -- manual / timeout / violation 등
 
 -- 채점 무결성 가드(0014)를 새 이름으로 다시 만든다. plpgsql 본문은 컬럼 rename 을 따라가지 않는다.
 -- 합격/불합격 판정(status passed·failed)도 채점 결과이므로 같은 가드에 넣는다 —
@@ -86,12 +104,12 @@ $$;
 -- 게스트 진입은 기존처럼 get_invitation_by_code RPC 로만 한다.
 -- code_hash / accepted_at 은 트리거로 동기화해 기존 함수(0025·0026)가 그대로 돈다.
 alter table public.exam_invitations
-  add column invite_code           text,
-  add column is_used               boolean not null default false,
-  add column allow_no_webcam       boolean not null default false,
-  add column allow_no_screen_share boolean not null default false,
-  add column allow_dual_monitor    boolean not null default false,
-  add column exemption_reason      text;
+  add column if not exists invite_code           text,
+  add column if not exists is_used               boolean not null default false,
+  add column if not exists allow_no_webcam       boolean not null default false,
+  add column if not exists allow_no_screen_share boolean not null default false,
+  add column if not exists allow_dual_monitor    boolean not null default false,
+  add column if not exists exemption_reason      text;
 
 create or replace function public.sync_exam_invitation_code()
 returns trigger
@@ -121,6 +139,7 @@ end $$;
 
 revoke all on function public.sync_exam_invitation_code() from public, anon, authenticated;
 
+drop trigger if exists exam_invitations_sync_code on public.exam_invitations;
 create trigger exam_invitations_sync_code
   before insert or update on public.exam_invitations
   for each row execute function public.sync_exam_invitation_code();
@@ -128,7 +147,7 @@ create trigger exam_invitations_sync_code
 alter table public.exam_invitations
   alter column invite_code set default upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)),
   alter column invite_code set not null;   -- 기본값·트리거가 채운다(기존 0건)
-create unique index exam_invitations_invite_code_uidx on public.exam_invitations (invite_code);
+create unique index if not exists exam_invitations_invite_code_uidx on public.exam_invitations (invite_code);
 
 -- 초대코드 조회 RPC: 저장된 코드·is_used·is_test_mode 를 그대로 내보낸다.
 create or replace function public.get_invitation_by_code(p_code text)
@@ -171,10 +190,14 @@ $$;
 -- ===========================================================================
 -- 4. 출제 순서 — exam_questions
 -- ===========================================================================
-alter table public.exam_questions rename column sort_order to order_num;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'exam_questions' and column_name = 'sort_order') then
+    alter table public.exam_questions rename column sort_order to order_num;
+  end if;
+end $$;
 alter table public.exam_questions
-  add column id uuid not null default gen_random_uuid();
-create unique index exam_questions_id_uidx on public.exam_questions (id);
+  add column if not exists id uuid not null default gen_random_uuid();
+create unique index if not exists exam_questions_id_uidx on public.exam_questions (id);
 
 create or replace function public.get_exam_questions_for_session(_session_id uuid)
 returns table (
@@ -245,32 +268,38 @@ end $$;
 -- ===========================================================================
 -- 5. 답안 — 화면은 텍스트 답안 + 슬롯 값 + 파일 URL 을 쓴다
 -- ===========================================================================
+do $$ begin
+  if (select data_type from information_schema.columns
+      where table_schema = 'public' and table_name = 'answers' and column_name = 'content') = 'jsonb' then
+    alter table public.answers
+      alter column content drop default,
+      alter column content type text using nullif(content #>> '{}', ''),
+      alter column content set default '',
+      alter column content drop not null;
+  end if;
+end $$;
 alter table public.answers
-  alter column content drop default,
-  alter column content type text using nullif(content #>> '{}', ''),
-  alter column content set default '',
-  alter column content drop not null;
-alter table public.answers
-  add column slot_values  jsonb,
-  add column file_url     text,
-  add column submitted_at timestamptz;
+  add column if not exists slot_values  jsonb,
+  add column if not exists file_url     text,
+  add column if not exists submitted_at timestamptz;
 
 -- ===========================================================================
 -- 6. 채점 잡 — 세션 단위 (ai-grade 가 세션별로 큐잉)
 -- ===========================================================================
 alter table public.grading_jobs
-  add column session_id    uuid references public.exam_sessions(id) on delete cascade,
-  add column result_status text,
-  add column result_total  numeric(6,2),
-  add column error_message text,
+  add column if not exists session_id    uuid references public.exam_sessions(id) on delete cascade,
+  add column if not exists result_status text,
+  add column if not exists result_total  numeric(6,2),
+  add column if not exists error_message text,
   alter column exam_id drop not null;
 
-alter table public.grading_jobs drop constraint grading_jobs_status_valid;
+alter table public.grading_jobs drop constraint if exists grading_jobs_status_valid;
 alter table public.grading_jobs add constraint grading_jobs_status_valid
   check (status in ('pending', 'processing', 'completed', 'failed', 'queued', 'running', 'done', 'cancelled'));
+alter table public.grading_jobs drop constraint if exists grading_jobs_target_present;
 alter table public.grading_jobs add constraint grading_jobs_target_present
   check (exam_id is not null or session_id is not null);
-create index grading_jobs_session_idx on public.grading_jobs (session_id);
+create index if not exists grading_jobs_session_idx on public.grading_jobs (session_id);
 
 -- 세션만 주어지면 회차를 세션에서 찾아 채운다(org 상속은 기존 트리거가 이어서 한다).
 create or replace function public.fill_grading_job_exam()
@@ -289,6 +318,7 @@ end $$;
 revoke all on function public.fill_grading_job_exam() from public, anon, authenticated;
 
 -- 트리거는 이름순으로 돈다: a_ 접두어로 inherit_org 보다 먼저.
+drop trigger if exists a_grading_jobs_fill_exam on public.grading_jobs;
 create trigger a_grading_jobs_fill_exam
   before insert or update of session_id, exam_id on public.grading_jobs
   for each row execute function public.fill_grading_job_exam();
@@ -296,22 +326,34 @@ create trigger a_grading_jobs_fill_exam
 -- ===========================================================================
 -- 7. 공지·채팅 — message / sender_id
 -- ===========================================================================
-alter table public.exam_chat_messages rename column body to message;
-alter table public.exam_announcements rename column body to message;
-alter table public.exam_announcements rename column created_by to sender_id;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'exam_chat_messages' and column_name = 'body') then
+    alter table public.exam_chat_messages rename column body to message;
+  end if;
+end $$;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'exam_announcements' and column_name = 'body') then
+    alter table public.exam_announcements rename column body to message;
+  end if;
+end $$;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'exam_announcements' and column_name = 'created_by') then
+    alter table public.exam_announcements rename column created_by to sender_id;
+  end if;
+end $$;
 
 -- ===========================================================================
 -- 8. 인증서 — 표시용 grade (동결 라벨 grade_label/grade_code 와 병행)
 -- ===========================================================================
-alter table public.certifications add column grade text;
+alter table public.certifications add column if not exists grade text;
 
 -- ===========================================================================
 -- 9. 프로필 — 응시자 소속 정보
 -- ===========================================================================
 alter table public.profiles
-  add column organization text,
-  add column department   text,
-  add column position     text;
+  add column if not exists organization text,
+  add column if not exists department   text,
+  add column if not exists position     text;
 
 -- ===========================================================================
 -- 10. 재응시 — 화면은 같은 사람에게 새 초대·새 세션을 만든다
@@ -319,13 +361,13 @@ alter table public.profiles
 -- 0007 은 회차당 1인 1세션 / 1이메일 1초대로 막았다. 화면의 재응시(관리자 "재응시 초대",
 -- 응시자 마이페이지의 제출 후 재응시)가 이 제약에 걸려 실패한다.
 -- 원래 막으려던 것은 "동시에 두 개"이므로 진행 중인 것만 유일하게 좁힌다.
-drop index public.exam_sessions_one_per_applicant;
-create unique index exam_sessions_one_active_per_applicant
+drop index if exists public.exam_sessions_one_per_applicant;
+create unique index if not exists exam_sessions_one_active_per_applicant
   on public.exam_sessions (exam_id, applicant_id)
   where applicant_id is not null and status in ('waiting', 'in_progress');
 
-drop index public.exam_invitations_exam_email_uniq;
-create unique index exam_invitations_exam_email_open_uniq
+drop index if exists public.exam_invitations_exam_email_uniq;
+create unique index if not exists exam_invitations_exam_email_open_uniq
   on public.exam_invitations (exam_id, email)
   where not is_used;
 
@@ -342,6 +384,7 @@ end $$;
 
 revoke all on function public.normalize_exam_invitation_email() from public, anon, authenticated;
 
+drop trigger if exists exam_invitations_normalize_email on public.exam_invitations;
 create trigger exam_invitations_normalize_email
   before insert or update of email on public.exam_invitations
   for each row execute function public.normalize_exam_invitation_email();
@@ -352,8 +395,8 @@ create trigger exam_invitations_normalize_email
 -- 세트 이름·시나리오는 name/description 을 그대로 쓴다(화면 어댑터 questionShape.ts 가 title/scenario 로 펼침).
 -- 재설계 때 빠진 세트 단위 첨부·분류만 들인다.
 alter table public.question_sets
-  add column attachments jsonb not null default '[]'::jsonb,
-  add column tags        jsonb not null default '[]'::jsonb,
-  add column category    text,
-  add column grade       text,
-  add column difficulty  public.question_difficulty not null default 'medium';
+  add column if not exists attachments jsonb not null default '[]'::jsonb,
+  add column if not exists tags        jsonb not null default '[]'::jsonb,
+  add column if not exists category    text,
+  add column if not exists grade       text,
+  add column if not exists difficulty  public.question_difficulty not null default 'medium';
