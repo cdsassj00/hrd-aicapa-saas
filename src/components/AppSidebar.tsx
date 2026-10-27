@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/sidebar';
 import {
   BookOpen, ClipboardList, Monitor, Users, BarChart3,
-  AlertTriangle, Home, CheckSquare, UserCog, Settings, ScanFace, Video, Shield, CreditCard,
+  AlertTriangle, Home, LayoutDashboard, CheckSquare, UserCog, Settings, ScanFace, Video, Shield, CreditCard,
 } from 'lucide-react';
 
 const menuConfig = {
@@ -18,6 +18,7 @@ const menuConfig = {
     { title: '이벤트 로그', url: '/examiner/events', icon: AlertTriangle },
   ],
   org_admin: [
+    { title: '홈', url: '/admin', icon: LayoutDashboard },
     { title: '시험 관리', url: '/admin/exams', icon: ClipboardList },
     { title: '문제은행', url: '/admin/questions', icon: BookOpen },
     { title: '실시간 모니터링', url: '/examiner/monitor', icon: Monitor },
@@ -60,7 +61,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild className="h-9 rounded-xl px-3 transition-colors">
                     <NavLink
                       to={item.url}
-                      end={item.url === '/applicant'}
+                      end={item.url === '/applicant' || item.url === '/admin'}
                       className="text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
                       activeClassName="bg-sidebar-accent text-foreground font-medium shadow-sm"
                     >
