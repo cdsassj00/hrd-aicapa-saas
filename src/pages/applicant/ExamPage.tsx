@@ -965,6 +965,8 @@ export default function ExamPage() {
   const secs = timeLeft === null ? 0 : timeLeft % 60;
   const isWarning = timeLeft !== null && timeLeft <= 600;
   const question = questions[currentQ];
+  // 샌드박스 문항이면 오른쪽 칸에 AI 작업 공간을 연다
+  const hasAgent = !!question && question.tool_req === 'code_sandbox';
 
   // ─────────────────────────────────────────────────────────
   // 2단계 시험 (Phase 1: 독립 문항 → Phase 2: 세트 문항)
@@ -1303,17 +1305,6 @@ export default function ExamPage() {
         isTaskQuestion={question?.type === 'work_based' || question?.type === 'file_upload'}
         enabled={!proctoringDisabledForSet && !isSubmitting && question?.type !== 'work_based' && question?.type !== 'file_upload'}
       />
-
-      {/* 시험 에이전트: 샌드박스를 요구하는 문항에서만 띄운다.
-          tool_req 는 get_exam_question_tools RPC 가 answer_key.meta 에서 꺼내 준다(0031).
-          대화·실행·생성 파일은 서버에 기록되어 채점 근거가 된다. */}
-      {sessionId && question?.id && question?.tool_req === 'code_sandbox' && (
-        <ExamAgentPanel
-          sessionId={sessionId}
-          questionId={question.id}
-          questionLabel={`${currentQ + 1}번 문항`}
-        />
-      )}
 
       {/* AI 감독: 안면 이탈 감지 (세트 옵션으로 비활성 가능, 시험 알림설정 화이트리스트 적용) */}
       <FaceMonitor
@@ -1718,9 +1709,12 @@ export default function ExamPage() {
           </div>
         </div>
 
-        {/* 오른쪽 — 감독 화면 (AI 에이전트 패널이 들어올 자리) */}
-        <div className="w-[320px] shrink-0 flex flex-col p-4 border-l bg-muted/20 min-h-0">
-          <div className="flex-1 overflow-y-auto space-y-4 min-h-0 pr-1">
+        {/* 오른쪽 — 감독 화면 + AI 작업 공간.
+            감독 화면(DailyProctor)은 웹캠·화면공유 스트림을 쥐고 있어 문항이 바뀌어도 늘 마운트된 채로 위에 둔다.
+            시험 에이전트는 샌드박스 문항(tool_req === 'code_sandbox', get_exam_question_tools RPC·0031)에서만
+            아래 칸을 채운다. 대화·실행·생성 파일은 서버에 기록되어 채점 근거가 된다. */}
+        <div className={cn("shrink-0 flex flex-col border-l bg-muted/20 min-h-0", hasAgent ? "w-[440px]" : "w-[320px]")}>
+          <div className={cn("space-y-4 p-4", hasAgent ? "shrink-0" : "flex-1 overflow-y-auto min-h-0")}>
             {session?.exam_id && (
               <DailyProctor
                 examId={session.exam_id}
@@ -1739,10 +1733,21 @@ export default function ExamPage() {
               />
             )}
 
-            <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
-              감독 화면은 시험 종료 시까지 켜 두세요. 문의는 상단 채팅으로 감독관에게 보낼 수 있습니다.
-            </p>
+            {!hasAgent && (
+              <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
+                감독 화면은 시험 종료 시까지 켜 두세요. 문의는 상단 채팅으로 감독관에게 보낼 수 있습니다.
+              </p>
+            )}
           </div>
+          {hasAgent && sessionId && question?.id && (
+            <div className="min-h-0 flex-1 border-t">
+              <ExamAgentPanel
+                sessionId={sessionId}
+                questionId={question.id}
+                questionLabel={`${currentQ + 1}번 문항`}
+              />
+            </div>
+          )}
         </div>
 
       </div>
