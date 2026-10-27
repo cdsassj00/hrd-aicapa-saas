@@ -109,7 +109,7 @@ export default function ExamPage() {
   useEffect(() => {
     if (!session?.exam_id || !currentUserEmail) return;
     (async () => {
-      // exam_invitations 는 운영진 전용이라 본인 초대장만 함수로 읽는다(0039).
+      // exam_invitations 는 운영진 전용이라 본인 초대장만 함수로 읽는다(0040).
       const { data: rows } = await supabase.rpc('get_my_exam_invitation', { _exam_id: session.exam_id });
       const data = (rows as any[] | null)?.[0];
       if (data) setExemptions({

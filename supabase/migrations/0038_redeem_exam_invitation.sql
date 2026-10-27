@@ -1,4 +1,4 @@
--- 0037_redeem_exam_invitation.sql
+-- 0038_redeem_exam_invitation.sql
 --
 -- 응시자가 초대코드로 응시를 신청하는 경로를 복구한다.
 --

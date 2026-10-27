@@ -50,7 +50,7 @@ export default function ApplicantMyPage() {
   // 예전에는 여기서 (1) exam_invitations 조회 (2) exam_sessions 생성
   // (3) is_used 표시를 클라이언트에서 직접 했다. 그런데 셋 다 RLS 에 막혀서
   // 유효한 코드를 넣어도 "유효하지 않은 응시코드입니다" 가 떴다(E2E 로 확인).
-  // 정책을 푸는 대신 서버 함수 하나로 묶었다 — 0037 참고. 그 안에서 로그인
+  // 정책을 푸는 대신 서버 함수 하나로 묶었다 — 0038 참고. 그 안에서 로그인
   // 계정의 이메일이 초대 이메일과 같은지 확인한다.
   const autoApplyWithCode = async (code: string) => {
     const { data: sessionId, error } = await supabase.rpc('redeem_exam_invitation', {

@@ -1,7 +1,7 @@
--- 0039_applicant_invitation_reads.sql
+-- 0040_applicant_invitation_reads.sql
 --
 -- 응시자 화면이 운영진 전용 테이블을 직접 읽던 두 곳을 좁은 함수로 바꾼다.
--- (0037 과 같은 이유: 원본은 조직 개념 없는 RLS 라 직접 조회가 통했다)
+-- (0038 과 같은 이유: 원본은 조직 개념 없는 RLS 라 직접 조회가 통했다)
 --
 -- 1) 개인별 감독 면제(allow_no_webcam / allow_no_screen_share)
 --    WaitingRoom·ExamPage 가 exam_invitations 를 직접 읽는데 정책이 운영진
