@@ -1108,6 +1108,14 @@ export type Database = {
         Args: { _code: string }
         Returns: string
       }
+      get_my_exam_invitation: {
+        Args: { _exam_id: string }
+        Returns: Database["public"]["Tables"]["exam_invitations"]["Row"][]
+      }
+      count_exam_participants: {
+        Args: { _exam_id: string }
+        Returns: number
+      }
       create_organization: {
         Args: { _name: string; _slug: string }
         Returns: {

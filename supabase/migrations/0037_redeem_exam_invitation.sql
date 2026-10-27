@@ -78,6 +78,15 @@ begin
   limit 1;
 
   if _session.id is null then
+    -- 1인 1회 응시(exam_sessions_one_per_applicant). 이미 제출한 회차면
+    -- DB 제약 오류 원문 대신 사람이 읽을 수 있는 안내를 준다.
+    if exists (
+      select 1 from public.exam_sessions
+       where exam_id = _inv.exam_id and applicant_id = _uid
+    ) then
+      raise exception '이미 응시를 마친 회차입니다' using errcode = 'invalid_parameter_value';
+    end if;
+
     -- 진행 중인 게 없을 때만 is_used 를 막는다. 테스트 모드는 예외.
     if coalesce(_inv.is_used, false) and not _test_mode then
       raise exception '이미 사용된 응시코드입니다' using errcode = 'invalid_parameter_value';

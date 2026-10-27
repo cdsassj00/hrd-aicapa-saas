@@ -108,12 +108,9 @@ export default function ExamPage() {
   useEffect(() => {
     if (!session?.exam_id || !currentUserEmail) return;
     (async () => {
-      const { data } = await supabase
-        .from('exam_invitations')
-        .select('allow_no_screen_share, allow_no_webcam')
-        .eq('exam_id', session.exam_id)
-        .eq('email', currentUserEmail)
-        .maybeSingle();
+      // exam_invitations 는 운영진 전용이라 본인 초대장만 함수로 읽는다(0039).
+      const { data: rows } = await supabase.rpc('get_my_exam_invitation', { _exam_id: session.exam_id });
+      const data = (rows as any[] | null)?.[0];
       if (data) setExemptions({
         allow_no_screen_share: !!data.allow_no_screen_share,
         allow_no_webcam: !!data.allow_no_webcam,
