@@ -101,7 +101,7 @@ export default function WaitingRoom() {
       setSession(sessionData);
       setExam(sessionData.exams);
 
-      // 개인별 감독 면제 확인. exam_invitations 는 운영진 전용이라 함수로 읽는다(0039).
+      // 개인별 감독 면제 확인. exam_invitations 는 운영진 전용이라 함수로 읽는다(0040).
       const { data: invRows } = await supabase.rpc('get_my_exam_invitation', { _exam_id: sessionData.exam_id });
       const inv = (invRows as any[] | null)?.[0];
       if (inv) setInvitation(inv);
@@ -288,7 +288,7 @@ export default function WaitingRoom() {
     setStarting(true);
 
     // Check max_participants limit
-    // 응시자에겐 본인 세션만 보이므로 인원 수는 함수로 센다(0039).
+    // 응시자에겐 본인 세션만 보이므로 인원 수는 함수로 센다(0040).
     const { data: count, error: countErr } = await supabase.rpc('count_exam_participants', { _exam_id: exam.id });
 
     // max_participants 가 비어 있으면 인원 제한이 없는 회차다. null 과 비교하면

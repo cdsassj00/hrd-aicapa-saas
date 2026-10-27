@@ -1,4 +1,4 @@
--- 0038_log_user_actions.sql
+-- 0039_log_user_actions.sql
 --
 -- 응시자 행동 로그(src/lib/userActions.ts)의 저장 경로를 audit_logs 로 옮긴다.
 --

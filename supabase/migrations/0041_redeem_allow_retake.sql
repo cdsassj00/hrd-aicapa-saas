@@ -1,25 +1,15 @@
--- 0037_redeem_exam_invitation.sql
+-- 0041_redeem_allow_retake.sql
 --
--- 응시자가 초대코드로 응시를 신청하는 경로를 복구한다.
+-- redeem_exam_invitation(0038) 이 재응시를 막던 것을 푼다.
 --
--- 증상: 메일로 받은 유효한 코드를 넣어도 "유효하지 않은 응시코드입니다" 가 뜬다.
--- E2E 로 확인했다 — 초대장이 DB 에 있고 이메일도 정확히 일치하는데 응시자의
--- 조회가 0건으로 돌아온다.
+-- 0038 은 이 회차에 세션이 하나라도 있으면 "이미 응시를 마친 회차입니다" 로
+-- 거부했다. 당시 운영 DB 에 회차당 1인 1세션 인덱스가 있었기 때문이다.
+-- 그런데 0037_align_exam_schema_to_app 이 그 인덱스를 "동시에 진행 중인 세션은
+-- 하나" 로 좁혔다 — 원본 화면의 재응시(관리자 "재응시 발급" → 같은 사람에게
+-- 새 응시코드)를 살리기 위해서다. 운영에도 이미 반영돼 있다.
 --
--- 원인: ApplicantMyPage 는 세 가지를 클라이언트에서 직접 한다.
---   (1) exam_invitations SELECT   (2) exam_sessions INSERT   (3) exam_invitations UPDATE
--- 그런데 exam_invitations 의 정책은 운영진 전용이고(is_org_examiner / is_platform_admin),
--- exam_sessions 에는 응시자용 INSERT 정책이 아예 없다. 셋 다 막힌다.
---
--- 고치는 방향: 정책을 느슨하게 풀지 않는다. 코드로 초대장을 읽을 수 있게 열면
--- 코드 대입으로 응시자 이름·이메일이 새고, 세션 INSERT 를 열면 남의 회차에
--- 세션을 꽂을 수 있다. 대신 세 동작을 SECURITY DEFINER 함수 하나로 묶고
--- 그 안에서 **로그인 계정의 이메일이 초대받은 이메일과 같은지** 확인한다.
--- 코드를 맞혀도 그 사람 계정으로 로그인할 수 없으면 들어오지 못한다 —
--- 짧은 코드(현장 입력용)를 유지하면서 실질 방어선을 세우는 자리다.
---
--- get_invitation_by_code(0025) 와 같은 방식이다. 그 함수는 로그인 전
--- 게스트 OTP 경로가 쓰고, 이 함수는 로그인한 응시자가 쓴다.
+-- 재응시는 새 코드로 들어오므로 막을 필요가 있는 건 "쓴 코드의 재사용" 뿐이고,
+-- 그건 아래 is_used 검사가 이미 한다. 진행 중 세션 재사용도 그대로다.
 
 create or replace function public.redeem_exam_invitation(_code text)
 returns uuid
@@ -78,15 +68,6 @@ begin
   limit 1;
 
   if _session.id is null then
-    -- 1인 1회 응시(exam_sessions_one_per_applicant). 이미 제출한 회차면
-    -- DB 제약 오류 원문 대신 사람이 읽을 수 있는 안내를 준다.
-    if exists (
-      select 1 from public.exam_sessions
-       where exam_id = _inv.exam_id and applicant_id = _uid
-    ) then
-      raise exception '이미 응시를 마친 회차입니다' using errcode = 'invalid_parameter_value';
-    end if;
-
     -- 진행 중인 게 없을 때만 is_used 를 막는다. 테스트 모드는 예외.
     if coalesce(_inv.is_used, false) and not _test_mode then
       raise exception '이미 사용된 응시코드입니다' using errcode = 'invalid_parameter_value';
