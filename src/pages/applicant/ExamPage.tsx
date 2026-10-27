@@ -109,12 +109,9 @@ export default function ExamPage() {
   useEffect(() => {
     if (!session?.exam_id || !currentUserEmail) return;
     (async () => {
-      const { data } = await supabase
-        .from('exam_invitations')
-        .select('allow_no_screen_share, allow_no_webcam')
-        .eq('exam_id', session.exam_id)
-        .eq('email', currentUserEmail)
-        .maybeSingle();
+      // exam_invitations 는 운영진 전용이라 본인 초대장만 함수로 읽는다(0039).
+      const { data: rows } = await supabase.rpc('get_my_exam_invitation', { _exam_id: session.exam_id });
+      const data = (rows as any[] | null)?.[0];
       if (data) setExemptions({
         allow_no_screen_share: !!data.allow_no_screen_share,
         allow_no_webcam: !!data.allow_no_webcam,
@@ -276,14 +273,17 @@ export default function ExamPage() {
             throw lastErr;
           };
 
-          let eqsRes: any, ansRes: any;
+          // 문항은 RPC 하나로만 읽는다. exam_questions 정책은 운영진 전용이라
+          // 응시자가 직접 조회하면 0건이 돌아와 "등록된 문제가 없습니다"가 떴다.
+          // RPC 가 본인 세션인지 확인하고 order_num 순으로 돌려준다.
+          let qsRes: any, ansRes: any;
           try {
-            [eqsRes, ansRes] = await Promise.all([
+            [qsRes, ansRes] = await Promise.all([
               withRetry(async () => {
-                const r = await supabase.from('exam_questions').select('question_id, order_num').eq('exam_id', sess.exam_id).order('order_num');
+                const r = await supabase.rpc('get_exam_questions_for_session', { _session_id: sessionId });
                 if (r.error) throw r.error;
                 return r;
-              }, 'exam_questions'),
+              }, 'questions'),
               withRetry(async () => {
                 const r = await supabase.from('answers').select('question_id, content, slot_values, file_url').eq('session_id', sessionId);
                 if (r.error) throw r.error;
@@ -291,31 +291,17 @@ export default function ExamPage() {
               }, 'answers'),
             ]);
           } catch (e: any) {
-            console.error('[ExamPage] exam_questions/answers fetch failed', e);
+            console.error('[ExamPage] questions/answers fetch failed', e);
             toast({ title: '문제 목록을 불러오지 못했습니다', description: e?.message || '네트워크 오류. 새로고침 해 주세요.', variant: 'destructive' });
             return;
           }
 
-          const eqs = eqsRes?.data;
+          const qs = qsRes?.data as any[] | null;
           const existingAnswers = ansRes?.data;
 
-          if (eqs && eqs.length > 0) {
-            let qs: any[] | null = null;
-            try {
-              const qsRes = await withRetry(async () => {
-                const r = await supabase.rpc('get_exam_questions_for_session', { _session_id: sessionId });
-                if (r.error) throw r.error;
-                return r;
-              }, 'questions');
-              qs = qsRes.data as any[] | null;
-            } catch (e: any) {
-              console.error('[ExamPage] questions RPC failed', e);
-              toast({ title: '문제 데이터를 불러오지 못했습니다', description: e?.message || '잠시 후 다시 시도해 주세요.', variant: 'destructive' });
-              return;
-            }
-            if (qs) {
-              const orderMap = new Map<string, number>(eqs.map((eq: any) => [eq.question_id, eq.order_num as number]));
-              qs.sort((a: any, b: any) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+          if (qs && qs.length > 0) {
+            {
+              qs.sort((a: any, b: any) => (a.order_num ?? 0) - (b.order_num ?? 0));
 
               // 문항별 작업 환경(tool_req). 시험 에이전트를 띄울지 판단하는 데만 쓴다.
               // 별도 RPC 인 이유: 문제 로딩 함수(get_exam_questions_for_session)는 응시

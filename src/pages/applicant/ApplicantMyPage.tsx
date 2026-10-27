@@ -45,71 +45,30 @@ export default function ApplicantMyPage() {
     autoApplyWithCode(inviteParam.trim().toUpperCase());
   }, [user, searchParams]);
 
+  // 초대코드로 응시 세션을 확보한다.
+  //
+  // 예전에는 여기서 (1) exam_invitations 조회 (2) exam_sessions 생성
+  // (3) is_used 표시를 클라이언트에서 직접 했다. 그런데 셋 다 RLS 에 막혀서
+  // 유효한 코드를 넣어도 "유효하지 않은 응시코드입니다" 가 떴다(E2E 로 확인).
+  // 정책을 푸는 대신 서버 함수 하나로 묶었다 — 0037 참고. 그 안에서 로그인
+  // 계정의 이메일이 초대 이메일과 같은지 확인한다.
   const autoApplyWithCode = async (code: string) => {
-    // Look up the invitation
-    const { data: inv } = await supabase
-      .from('exam_invitations')
-      .select('*, exams(*)')
-      .eq('invite_code', code)
-      .maybeSingle();
+    const { data: sessionId, error } = await supabase.rpc('redeem_exam_invitation', {
+      _code: code,
+    });
 
-    if (!inv) {
-      toast({ title: '유효하지 않은 응시코드입니다', variant: 'destructive' });
+    if (error || !sessionId) {
+      // 함수가 사람이 읽을 수 있는 문구로 던진다. 그대로 보여 준다 —
+      // 응시 직전에 막힌 사람에게 필요한 건 원인이다.
+      toast({
+        title: error?.message ?? '응시 신청에 실패했습니다',
+        variant: 'destructive',
+      });
       return;
-    }
-
-    // 테스트 모드 시험이 아닐 때만 is_used 차단
-    const isTestMode = (inv as any).exams?.is_test_mode === true;
-    if (inv.is_used && !isTestMode) {
-      toast({ title: '이미 사용된 응시코드입니다', variant: 'destructive' });
-      return;
-    }
-
-    // Check for existing session
-    const { data: existing } = await supabase
-      .from('exam_sessions')
-      .select('id, status')
-      .eq('exam_id', inv.exam_id)
-      .eq('applicant_id', user!.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (existing && (existing.status === 'waiting' || existing.status === 'in_progress')) {
-      // 테스트 모드가 아닌 경우에만 is_used 마킹
-      if (!isTestMode) {
-        await supabase
-          .from('exam_invitations')
-          .update({ is_used: true, session_id: existing.id })
-          .eq('id', inv.id);
-      }
-      toast({ title: '이미 신청된 시험입니다. 대기실로 이동합니다.' });
-      navigate(`/applicant/waiting-room/${existing.id}`);
-      return;
-    }
-
-    // Create new session (also handles retake: previous session was submitted/passed/failed)
-    const { data: session, error } = await supabase
-      .from('exam_sessions')
-      .insert(inheritOrg<'exam_sessions'>({ exam_id: inv.exam_id, applicant_id: user!.id }))
-      .select()
-      .single();
-
-    if (error) {
-      toast({ title: '응시 신청 실패', description: error.message, variant: 'destructive' });
-      return;
-    }
-
-    // 테스트 모드가 아닌 경우에만 is_used 마킹
-    if (!isTestMode) {
-      await supabase
-        .from('exam_invitations')
-        .update({ is_used: true, session_id: session.id })
-        .eq('id', inv.id);
     }
 
     toast({ title: '응시 신청 완료! 대기실로 이동합니다.' });
-    navigate(`/applicant/waiting-room/${session.id}`);
+    navigate(`/applicant/waiting-room/${sessionId}`);
   };
 
   const fetchExams = async () => {
@@ -242,26 +201,13 @@ export default function ApplicantMyPage() {
   };
 
   // 응시코드로 시험 찾기
+  // 응시코드 입력 → 바로 응시 세션까지. 예전에는 코드를 확인한 뒤 신청 대화상자를
+  // 한 번 더 거쳤는데, 확인 단계가 RLS 에 막혀 아예 통과하지 못했다. 서버 함수가
+  // 확인·세션 생성·사용 표시를 한 번에 하므로 대화상자를 거칠 이유가 없다.
   const handleCodeLookup = async () => {
     if (!inviteCode.trim()) return;
-    const { data: inv } = await supabase
-      .from('exam_invitations')
-      .select('*, exams(*)')
-      .eq('invite_code', inviteCode.trim().toUpperCase())
-      .maybeSingle();
-
-    if (!inv) {
-      toast({ title: '유효하지 않은 응시코드입니다', variant: 'destructive' });
-      return;
-    }
-    const isTestMode = (inv as any).exams?.is_test_mode === true;
-    if (inv.is_used && !isTestMode) {
-      toast({ title: '이미 사용된 응시코드입니다', variant: 'destructive' });
-      return;
-    }
-    setSelectedExamId(inv.exam_id);
     setCodeDialogOpen(false);
-    setApplyOpen(true);
+    await autoApplyWithCode(inviteCode.trim().toUpperCase());
   };
 
   const getStatusLabel = (status: string) => {

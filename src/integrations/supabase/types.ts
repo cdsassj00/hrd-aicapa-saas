@@ -2414,6 +2414,7 @@ export type Database = {
         }
         Returns: string
       }
+      count_exam_participants: { Args: { _exam_id: string }; Returns: number }
       create_org_invitation: {
         Args: {
           _email: string
@@ -2483,6 +2484,33 @@ export type Database = {
           name: string
         }[]
       }
+      get_my_exam_invitation: {
+        Args: { _exam_id: string }
+        Returns: {
+          accepted_at: string | null
+          allow_dual_monitor: boolean
+          allow_no_screen_share: boolean
+          allow_no_webcam: boolean
+          code_hash: string | null
+          created_at: string
+          email: string
+          exam_id: string
+          exemption_reason: string | null
+          id: string
+          invite_code: string
+          is_used: boolean
+          name: string | null
+          org_id: string
+          sent_at: string | null
+          session_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "exam_invitations"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_question_fixtures: {
         Args: { _session_id: string }
         Returns: {
@@ -2511,6 +2539,7 @@ export type Database = {
       is_org_examiner: { Args: { _org_id: string }; Returns: boolean }
       is_org_member: { Args: { _org_id: string }; Returns: boolean }
       is_platform_admin: { Args: never; Returns: boolean }
+      log_user_actions: { Args: { _actions: Json }; Returns: number }
       org_has_question_license: { Args: { _set_id: string }; Returns: boolean }
       redeem_exam_invitation: { Args: { _code: string }; Returns: string }
       revoke_org_invitation: {
