@@ -22,7 +22,7 @@ export default function ApplicantMyPage() {
   const [isApplying, setIsApplying] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
-  const { user, role, activeOrg, isPlatformAdmin } = useAuth();
+  const { user, role, activeOrg, isPlatformAdmin, refreshMemberships } = useAuth();
   const isApplicantRole = role === 'applicant';
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -40,9 +40,12 @@ export default function ApplicantMyPage() {
     const inviteParam = searchParams.get('invite');
     if (!inviteParam) return;
     autoInviteProcessed.current = true;
-    // Clear the param from URL
-    setSearchParams({}, { replace: true });
-    autoApplyWithCode(inviteParam.trim().toUpperCase());
+    // 주소창의 코드는 신청이 실패했을 때만 지운다. 먼저 지우면 조직이 아직 없는
+    // 수강생은 ProtectedRoute 가 신청 도중 온보딩으로 보내 버린다.
+    // 성공하면 대기실로 이동하므로 지울 필요가 없다.
+    autoApplyWithCode(inviteParam.trim().toUpperCase()).then(ok => {
+      if (!ok) setSearchParams({}, { replace: true });
+    });
   }, [user, searchParams]);
 
   // 초대코드로 응시 세션을 확보한다.
@@ -64,11 +67,15 @@ export default function ApplicantMyPage() {
         title: error?.message ?? '응시 신청에 실패했습니다',
         variant: 'destructive',
       });
-      return;
+      return false;
     }
 
+    // 방금 조직 멤버십이 생겼을 수 있다(첫 초대). 갱신하지 않으면 대기실의
+    // ProtectedRoute 가 여전히 "조직 없음"으로 보고 온보딩으로 보낸다.
+    await refreshMemberships();
     toast({ title: '응시 신청 완료! 대기실로 이동합니다.' });
     navigate(`/applicant/waiting-room/${sessionId}`);
+    return true;
   };
 
   const fetchExams = async () => {
