@@ -722,7 +722,7 @@ export default function RecordingReviewPage() {
           supabase.rpc('get_user_emails'),
         ]);
         const emailById: Record<string, string> = {};
-        (emailsRes.data || []).forEach((e: any) => { emailById[e.user_id] = e.email; });
+        (emailsRes.data || []).forEach((e: any) => { emailById[e.id ?? e.user_id] = e.email; });
         (profsRes.data || []).forEach((p: any) => {
           profilesMap[p.id] = { name: p.name, email: emailById[p.id] || null };
         });
