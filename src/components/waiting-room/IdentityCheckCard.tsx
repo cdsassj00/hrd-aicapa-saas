@@ -284,6 +284,13 @@ export default function IdentityCheckCard({ sessionId, verified, onVerified, ski
     }
   }, [idBase64, cameraStream, user, onVerified, toast]);
 
+  // 카운트다운 타이머가 최신 captureAndVerify 를 부르도록 ref 로 들고 있는다.
+  // 효과의 의존성에 함수를 넣으면, 대기실이 매초 시계를 갱신하며 다시 그릴 때마다
+  // 새 onVerified → 새 captureAndVerify 가 되어 타이머가 매초 처음부터 다시 시작한다.
+  // 그러면 자동 촬영이 영영 일어나지 않고 "카메라 준비 중..."에 멈춘다(E2E 로 확인).
+  const captureRef = useRef(captureAndVerify);
+  useEffect(() => { captureRef.current = captureAndVerify; }, [captureAndVerify]);
+
   // Auto-countdown when selfie camera opens
   useEffect(() => {
     if (stage !== 'selfie') return;
@@ -299,7 +306,7 @@ export default function IdentityCheckCard({ sessionId, verified, onVerified, ski
           setCountdown(null);
           if (!capturedRef.current) {
             capturedRef.current = true;
-            captureAndVerify();
+            captureRef.current();
           }
           return;
         }
@@ -315,7 +322,7 @@ export default function IdentityCheckCard({ sessionId, verified, onVerified, ski
       }
       setCountdown(null);
     };
-  }, [stage, captureAndVerify]);
+  }, [stage]);
 
   const retrySelfie = () => {
     setSelfieBase64(null);

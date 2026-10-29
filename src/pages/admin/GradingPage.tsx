@@ -92,7 +92,7 @@ export default function GradingPage() {
       }
       // Fetch emails via RPC
       const { data: emailData } = await (supabase as any).rpc('get_user_emails');
-      if (emailData) setEmails(new Map(emailData.map((e: any) => [e.user_id, e.email])));
+      if (emailData) setEmails(new Map(emailData.map((e: any) => [e.id ?? e.user_id, e.email])));
     }
   };
 

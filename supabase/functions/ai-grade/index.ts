@@ -3,6 +3,15 @@ import { AiPaymentRequiredError, AiRateLimitError, chatCompletion } from "../_sh
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { QUESTION_SELECT, toLegacyQuestion } from "../_shared/questionShape.ts";
 
+// 외부(에이전트·사람) 채점이 필요한 문항인가.
+// 원본에서 "세트 문항"은 곧 작업형 시나리오 묶음이었으므로 set_id 로 판단했다.
+// SaaS 문제은행은 세트를 문항 묶음(패키지)으로도 쓴다 — 객관식·단답 20문항짜리
+// "AI 리터러시 스크리닝"도 세트다. set_id 기준이면 이런 시험은 총점이 영영 안
+// 나온다(E2E: "AI 채점 완료 총점: null점"). 그래서 유형으로 판단한다.
+function needsExternalGrading(q: any): boolean {
+  return Boolean(q.set_id) && (q.type === "work_based" || q.type === "file_upload");
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -124,8 +133,8 @@ async function performGrading(jobId: string, session_id: string) {
       const question = questions.find((q: any) => q.id === answer.question_id);
       if (!question) continue;
 
-      // 세트 문항은 외부 AI 에이전트 채점 대상 → 스킵 (기존 점수/피드백 보존)
-      if (question.set_id) {
+      // 외부 채점 대상(작업형·파일 제출)은 스킵 (기존 점수/피드백 보존)
+      if (needsExternalGrading(question)) {
         const pct = 15 + Math.round(((i + 1) / total) * 75);
         await updateJob(jobId, { progress: pct });
         continue;
@@ -260,9 +269,9 @@ ${val}
       }).eq("id", r.answer_id);
     }
 
-    // 세트 문항이 있으면 AI 채점은 부분 채점이므로 세션 총점/합격여부를 갱신하지 않는다
+    // 외부 채점 대상 문항이 있으면 AI 채점은 부분 채점이므로 세션 총점/합격여부를 갱신하지 않는다
     // (외부 AI 에이전트 채점 CSV 업로드가 최종 반영을 수행)
-    const hasSetQuestions = questions.some((q: any) => q.set_id);
+    const hasSetQuestions = questions.some(needsExternalGrading);
     if (hasSetQuestions) {
       console.log(`[ai-grade] session=${session_id} has set questions → skip session total update (external grading required)`);
       await updateJob(jobId, { status: "completed", progress: 100 });
