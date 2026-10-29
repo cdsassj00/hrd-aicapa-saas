@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
     // EBML header detection (Matroska/WebM): 0x1A 0x45 0xDF 0xA3
     const head = new Uint8Array(body, 0, Math.min(4, body.byteLength));
     const isHeader = head.length >= 4 && head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3;
-    const { error: insertErr } = await adminClient.from('recording_chunks').insert({
+    const row = {
       session_id: sessionId,
       exam_id: sess.exam_id,
       applicant_id: user.id,
@@ -226,10 +226,41 @@ Deno.serve(async (req) => {
       started_at: startedAt,
       ended_at: endedAt,
       is_header: isHeader,
-    });
+    };
+    let { error: insertErr } = await adminClient.from('recording_chunks').insert(row);
+
+    // 번호 충돌(23505). 녹화기는 페이지를 열 때마다 0번부터 센다 — 응시 중
+    // 새로고침하면 그때부터의 조각이 전부 기존 번호와 겹쳐 버려졌다(E2E 로 확인).
+    // 응시자는 기존 조각을 읽을 수 없어 이어 셀 수가 없으므로 여기서 푼다.
+    //   - 같은 조각의 재시도(같은 started_at)면 이미 저장된 것이므로 성공으로 본다
+    //   - 새 조각이면 비어 있는 다음 번호를 준다. 재생은 chunk_index 순이고
+    //     새 구간의 첫 조각은 is_header 로 구분되므로 순서가 유지된다.
+    for (let attempt = 0; insertErr?.code === '23505' && attempt < 3; attempt++) {
+      const { data: same } = await adminClient
+        .from('recording_chunks')
+        .select('id, started_at')
+        .eq('session_id', sessionId).eq('kind', kind).eq('chunk_index', row.chunk_index)
+        .maybeSingle();
+      if (same && new Date(same.started_at).getTime() === new Date(startedAt).getTime()) {
+        insertErr = null;
+        break;
+      }
+      const { data: last } = await adminClient
+        .from('recording_chunks')
+        .select('chunk_index')
+        .eq('session_id', sessionId).eq('kind', kind)
+        .order('chunk_index', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      row.chunk_index = (last?.chunk_index ?? -1) + 1;
+      ({ error: insertErr } = await adminClient.from('recording_chunks').insert(row));
+    }
     if (insertErr) {
       await logDiag(adminClient, sessionId, diagApplicant, diagKind, 'db_insert', 'error', `DB insert 실패: ${insertErr.message}`, { idx: chunkIndex, object_key: objectKey });
       throw insertErr;
+    }
+    if (row.chunk_index !== chunkIndex) {
+      await logDiag(adminClient, sessionId, diagApplicant, diagKind, 'db_insert', 'info', `번호 충돌로 재배정 ${chunkIndex} → ${row.chunk_index}`, { idx: row.chunk_index, object_key: objectKey });
     }
 
     return json({ ok: true, object_key: objectKey, exam_id: sess.exam_id });
