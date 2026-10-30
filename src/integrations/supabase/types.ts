@@ -2415,6 +2415,7 @@ export type Database = {
         Returns: string
       }
       count_exam_participants: { Args: { _exam_id: string }; Returns: number }
+      apply_open_exam: { Args: { _exam_id: string }; Returns: string }
       create_org_invitation: {
         Args: {
           _email: string

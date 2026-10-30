@@ -10,7 +10,6 @@ import { GradeBadge } from '@/components/GradeBadge';
 import { CalendarDays, Clock, Users, BookOpen, CheckCircle2, Info, RotateCcw, KeyRound } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { inheritOrg } from '@/lib/inheritedOrg';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -103,93 +102,56 @@ export default function ApplicantMyPage() {
     if (data) setSessions(data);
   };
 
+  // 시험 목록에서 "응시 신청". 예전에는 초대장 확인·세션 생성·사용 표시를
+  // 클라이언트에서 직접 했는데 응시자에게는 셋 다 RLS 로 막혀 있었다 — 공개(자율
+  // 신청) 회차에 아무도 신청할 수 없었다(E2E 로 확인). 서버 함수로 보낸다:
+  //   코드 입력 → redeem_exam_invitation(0038/0041), 코드 없음 → apply_open_exam(0042)
   const handleApply = async () => {
     if (!user || !selectedExamId) return;
     setIsApplying(true);
-
-    const regMode = getExamRegMode(selectedExamId);
-
-    // 초대전용/혼합에서 초대코드가 입력된 경우 검증
-    if (inviteCode.trim() && (regMode === 'invite_only' || regMode === 'hybrid')) {
-      const { data: inv } = await supabase
-        .from('exam_invitations')
-        .select('*, exams(is_test_mode)')
-        .eq('exam_id', selectedExamId)
-        .eq('invite_code', inviteCode.trim().toUpperCase())
-        .maybeSingle();
-
-      if (!inv) {
-        toast({ title: '유효하지 않은 응시코드입니다', variant: 'destructive' });
-        setIsApplying(false);
+    try {
+      const code = inviteCode.trim().toUpperCase();
+      if (code) {
+        setApplyOpen(false); setInviteCode('');
+        await autoApplyWithCode(code);
         return;
       }
-      // 테스트 모드 시험은 is_used 무시
-      const isTestMode = (inv as any).exams?.is_test_mode === true;
-      if (inv.is_used && !isTestMode) {
-        toast({ title: '이미 사용된 응시코드입니다', variant: 'destructive' });
-        setIsApplying(false);
-        return;
-      }
-    } else if (regMode === 'invite_only' && !isPlatformAdmin) {
-      toast({ title: '이 시험은 응시코드가 필요합니다', variant: 'destructive' });
-      setIsApplying(false);
-      return;
-    }
 
-    // 기존 세션 확인
-    const { data: existing } = await supabase
-      .from('exam_sessions')
-      .select('id, status')
-      .eq('exam_id', selectedExamId)
-      .eq('applicant_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (existing) {
+      // 슈퍼관리자 점검용: 기존 세션을 초기화해 재사용(원본 동작). 운영자는 RLS 를 통과한다.
       if (isPlatformAdmin) {
-        await supabase.from('answers').delete().eq('session_id', existing.id);
-        await supabase.from('exam_sessions').update({
-          status: 'waiting', start_time: null, submit_time: null, score_total: null, is_flagged: false,
-        }).eq('id', existing.id);
-        toast({ title: '기존 세션 초기화 후 재사용합니다' });
-        setIsApplying(false); setApplyOpen(false); setInviteCode('');
-        fetchSessions();
-        navigate(`/applicant/waiting-room/${existing.id}`);
-        return;
-      } else {
-        toast({ title: '이미 신청한 시험입니다', variant: 'destructive' });
-        setIsApplying(false); setApplyOpen(false);
-        return;
-      }
-    }
-
-    const { data, error } = await supabase
-      .from('exam_sessions')
-      .insert(inheritOrg<'exam_sessions'>({ exam_id: selectedExamId, applicant_id: user.id }))
-      .select()
-      .single();
-
-    if (error) {
-      toast({ title: '신청 실패', description: error.message, variant: 'destructive' });
-    } else {
-      // 초대코드 사용 처리 (테스트 모드 시험은 재사용 가능하므로 마킹 스킵)
-      if (inviteCode.trim()) {
-        const selectedExam = exams.find(e => e.id === selectedExamId);
-        if (!(selectedExam as any)?.is_test_mode) {
-          await supabase
-            .from('exam_invitations')
-            .update({ is_used: true, session_id: data.id })
-            .eq('exam_id', selectedExamId)
-            .eq('invite_code', inviteCode.trim().toUpperCase());
+        const { data: existing } = await supabase
+          .from('exam_sessions')
+          .select('id')
+          .eq('exam_id', selectedExamId)
+          .eq('applicant_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existing) {
+          await supabase.from('answers').delete().eq('session_id', existing.id);
+          await supabase.from('exam_sessions').update({
+            status: 'waiting', start_time: null, submit_time: null, score_total: null, is_flagged: false,
+          }).eq('id', existing.id);
+          toast({ title: '기존 세션 초기화 후 재사용합니다' });
+          setApplyOpen(false);
+          fetchSessions();
+          navigate(`/applicant/waiting-room/${existing.id}`);
+          return;
         }
       }
-      toast({ title: '응시 신청 완료' });
-      fetchSessions();
-      navigate(`/applicant/waiting-room/${data.id}`);
-    }
 
-    setIsApplying(false); setApplyOpen(false); setInviteCode('');
+      const { data: sessionId, error } = await supabase.rpc('apply_open_exam', { _exam_id: selectedExamId });
+      if (error || !sessionId) {
+        toast({ title: error?.message ?? '신청 실패', variant: 'destructive' });
+        return;
+      }
+      toast({ title: '응시 신청 완료' });
+      setApplyOpen(false);
+      fetchSessions();
+      navigate(`/applicant/waiting-room/${sessionId}`);
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   // 슈퍼관리자: 세션 초기화
