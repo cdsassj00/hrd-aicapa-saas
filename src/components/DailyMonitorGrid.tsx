@@ -149,16 +149,6 @@ export default function DailyMonitorGrid({ examId, roomName, roomUrl, sessionPro
       });
       callRef.current = call;
 
-      // 저품질 수신 강제 (대규모 시험 브라우저 부하 완화)
-      try {
-        call.updateReceiveSettings({
-          base: {
-            video: { layer: 0 },
-            screenVideo: { layer: 0 },
-          },
-        });
-      } catch {}
-
       const refresh = () => updateParticipants(call);
 
       call.on('joined-meeting', () => {
@@ -171,7 +161,19 @@ export default function DailyMonitorGrid({ examId, roomName, roomUrl, sessionPro
       call.on('track-started', refresh);
       call.on('track-stopped', refresh);
 
-      await call.join({ url: rUrl, token });
+      // 저품질 수신 강제 (대규모 시험 브라우저 부하 완화).
+      // join 전에 updateReceiveSettings 를 부르면 SDK 가 비동기로 거부해
+      // try/catch 에 잡히지 않는 오류가 났다 — join 설정으로 넘긴다.
+      await call.join({
+        url: rUrl,
+        token,
+        receiveSettings: {
+          base: {
+            video: { layer: 0 },
+            screenVideo: { layer: 0 },
+          },
+        },
+      });
     } catch (err) {
       console.error('Examiner join error:', err);
     } finally {
