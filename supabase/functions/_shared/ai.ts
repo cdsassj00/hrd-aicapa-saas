@@ -39,14 +39,17 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
     .replace(/\/+$/, "");
   const model = opts.model ?? Deno.env.get("AI_MODEL") ?? "gpt-4o-mini";
 
-  // 모델마다 토큰 상한 파라미터 이름이 다르다(max_tokens / max_completion_tokens).
-  // 400 을 받으면 반대쪽 이름으로 한 번 재시도한다.
-  // jsonMode 는 response_format=json_object 로 요청한다. 공급자에 따라 이 형식을
-  // 받지 않는다(예: "response_format.type: Input should be 'json_schema'" 400 —
-  // AI 문항 생성이 이 때문에 전부 실패했다). 그때는 빼고 다시 부르고, 본문에서
-  // JSON 만 골라낸다(프롬프트가 이미 JSON 만 내라고 지시한다).
+  // 모델·공급자마다 받지 않는 파라미터가 다르다. 400 이 그 파라미터를 지목하면
+  // 빼거나 바꿔서 다시 부른다(최대 3번). 실제로 겪은 것:
+  //   - response_format=json_object 거부 ("Input should be 'json_schema'")
+  //     → 빼고, 본문에서 JSON 만 골라낸다(프롬프트가 이미 JSON 만 내라고 지시한다)
+  //   - temperature 거부 ("`temperature` is deprecated for this model")
+  //   - 토큰 상한 이름 차이 (max_tokens ↔ max_completion_tokens)
+  // AI 문항 생성이 앞의 두 가지로 전부 실패했다(E2E 로 확인).
   let useResponseFormat = Boolean(opts.jsonMode);
-  const call = async (tokenParam: "max_tokens" | "max_completion_tokens") => {
+  let useTemperature = opts.temperature !== undefined;
+  let tokenParam: "max_tokens" | "max_completion_tokens" = "max_tokens";
+  const call = async () => {
     return await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -56,26 +59,22 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
       body: JSON.stringify({
         model,
         messages: opts.messages,
-        ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+        ...(useTemperature ? { temperature: opts.temperature } : {}),
         ...(opts.maxTokens !== undefined ? { [tokenParam]: opts.maxTokens } : {}),
         ...(useResponseFormat ? { response_format: { type: "json_object" } } : {}),
       }),
     });
   };
 
-  let res = await call("max_tokens");
-  if (res.status === 400 && useResponseFormat) {
+  let res = await call();
+  for (let attempt = 0; res.status === 400 && attempt < 3; attempt++) {
     const detail = await res.clone().text().catch(() => "");
-    if (detail.includes("response_format")) {
-      useResponseFormat = false;
-      res = await call("max_tokens");
-    }
-  }
-  if (res.status === 400 && opts.maxTokens !== undefined) {
-    const detail = await res.clone().text().catch(() => "");
-    if (detail.includes("max_completion_tokens") || detail.includes("max_tokens")) {
-      res = await call("max_completion_tokens");
-    }
+    if (useResponseFormat && detail.includes("response_format")) useResponseFormat = false;
+    else if (useTemperature && detail.includes("temperature")) useTemperature = false;
+    else if (opts.maxTokens !== undefined && tokenParam === "max_tokens" &&
+      (detail.includes("max_completion_tokens") || detail.includes("max_tokens"))) tokenParam = "max_completion_tokens";
+    else break;
+    res = await call();
   }
 
   // 호출부가 이미 429/402 를 구분해 처리하고 있어 타입을 나눠 던진다
