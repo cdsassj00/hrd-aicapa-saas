@@ -201,6 +201,15 @@ export async function createSandbox(
     network: networkPolicy(egressMode),
   });
   await sbx.commands.run(`mkdir -p ${WORK_DIR}`);
+  // 기본 템플릿에는 pandas 등이 없다. 데이터 분석 문항에서 에이전트가 import 실패를
+  // 몇 번 겪은 뒤 직접 설치하느라 응시자 시간과 토큰이 샜다(E2E 로 확인).
+  // 응시자를 기다리게 하지 않도록 백그라운드로 깐다. 근본 해결은 이 라이브러리를
+  // 미리 넣은 커스텀 템플릿을 E2B_TEMPLATE 로 지정하는 것이다.
+  if (!template) {
+    await sbx.commands
+      .run("pip install -q pandas matplotlib openpyxl >/tmp/pip-preinstall.log 2>&1", { background: true })
+      .catch(() => {});
+  }
   return wrap(sbx);
 }
 
