@@ -41,6 +41,11 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
 
   // 모델마다 토큰 상한 파라미터 이름이 다르다(max_tokens / max_completion_tokens).
   // 400 을 받으면 반대쪽 이름으로 한 번 재시도한다.
+  // jsonMode 는 response_format=json_object 로 요청한다. 공급자에 따라 이 형식을
+  // 받지 않는다(예: "response_format.type: Input should be 'json_schema'" 400 —
+  // AI 문항 생성이 이 때문에 전부 실패했다). 그때는 빼고 다시 부르고, 본문에서
+  // JSON 만 골라낸다(프롬프트가 이미 JSON 만 내라고 지시한다).
+  let useResponseFormat = Boolean(opts.jsonMode);
   const call = async (tokenParam: "max_tokens" | "max_completion_tokens") => {
     return await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
@@ -53,12 +58,19 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
         messages: opts.messages,
         ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
         ...(opts.maxTokens !== undefined ? { [tokenParam]: opts.maxTokens } : {}),
-        ...(opts.jsonMode ? { response_format: { type: "json_object" } } : {}),
+        ...(useResponseFormat ? { response_format: { type: "json_object" } } : {}),
       }),
     });
   };
 
   let res = await call("max_tokens");
+  if (res.status === 400 && useResponseFormat) {
+    const detail = await res.clone().text().catch(() => "");
+    if (detail.includes("response_format")) {
+      useResponseFormat = false;
+      res = await call("max_tokens");
+    }
+  }
   if (res.status === 400 && opts.maxTokens !== undefined) {
     const detail = await res.clone().text().catch(() => "");
     if (detail.includes("max_completion_tokens") || detail.includes("max_tokens")) {
@@ -77,7 +89,18 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
   const data = await res.json();
   const text = data?.choices?.[0]?.message?.content;
   if (typeof text !== "string") throw new Error("AI 응답에서 본문을 찾지 못했습니다");
-  return text;
+  return opts.jsonMode ? extractJson(text) : text;
+}
+
+/** 응답 본문에서 JSON 부분만 남긴다(```json 펜스나 앞뒤 설명문 제거). 못 찾으면 원문. */
+function extractJson(text: string): string {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const body = (fenced ? fenced[1] : text).trim();
+  const starts = [body.indexOf("{"), body.indexOf("[")].filter((i) => i >= 0);
+  if (!starts.length) return body;
+  const start = Math.min(...starts);
+  const end = Math.max(body.lastIndexOf("}"), body.lastIndexOf("]"));
+  return end > start ? body.slice(start, end + 1) : body;
 }
 
 // ---------------------------------------------------------------------------
