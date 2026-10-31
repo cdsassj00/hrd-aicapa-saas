@@ -2416,6 +2416,10 @@ export type Database = {
       }
       count_exam_participants: { Args: { _exam_id: string }; Returns: number }
       apply_open_exam: { Args: { _exam_id: string }; Returns: string }
+      approve_inquiry: {
+        Args: { _inquiry_id: string; _org_name?: string }
+        Returns: Database["public"]["Tables"]["organizations"]["Row"]
+      }
       create_org_invitation: {
         Args: {
           _email: string
