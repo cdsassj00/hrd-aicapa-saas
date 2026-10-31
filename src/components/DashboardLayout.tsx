@@ -20,6 +20,10 @@ export function DashboardLayout() {
     return <Navigate to={`/login?redirect=${encodeURIComponent(redirect)}`} replace />;
   }
 
+  // 응시자 리포트는 인쇄(PDF 저장)용이라 사이드바 없이 종이 폭으로 렌더링
+  const isReport = location.pathname.startsWith('/admin/report/');
+  if (isReport) return <Outlet />;
+
   if (isInExam) {
     return (
       <div className="min-h-screen flex flex-col w-full">
