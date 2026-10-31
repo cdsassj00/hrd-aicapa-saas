@@ -67,6 +67,8 @@ export default function ExamPage() {
   const [examTitle, setExamTitle] = useState('');
   const [examCustomTexts, setExamCustomTexts] = useState<ExamCustomTexts | null>(null);
   const [skipFaceMatch, setSkipFaceMatch] = useState(false);
+  // 현장(오프라인) 시험: 원격 감독(화상·녹화·얼굴 감지)을 하지 않는다(0047)
+  const [onsite, setOnsite] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState('');
   const [profileName, setProfileName] = useState('');
@@ -74,6 +76,9 @@ export default function ExamPage() {
   const [proctorError, setProctorError] = useState<string | null>(null);
   const [exemptions, setExemptions] = useState({ allow_no_screen_share: false, allow_no_webcam: false });
   const [sebBlocked, setSebBlocked] = useState(false);
+  useEffect(() => {
+    if (onsite) setExemptions({ allow_no_screen_share: true, allow_no_webcam: true });
+  }, [onsite]);
 
   const [screenSharedOnce, setScreenSharedOnce] = useState(false);
   const dailyDestroyRef = useRef<(() => void) | null>(null);
@@ -117,9 +122,10 @@ export default function ExamPage() {
       const data = (rows as any[] | null)?.[0];
       // SEB 안에서는 화면공유(getDisplayMedia)를 쓸 수 없고 SEB 가 화면을 잠그므로 화면공유 면제로 취급한다.
       const inSeb = isInSeb();
-      if (data || inSeb) setExemptions({
-        allow_no_screen_share: inSeb || !!data?.allow_no_screen_share,
-        allow_no_webcam: !!data?.allow_no_webcam,
+      const isOnsite = !!(session as any)?.exams?.onsite_mode;
+      if (data || inSeb || isOnsite) setExemptions({
+        allow_no_screen_share: inSeb || isOnsite || !!data?.allow_no_screen_share,
+        allow_no_webcam: isOnsite || !!data?.allow_no_webcam,
       });
     })();
   }, [session?.exam_id, currentUserEmail]);
@@ -255,6 +261,7 @@ export default function ExamPage() {
           setExamTitle(exam?.title || '');
           setExamCustomTexts((exam as any)?.custom_texts || null);
           setSkipFaceMatch(!!(exam as any)?.skip_face_match);
+          setOnsite(!!(exam as any)?.onsite_mode);
 
           const endMs = computeEndMs();
           if (endMs != null) {
@@ -291,6 +298,10 @@ export default function ExamPage() {
                   _session_id: sessionId!,
                   ...(proof ? { _seb_url: proof.url, _seb_hash: proof.hash } : {}),
                 });
+                if (r.error && /ONSITE_REQUIRED/.test(r.error.message)) {
+                  navigate(`/applicant/waiting-room/${sessionId}`, { replace: true });
+                  return r;
+                }
                 if (r.error && /SEB_REQUIRED/.test(r.error.message)) {
                   setSebBlocked(true);
                   return r;
@@ -1315,7 +1326,7 @@ export default function ExamPage() {
         videoEl={webcamVideoEl}
         sessionId={sessionId || ''}
         questionIndex={currentQ + 1}
-        enabled={!skipFaceMatch && proctorStatus.camOn && !proctoringDisabledForSet && !isSubmitting && (alertAllow('face_missing') || alertAllow('multiple_faces'))}
+        enabled={!onsite && !skipFaceMatch && proctorStatus.camOn && !proctoringDisabledForSet && !isSubmitting && (alertAllow('face_missing') || alertAllow('multiple_faces'))}
         notifyFaceMissing={alertAllow('face_missing')}
         notifyMultipleFaces={alertAllow('multiple_faces')}
       />
@@ -1340,7 +1351,7 @@ export default function ExamPage() {
       </Dialog>
 
       {/* Connection warning banner */}
-      {!proctorStatus.connected && !loading && !proctoringDisabledForSet && (
+      {!proctorStatus.connected && !loading && !proctoringDisabledForSet && !onsite && (
         <div className="flex items-center gap-2 px-6 py-2 bg-destructive/10 border-b text-[12px] text-destructive font-medium">
           <WifiOff className="h-4 w-4" />
           온라인 감독 기능이 정상 동작 중이지 않습니다. 우측 패널에서 재연결해 주세요.
@@ -1397,11 +1408,13 @@ export default function ExamPage() {
         </div>
         <div className="flex items-center gap-3">
           {/* Connection status icons */}
-          <div className="flex items-center gap-1.5">
+          {!onsite && <div className="flex items-center gap-1.5">
             {proctorStatus.camOn ? <Video className="h-3.5 w-3.5 text-success" /> : <VideoOff className="h-3.5 w-3.5 text-destructive" />}
             {proctorStatus.screenOn ? <Monitor className="h-3.5 w-3.5 text-success" /> : <MonitorOff className="h-3.5 w-3.5 text-destructive" />}
-          </div>
-          <RecordingStatusBadge status={recStatus} onRetry={recRetry} />
+          </div>}
+          {onsite
+            ? <span className="text-[11px] text-muted-foreground" data-testid="onsite-badge">현장 시험</span>
+            : <RecordingStatusBadge status={recStatus} onRetry={recRetry} />}
           {violationCount > 0 && <span className="text-[11px] text-destructive font-medium">부정행위 감지: {violationCount}회</span>}
           <span className="text-[12px] text-muted-foreground">
             {isPhasedExam
@@ -1719,7 +1732,7 @@ export default function ExamPage() {
             아래 칸을 채운다. 대화·실행·생성 파일은 서버에 기록되어 채점 근거가 된다. */}
         <div className={cn("shrink-0 flex flex-col border-l bg-muted/20 min-h-0", hasAgent ? "w-[440px]" : "w-[320px]")}>
           <div className={cn("space-y-4 p-4", hasAgent ? "shrink-0" : "flex-1 overflow-y-auto min-h-0")}>
-            {session?.exam_id && (
+            {session?.exam_id && !onsite && (
               <DailyProctor
                 examId={session.exam_id}
                 userName={profileName || '응시자'}

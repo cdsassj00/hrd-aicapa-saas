@@ -988,6 +988,7 @@ export type Database = {
           is_test_mode: boolean
           late_entry_minutes: number
           max_participants: number | null
+          onsite_mode: boolean
           org_id: string
           pass_score: number
           phase1_minutes: number
@@ -1027,6 +1028,7 @@ export type Database = {
           is_test_mode?: boolean
           late_entry_minutes?: number
           max_participants?: number | null
+          onsite_mode?: boolean
           org_id: string
           pass_score?: number
           phase1_minutes?: number
@@ -1066,6 +1068,7 @@ export type Database = {
           is_test_mode?: boolean
           late_entry_minutes?: number
           max_participants?: number | null
+          onsite_mode?: boolean
           org_id?: string
           pass_score?: number
           phase1_minutes?: number
@@ -2462,6 +2465,15 @@ export type Database = {
           question_id: string
           tool_req: string
         }[]
+      }
+      rotate_onsite_code: { Args: { _exam_id: string }; Returns: string }
+      staff_onsite_checkin: {
+        Args: { _session_id: string; _verify?: boolean }
+        Returns: undefined
+      }
+      verify_onsite_code: {
+        Args: { _code: string; _session_id: string }
+        Returns: string
       }
       get_exam_questions_for_session: {
         Args: { _seb_hash?: string; _seb_url?: string; _session_id: string }
