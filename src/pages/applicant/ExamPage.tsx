@@ -37,6 +37,8 @@ import remarkGfm from 'remark-gfm';
 import MarkdownView from '@/components/exam/MarkdownView';
 import { useExamRecorder } from '@/hooks/useExamRecorder';
 import RecordingStatusBadge from '@/components/exam/RecordingStatusBadge';
+import { getSebProof, isInSeb } from '@/lib/seb';
+import SebRequiredNotice from '@/components/exam/SebRequiredNotice';
 
 const categoryColors: Record<string, string> = {
   '생성형AI활용': 'bg-grade-green-bg text-grade-green border-grade-green/20',
@@ -71,6 +73,7 @@ export default function ExamPage() {
   const [proctorStatus, setProctorStatus] = useState({ camOn: false, screenOn: false, connected: false });
   const [proctorError, setProctorError] = useState<string | null>(null);
   const [exemptions, setExemptions] = useState({ allow_no_screen_share: false, allow_no_webcam: false });
+  const [sebBlocked, setSebBlocked] = useState(false);
 
   const [screenSharedOnce, setScreenSharedOnce] = useState(false);
   const dailyDestroyRef = useRef<(() => void) | null>(null);
@@ -112,9 +115,11 @@ export default function ExamPage() {
       // exam_invitations 는 운영진 전용이라 본인 초대장만 함수로 읽는다(0040).
       const { data: rows } = await supabase.rpc('get_my_exam_invitation', { _exam_id: session.exam_id });
       const data = (rows as any[] | null)?.[0];
-      if (data) setExemptions({
-        allow_no_screen_share: !!data.allow_no_screen_share,
-        allow_no_webcam: !!data.allow_no_webcam,
+      // SEB 안에서는 화면공유(getDisplayMedia)를 쓸 수 없고 SEB 가 화면을 잠그므로 화면공유 면제로 취급한다.
+      const inSeb = isInSeb();
+      if (data || inSeb) setExemptions({
+        allow_no_screen_share: inSeb || !!data?.allow_no_screen_share,
+        allow_no_webcam: !!data?.allow_no_webcam,
       });
     })();
   }, [session?.exam_id, currentUserEmail]);
@@ -280,7 +285,16 @@ export default function ExamPage() {
           try {
             [qsRes, ansRes] = await Promise.all([
               withRetry(async () => {
-                const r = await supabase.rpc('get_exam_questions_for_session', { _session_id: sessionId });
+                // SEB 필수 시험이면 SEB 가 준 Config Key 해시를 함께 보내 서버가 검증한다(0046).
+                const proof = await getSebProof();
+                const r = await supabase.rpc('get_exam_questions_for_session', {
+                  _session_id: sessionId!,
+                  ...(proof ? { _seb_url: proof.url, _seb_hash: proof.hash } : {}),
+                });
+                if (r.error && /SEB_REQUIRED/.test(r.error.message)) {
+                  setSebBlocked(true);
+                  return r;
+                }
                 if (r.error) throw r.error;
                 return r;
               }, 'questions'),
@@ -1213,6 +1227,10 @@ export default function ExamPage() {
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground">시험 데이터를 불러오는 중...</p></div>;
+  }
+
+  if (sebBlocked) {
+    return <SebRequiredNotice verifyFailed={isInSeb()} onBack={() => navigate('/applicant')} />;
   }
 
   if (questions.length === 0) {

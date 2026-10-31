@@ -23,6 +23,7 @@ import { questionTypeLabels } from '@/components/question-bank/questionTypes';
 import ExamCustomTextsEditor from '@/components/admin/ExamCustomTextsEditor';
 import { ExamCustomTexts } from '@/lib/defaultCustomTexts';
 import { ALERT_EVENT_DEFS } from '@/lib/alertEventTypes';
+import { downloadSebFile, parseSebKeys, sebForOrigin } from '@/lib/seb';
 
 const statusLabels: Record<ExamStatus, string> = { draft: '초안', open: '접수중', closed: '마감' };
 const regModeLabels: Record<string, string> = { open: '공개', invite_only: '초대전용', hybrid: '혼합' };
@@ -101,13 +102,18 @@ export default function ExamManagePage() {
     setPolishing(false);
   };
 
+  // 이 화면 origin 으로 만든 .seb 의 Config Key. 저장할 때 자동 등록한다.
+  const [sebAutoKey, setSebAutoKey] = useState('');
+  useEffect(() => { sebForOrigin(window.location.origin).then(r => setSebAutoKey(r.configKey)); }, []);
+
   const openEdit = (exam: any) => {
     // Convert UTC exam_date to local datetime-local format for the input
     const localDate = exam.exam_date ? new Date(exam.exam_date) : null;
     const localDateStr = localDate
       ? `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}T${String(localDate.getHours()).padStart(2, '0')}:${String(localDate.getMinutes()).padStart(2, '0')}`
       : '';
-    setEditExam({ ...exam, exam_date: localDateStr });
+    const extraKeys = (exam.seb_config_keys ?? []).filter((k: string) => k !== sebAutoKey);
+    setEditExam({ ...exam, exam_date: localDateStr, seb_extra_keys_text: extraKeys.join('\n') });
     setEditOpen(true);
   };
 
@@ -150,6 +156,10 @@ export default function ExamManagePage() {
       alert_event_types: Array.isArray(editExam.alert_event_types) ? editExam.alert_event_types : [],
       phased_enabled: editExam.phased_enabled || false,
       phase1_minutes: editExam.phased_enabled ? (Number(editExam.phase1_minutes) || 10) : 10,
+      seb_required: editExam.seb_required || false,
+      seb_config_keys: editExam.seb_required
+        ? [...new Set([sebAutoKey, ...parseSebKeys(editExam.seb_extra_keys_text ?? '')])]
+        : [],
     };
 
     if (editExam.id) {
@@ -468,6 +478,37 @@ export default function ExamManagePage() {
                   <span className="font-medium">⛔ 늦은 입실 차단</span>
                   <span className="text-muted-foreground ml-1">— 평가 시작 시각 이후로 입실 불가 (지각자 응시 X)</span>
                 </Label>
+              </div>
+              <div className="p-3 rounded-md border space-y-2" data-testid="seb-section">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="sebRequired"
+                    checked={editExam.seb_required || false}
+                    onCheckedChange={(v) => setEditExam((p: any) => ({ ...p, seb_required: !!v }))}
+                  />
+                  <Label htmlFor="sebRequired" className="text-[12px] cursor-pointer">
+                    <span className="font-medium">🔒 Safe Exam Browser 필수</span>
+                    <span className="text-muted-foreground ml-1">— 잠금 브라우저(SEB)에서만 문제를 받을 수 있음. 다른 프로그램·사이트 차단, 이 서비스 도메인만 허용</span>
+                  </Label>
+                </div>
+                {editExam.seb_required && (
+                  <div className="pl-6 space-y-2">
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-[12px]" onClick={() => downloadSebFile(window.location.origin)}>
+                      .seb 설정 파일 받기
+                    </Button>
+                    <p className="text-[11px] text-muted-foreground">
+                      응시자는 대기실에서 같은 파일을 직접 받을 수 있습니다. 저장하면 이 파일의 Config Key가 자동 등록됩니다.
+                    </p>
+                    <Label className="text-[11px]">직접 만든 SEB 설정의 Config Key (선택, 줄마다 1개)</Label>
+                    <Textarea
+                      rows={2}
+                      className="text-[11px] font-mono"
+                      placeholder="SEB Config Tool → Exam 탭의 Config Key (64자리)"
+                      value={editExam.seb_extra_keys_text ?? ''}
+                      onChange={(e) => setEditExam((p: any) => ({ ...p, seb_extra_keys_text: e.target.value }))}
+                    />
+                  </div>
+                )}
               </div>
               <div className="p-3 rounded-md border space-y-2">
                 <div className="flex items-center gap-2">
