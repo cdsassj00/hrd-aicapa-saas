@@ -2416,6 +2416,8 @@ export type Database = {
       }
       count_exam_participants: { Args: { _exam_id: string }; Returns: number }
       apply_open_exam: { Args: { _exam_id: string }; Returns: string }
+      grant_seats: { Args: { _org_id: string; _seats: number; _note?: string | null }; Returns: number }
+      org_seat_balance: { Args: { _org_id: string }; Returns: number }
       approve_inquiry: {
         Args: { _inquiry_id: string; _org_name?: string }
         Returns: Database["public"]["Tables"]["organizations"]["Row"]
