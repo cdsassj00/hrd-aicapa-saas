@@ -19,6 +19,7 @@ import { setProctorWebcam, getProctorWebcam } from '@/lib/proctorMedia';
 import { useAuth } from '@/contexts/AuthContext';
 import { isInSeb } from '@/lib/seb';
 import SebRequiredNotice from '@/components/exam/SebRequiredNotice';
+import OnsiteCodeCard from '@/components/waiting-room/OnsiteCodeCard';
 
 export default function WaitingRoom() {
   const { sessionId } = useParams();
@@ -30,7 +31,10 @@ export default function WaitingRoom() {
   const [loadError, setLoadError] = useState('');
   const [invitation, setInvitation] = useState<any>(null);
   const [checks, setChecks] = useState({ webcam: false, screen: false, smsOtp: false, agree: false, pledge: false, monitor: false, identity: false });
-  const skipChecks = exam?.skip_waiting_checks === true;
+  const onsite = exam?.onsite_mode === true;
+  const [onsiteVerified, setOnsiteVerified] = useState(false);
+  // 현장 시험은 원격 점검(웹캠·화면·이메일·신분증) 대신 입실 코드 하나로 대체한다(0047)
+  const skipChecks = exam?.skip_waiting_checks === true || onsite;
   const { role } = useAuth();
   const inSeb = isInSeb();
   const isStaff = role === 'org_admin' || role === 'org_owner' || role === 'examiner';
@@ -199,7 +203,16 @@ export default function WaitingRoom() {
     }
   }, [skipChecks]);
 
-  const allChecked = skipChecks ? checks.agree && checks.pledge : Object.values(checks).every(Boolean);
+  const allChecked = skipChecks
+    ? checks.agree && checks.pledge && (!onsite || onsiteVerified)
+    : Object.values(checks).every(Boolean);
+
+  // 이미 입실 확인된 세션이면(새로고침 등) 다시 묻지 않는다
+  useEffect(() => {
+    if (!onsite || !sessionId) return;
+    (supabase as any).from('exam_onsite_checkins').select('verified_at').eq('session_id', sessionId).maybeSingle()
+      .then(({ data }: any) => { if (data?.verified_at) setOnsiteVerified(true); });
+  }, [onsite, sessionId]);
   const canStart = allChecked && timeStatus === 'ok' && examStarted;
 
   // Auto-start when exam time arrives and all checks are done
@@ -419,7 +432,9 @@ export default function WaitingRoom() {
         <CardContent className="space-y-4">
           <h3>환경 점검</h3>
           <div className="space-y-3">
-            {skipChecks ? (
+            {onsite ? (
+              <OnsiteCodeCard sessionId={sessionId!} verified={onsiteVerified} onVerified={() => setOnsiteVerified(true)} />
+            ) : skipChecks ? (
               <div className="p-4 rounded-md border border-primary/30 bg-primary/5 text-center">
                 <CheckCircle2 className="h-5 w-5 text-primary mx-auto mb-2" />
                 <p className="text-[13px] font-medium">환경 점검이 면제되었습니다</p>

@@ -24,6 +24,7 @@ import ExamCustomTextsEditor from '@/components/admin/ExamCustomTextsEditor';
 import { ExamCustomTexts } from '@/lib/defaultCustomTexts';
 import { ALERT_EVENT_DEFS } from '@/lib/alertEventTypes';
 import { downloadSebFile, parseSebKeys, sebForOrigin } from '@/lib/seb';
+import OnsiteExamPanel from '@/components/admin/OnsiteExamPanel';
 
 const statusLabels: Record<ExamStatus, string> = { draft: '초안', open: '접수중', closed: '마감' };
 const regModeLabels: Record<string, string> = { open: '공개', invite_only: '초대전용', hybrid: '혼합' };
@@ -117,6 +118,12 @@ export default function ExamManagePage() {
     setEditOpen(true);
   };
 
+  // 현장 시험으로 저장할 때 입실 코드가 없으면 발급 (0047)
+  const ensureOnsiteCode = async (examId: string) => {
+    const { data } = await (supabase as any).from('exam_onsite_codes').select('exam_id').eq('exam_id', examId).maybeSingle();
+    if (!data) await supabase.rpc('rotate_onsite_code', { _exam_id: examId });
+  };
+
   const handleSave = async () => {
     // Convert local datetime-local value to proper ISO string with timezone
     const examDateISO = editExam.exam_date ? new Date(editExam.exam_date).toISOString() : new Date().toISOString();
@@ -156,6 +163,7 @@ export default function ExamManagePage() {
       alert_event_types: Array.isArray(editExam.alert_event_types) ? editExam.alert_event_types : [],
       phased_enabled: editExam.phased_enabled || false,
       phase1_minutes: editExam.phased_enabled ? (Number(editExam.phase1_minutes) || 10) : 10,
+      onsite_mode: editExam.onsite_mode || false,
       seb_required: editExam.seb_required || false,
       seb_config_keys: editExam.seb_required
         ? [...new Set([sebAutoKey, ...parseSebKeys(editExam.seb_extra_keys_text ?? '')])]
@@ -165,6 +173,7 @@ export default function ExamManagePage() {
     if (editExam.id) {
       const { error } = await supabase.from('exams').update(payload).eq('id', editExam.id);
       if (error) { toast({ title: '수정 실패', description: error.message, variant: 'destructive' }); return; }
+      if (payload.onsite_mode) await ensureOnsiteCode(editExam.id);
     } else {
       if (!activeOrgId) { toast({ title: '생성 실패', description: '조직을 먼저 선택해 주세요.', variant: 'destructive' }); return; }
       const { data, error } = await supabase
@@ -173,6 +182,7 @@ export default function ExamManagePage() {
         .select()
         .single();
       if (error) { toast({ title: '생성 실패', description: error.message, variant: 'destructive' }); return; }
+      if (data && payload.onsite_mode) await ensureOnsiteCode(data.id);
 
       if (data) {
         try {
@@ -478,6 +488,26 @@ export default function ExamManagePage() {
                   <span className="font-medium">⛔ 늦은 입실 차단</span>
                   <span className="text-muted-foreground ml-1">— 평가 시작 시각 이후로 입실 불가 (지각자 응시 X)</span>
                 </Label>
+              </div>
+              <div className="p-3 rounded-md border space-y-2" data-testid="onsite-section">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="onsiteMode"
+                    checked={editExam.onsite_mode || false}
+                    onCheckedChange={(v) => setEditExam((p: any) => ({ ...p, onsite_mode: !!v }))}
+                  />
+                  <Label htmlFor="onsiteMode" className="text-[12px] cursor-pointer">
+                    <span className="font-medium">🏢 현장(오프라인) 시험</span>
+                    <span className="text-muted-foreground ml-1">— 시험장에서 감독관이 신분증 확인 후 입실 코드 배부. 웹캠·화면 녹화·신분증 촬영·얼굴 대조·이메일 인증을 하지 않음</span>
+                  </Label>
+                </div>
+                {editExam.onsite_mode && (
+                  <div className="pl-6">
+                    {editExam.id
+                      ? <OnsiteExamPanel examId={editExam.id} />
+                      : <p className="text-[11px] text-muted-foreground">저장하면 입실 코드가 발급됩니다.</p>}
+                  </div>
+                )}
               </div>
               <div className="p-3 rounded-md border space-y-2" data-testid="seb-section">
                 <div className="flex items-center gap-2">
