@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Send, Bot, Loader2, Zap, Download, Search, Table2, ExternalLink, FileDown, Check, X, Package, Upload } from 'lucide-react';
+import { Eye, Send, Bot, Loader2, Zap, Download, Search, Table2, ExternalLink, FileDown, Check, X, Package, Upload, FileText } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { QUESTION_SELECT, toLegacyQuestion } from '@/lib/questionShape';
@@ -640,6 +641,11 @@ export default function GradingPage() {
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(s.id)}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
+                    {s.status !== 'submitted' && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="응시자 리포트" aria-label="응시자 리포트" asChild>
+                        <Link to={`/admin/report/${s.id}`}><FileText className="h-3.5 w-3.5" /></Link>
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               );

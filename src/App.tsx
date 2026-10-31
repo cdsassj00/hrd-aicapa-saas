@@ -19,6 +19,7 @@ import EventLogPage from "@/pages/examiner/EventLogPage";
 import ExamManagePage from "@/pages/admin/ExamManagePage";
 import QuestionBankPage from "@/pages/admin/QuestionBankPage";
 import GradingPage from "@/pages/admin/GradingPage";
+import CandidateReportPage from "@/pages/admin/CandidateReportPage";
 import CertificationsPage from "@/pages/admin/CertificationsPage";
 import StatsPage from "@/pages/admin/StatsPage";
 import OrgMembersPage from "@/pages/admin/OrgMembersPage";
@@ -89,6 +90,7 @@ function AuthGate() {
         <Route path="/admin/exams" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><ExamManagePage /></ProtectedRoute>} />
         <Route path="/admin/questions" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><QuestionBankPage /></ProtectedRoute>} />
         <Route path="/admin/grading" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><GradingPage /></ProtectedRoute>} />
+        <Route path="/admin/report/:sessionId" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><CandidateReportPage /></ProtectedRoute>} />
         <Route path="/admin/certifications" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner', 'viewer']}><CertificationsPage /></ProtectedRoute>} />
         <Route path="/admin/stats" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner', 'viewer']}><StatsPage /></ProtectedRoute>} />
         <Route path="/admin/members" element={<ProtectedRoute allowedRoles={['org_admin', 'org_owner']}><OrgMembersPage /></ProtectedRoute>} />
