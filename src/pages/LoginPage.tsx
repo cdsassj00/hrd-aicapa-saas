@@ -39,7 +39,7 @@ export default function LoginPage() {
   const [otpStep, setOtpStep] = useState<'info' | 'verify'>('info');
   const [otpCode, setOtpCode] = useState('');
   const [otpSending, setOtpSending] = useState(false);
-  const { signIn, signUp, signOut, user, role, loading } = useAuth();
+  const { signIn, signUp, signOut, user, role, loading, isPlatformAdmin, memberships } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { settings } = useSiteSettings();
@@ -98,10 +98,12 @@ export default function LoginPage() {
     if (!loading && user && !wantSignup) {
       const params = new URLSearchParams(window.location.search);
       const invite = params.get('invite');
-      const target = getSafeRedirect() || routes[role] || '/applicant';
+      // 조직에 속하지 않은 플랫폼 운영자는 운영 화면으로 보낸다.
+      const home = isPlatformAdmin && memberships.length === 0 ? '/platform' : routes[role];
+      const target = getSafeRedirect() || home || '/applicant';
       navigate(invite ? `${target}?invite=${invite}` : target, { replace: true });
     }
-  }, [loading, user, role, navigate, redirectParam, wantSignup]);
+  }, [loading, user, role, navigate, redirectParam, wantSignup, isPlatformAdmin, memberships]);
 
   useEffect(() => {
     if (user || loading) return;
