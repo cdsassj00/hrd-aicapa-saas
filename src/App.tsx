@@ -47,10 +47,12 @@ const routes = {
 } as const;
 
 function HomeRedirect() {
-  const { user, role, loading, needsOnboarding } = useAuth();
+  const { user, role, loading, needsOnboarding, isPlatformAdmin } = useAuth();
 
   if (loading) return <FullscreenLoader message="세션 확인 중..." />;
   if (!user) return <Navigate to="/login" replace />;
+  // 조직에 속하지 않은 플랫폼 운영자는 운영 화면으로(온보딩은 관리자 후보용이다).
+  if (needsOnboarding && isPlatformAdmin) return <Navigate to="/platform" replace />;
   // 소속 조직이 없으면 볼 수 있는 데이터가 하나도 없다 — 온보딩으로.
   if (needsOnboarding) return <Navigate to="/onboarding" replace />;
 

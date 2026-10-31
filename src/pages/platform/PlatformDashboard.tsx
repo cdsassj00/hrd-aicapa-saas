@@ -17,7 +17,7 @@ type Org = { id: string; name: string; slug: string; status: string; created_at:
 type Inquiry = {
   id: string; company: string; contact_name: string | null; email: string | null; phone: string | null;
   inquiry_type: string | null; headcount: string | null; timeframe: string | null; source: string | null;
-  message: string | null; status: string; created_at: string;
+  message: string | null; status: string; created_at: string; org_id: string | null;
 };
 
 export default function PlatformDashboard() {
@@ -49,6 +49,23 @@ export default function PlatformDashboard() {
       setInquiries(prev);
       toast({ title: '상태 변경 실패', description: error.message, variant: 'destructive' });
     }
+  };
+
+  // 승인 = 요청자 회사명으로 조직을 만들고 요청자를 소유자로 넣는다(0043).
+  // 예전에는 상태 라벨만 바꿀 수 있어서, 승인해도 요청자는 계속 "조직 없음"이었다.
+  const approve = async (i: Inquiry) => {
+    const name = window.prompt(
+      `${i.contact_name || i.email} 님을 관리자로 하는 조직을 개설합니다.\n조직명(회사·기관명)을 확인해 주세요.`,
+      i.company === '(개인 가입자)' ? '' : i.company,
+    );
+    if (!name?.trim()) return;
+    const { data, error } = await supabase.rpc('approve_inquiry', { _inquiry_id: i.id, _org_name: name.trim() });
+    if (error) {
+      toast({ title: '승인 실패', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: '승인 완료', description: `"${(data as any)?.name ?? name}" 조직이 개설되었습니다. 요청자가 다시 로그인하면 관리자 화면으로 들어갑니다.` });
+    void load();
   };
 
   const newCount = inquiries.filter(i => i.status === '신규').length;
@@ -94,7 +111,7 @@ export default function PlatformDashboard() {
                     <TableRow>
                       <TableHead>접수일</TableHead><TableHead>회사</TableHead><TableHead>담당자</TableHead>
                       <TableHead>연락처</TableHead><TableHead>유형</TableHead><TableHead>규모/시기</TableHead>
-                      <TableHead>내용</TableHead><TableHead className="w-[130px]">상태</TableHead>
+                      <TableHead>내용</TableHead><TableHead className="w-[130px]">상태</TableHead><TableHead>승인</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -115,10 +132,17 @@ export default function PlatformDashboard() {
                             </SelectContent>
                           </Select>
                         </TableCell>
+                        <TableCell>
+                          {i.org_id
+                            ? <span className="text-xs text-muted-foreground">개설됨 · {orgs.find(o => o.id === i.org_id)?.name ?? '조직'}</span>
+                            : i.inquiry_type?.includes('가입')
+                              ? <Button size="sm" className="h-8" onClick={() => void approve(i)}>승인</Button>
+                              : <span className="text-xs text-muted-foreground">-</span>}
+                        </TableCell>
                       </TableRow>
                     ))}
                     {inquiries.length === 0 && !loading && (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">접수된 문의가 없습니다.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">접수된 문의가 없습니다.</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>

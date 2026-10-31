@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
-  const { user, role, loading, needsOnboarding } = useAuth();
+  const { user, role, loading, needsOnboarding, isPlatformAdmin } = useAuth();
   const location = useLocation();
 
   if (loading) return <FullscreenLoader message="권한 확인 중..." />;
@@ -26,7 +26,7 @@ export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) 
   // 여기서 온보딩으로 보내면 코드가 사라지고, 초대받은 수강생이 "조직 없음 →
   // 승인 요청" 화면(관리자 후보용)에 갇힌다(E2E 로 확인).
   const hasInvite = location.pathname === '/applicant' && new URLSearchParams(location.search).has('invite');
-  if (needsOnboarding && !hasInvite) return <Navigate to="/onboarding" replace />;
+  if (needsOnboarding && !hasInvite) return <Navigate to={isPlatformAdmin ? '/platform' : '/onboarding'} replace />;
 
   if (!allowedRoles.includes(role)) {
     const routes: Record<UserRole, string> = {
