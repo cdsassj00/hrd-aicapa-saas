@@ -16,6 +16,9 @@ import IdentityCheckCard from '@/components/waiting-room/IdentityCheckCard';
 import { mergeCustomTexts, ExamCustomTexts } from '@/lib/defaultCustomTexts';
 import { trackAction } from '@/lib/userActions';
 import { setProctorWebcam, getProctorWebcam } from '@/lib/proctorMedia';
+import { useAuth } from '@/contexts/AuthContext';
+import { isInSeb } from '@/lib/seb';
+import SebRequiredNotice from '@/components/exam/SebRequiredNotice';
 
 export default function WaitingRoom() {
   const { sessionId } = useParams();
@@ -28,6 +31,11 @@ export default function WaitingRoom() {
   const [invitation, setInvitation] = useState<any>(null);
   const [checks, setChecks] = useState({ webcam: false, screen: false, smsOtp: false, agree: false, pledge: false, monitor: false, identity: false });
   const skipChecks = exam?.skip_waiting_checks === true;
+  const { role } = useAuth();
+  const inSeb = isInSeb();
+  const isStaff = role === 'org_admin' || role === 'org_owner' || role === 'examiner';
+  // SEB 필수 시험: 응시자는 SEB 밖에서 입실할 수 없다. 운영진 미리보기는 서버(0046)와 같이 면제.
+  const sebBlocked = exam?.seb_required === true && !inSeb && !isStaff;
   const [checking, setChecking] = useState({ screen: false });
   const [starting, setStarting] = useState(false);
   const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
@@ -178,6 +186,11 @@ export default function WaitingRoom() {
       setChecks(p => ({ ...p, screen: true }));
     }
   }, [allowNoScreenShare]);
+
+  // SEB 안: 화면공유 API 가 없고 SEB 가 화면·모니터를 잠그므로 두 점검은 통과로 처리
+  useEffect(() => {
+    if (inSeb) setChecks(p => ({ ...p, screen: true, monitor: true }));
+  }, [inSeb]);
 
   // Skip all hardware checks when exam-level skip is enabled
   useEffect(() => {
@@ -354,6 +367,10 @@ export default function WaitingRoom() {
     );
   }
 
+  if (sebBlocked) {
+    return <SebRequiredNotice onBack={() => navigate('/applicant')} />;
+  }
+
   const instructions = exam.instructions || '';
   const examDate = new Date(exam.exam_date);
   const ct = mergeCustomTexts(exam.custom_texts as ExamCustomTexts | null);
@@ -411,7 +428,7 @@ export default function WaitingRoom() {
             ) : (
             <>
             {/* Dual Monitor Check — skip if exam allows dual monitors */}
-            {allowDualMonitor ? null : (
+            {allowDualMonitor || inSeb ? null : (
               <DualMonitorDetector onResult={(ok) => setChecks(p => ({ ...p, monitor: ok }))} descOverride={ct.waiting_room.monitor_desc} />
             )}
 
@@ -435,7 +452,16 @@ export default function WaitingRoom() {
             />
             )}
 
-            {/* Screen */}
+            {/* Screen — SEB 안에서는 SEB 가 화면을 잠그므로 생략 */}
+            {inSeb ? (
+              <div className="flex items-center justify-between p-3 rounded-md border bg-card" data-testid="seb-active">
+                <div className="flex items-center gap-3">
+                  <span className="text-[13px] font-medium">Safe Exam Browser 잠금 모드</span>
+                  <span className="text-[11px] text-muted-foreground">화면공유·모니터 점검을 SEB가 대신합니다</span>
+                </div>
+                <Badge variant="secondary" className="text-[10px]">SEB</Badge>
+              </div>
+            ) : (
             <CheckItem
               icon={<Monitor className="h-4 w-4 text-muted-foreground" />}
               title="3. 화면 공유 허용"
@@ -444,6 +470,7 @@ export default function WaitingRoom() {
               checking={checking.screen}
               onCheck={checkScreen}
             />
+            )}
 
 
             {/* Email OTP */}

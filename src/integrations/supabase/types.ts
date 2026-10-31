@@ -995,6 +995,8 @@ export type Database = {
           proctoring: boolean
           registration_mode: Database["public"]["Enums"]["registration_mode"]
           require_identity: boolean
+          seb_config_keys: string[]
+          seb_required: boolean
           skip_face_match: boolean
           skip_waiting_checks: boolean
           status: Database["public"]["Enums"]["exam_status"]
@@ -1032,6 +1034,8 @@ export type Database = {
           proctoring?: boolean
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           require_identity?: boolean
+          seb_config_keys?: string[]
+          seb_required?: boolean
           skip_face_match?: boolean
           skip_waiting_checks?: boolean
           status?: Database["public"]["Enums"]["exam_status"]
@@ -1069,6 +1073,8 @@ export type Database = {
           proctoring?: boolean
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           require_identity?: boolean
+          seb_config_keys?: string[]
+          seb_required?: boolean
           skip_face_match?: boolean
           skip_waiting_checks?: boolean
           status?: Database["public"]["Enums"]["exam_status"]
@@ -2458,7 +2464,7 @@ export type Database = {
         }[]
       }
       get_exam_questions_for_session: {
-        Args: { _session_id: string }
+        Args: { _seb_hash?: string; _seb_url?: string; _session_id: string }
         Returns: {
           allow_file_upload: boolean
           attachments: Json

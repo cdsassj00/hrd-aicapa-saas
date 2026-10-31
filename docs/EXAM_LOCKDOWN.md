@@ -69,6 +69,25 @@ chrome --kiosk --incognito \
   https://app.ai-hrd.com/exam
 ```
 
+## 2-1. Safe Exam Browser(SEB) 필수 회차 — 개인 PC 차단
+
+관리형 크롬이 없는 개인 PC에서도 **차단**이 필요하면 회차 설정에서
+"🔒 Safe Exam Browser 필수"를 켭니다(0046). SEB는 무료 오픈소스 잠금 브라우저
+(Windows·macOS·iPad)로, 실행 중에는 다른 프로그램 전환·다른 사이트 접속·
+화면 캡처·복수 모니터를 막습니다.
+
+| 단계 | 동작 | 코드 |
+|---|---|---|
+| 설정 파일 | 앱이 회차용 `.seb`(XML plist)를 만든다. 시작 URL = `/applicant`, URL 필터 = 앱 도메인 + `*.supabase.co`, 웹캠·마이크 허용, 모니터 1대 | `src/lib/seb.ts` `buildSebSettings` |
+| 키 등록 | 같은 설정의 Config Key(SHA-256)를 계산해 `exams.seb_config_keys`에 저장. 직접 만든 설정의 키도 추가 가능 | `ExamManagePage` |
+| 응시자 | SEB 밖이면 대기실·응시 화면이 설치 안내와 `.seb` 받기를 띄운다 | `SebRequiredNotice` |
+| 서버 검증 | SEB JS API가 주는 `SHA256(현재 URL + Config Key)`를 문항 RPC가 재계산해 비교. 실패하면 문항을 주지 않는다 | `get_exam_questions_for_session` |
+
+- SEB 안에서는 `getDisplayMedia`가 없으므로 화면공유 점검·녹화는 생략하고(SEB가 화면을 잠금), 웹캠 감독은 그대로 합니다.
+- 운영진(감독·관리자)은 SEB 없이 미리보기할 수 있습니다.
+- **배포 전 확인**: Config Key 계산은 SEB 문서·Moodle 구현과 같은 규칙이지만, 실제 SEB 앱(Windows·macOS)에서 키가 일치하는지는 실기기로 한 번 확인해야 합니다. 불일치하면 SEB Config Tool에 표시되는 Config Key를 "직접 만든 설정의 Config Key"에 붙여 넣으면 됩니다.
+- 한계: `.seb` 파일과 Config Key는 비밀이 아닙니다. 개발 지식이 있는 응시자는 일반 브라우저에서 해시를 흉내 낼 수 있습니다(Moodle 등 모든 SEB 연동의 공통 한계). 웹캠 감독과 과정 로그가 2차 방어선입니다.
+
 ## 3. 샌드박스 송신을 좁혀야 하는 경우
 
 기본은 개방입니다. 아래 경우에만 `SANDBOX_EGRESS=allowlist` 로 바꿉니다.
