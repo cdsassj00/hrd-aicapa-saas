@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 // Edge Function 의 순수 결제 로직. fetch 를 주입받으므로 네트워크 없이 검증한다.
 import {
-  PRO_PLAN, TossApiError, addOneMonth, basicAuth, chargeBilling, issueBillingKey, makeOrderId, withVat,
+  PRO_PLAN, SEAT_PRODUCT, TossApiError, addOneMonth, basicAuth, chargeBilling, confirmPayment, issueBillingKey,
+  makeOrderId, makeSeatOrderId, seatAmount, seatOrderName, withVat,
 } from '../../supabase/functions/_shared/tossBilling';
 
 describe('withVat', () => {
@@ -59,5 +60,33 @@ describe('토스 API 호출', () => {
     const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'REJECT_CARD_COMPANY', message: '카드사 거절' }), { status: 400 }));
     await expect(issueBillingKey(fetchFn, 'sk', 'a', 'c')).rejects.toMatchObject({ code: 'REJECT_CARD_COMPANY', message: '카드사 거절' });
     await expect(issueBillingKey(fetchFn, 'sk', 'a', 'c')).rejects.toBeInstanceOf(TossApiError);
+  });
+});
+
+describe('응시권(1명 = 1회 응시)', () => {
+  it('단가는 랜딩·환불정책 표기 1인당 25,000원(부가세 별도)', () => {
+    expect(SEAT_PRODUCT.unitSupplyAmount).toBe(25_000);
+    expect(seatAmount(1)).toBe(27_500);
+    expect(seatAmount(10)).toBe(275_000);
+  });
+  it('수량은 1~1000 정수만', () => {
+    expect(() => seatAmount(0)).toThrow();
+    expect(() => seatAmount(1.5)).toThrow();
+    expect(() => seatAmount(1001)).toThrow();
+  });
+  it('주문명·주문번호 형식', () => {
+    expect(seatOrderName(30)).toBe('AI 역량평가 응시권 30명분');
+    const id = makeSeatOrderId('3f2a9c1e-1111-2222-3333-444455556666', new Date('2026-10-31T06:00:00Z'));
+    expect(id).toMatch(/^seat-[A-Za-z0-9_-]{6,64}$/);
+    expect(id.length).toBeLessThanOrEqual(64);
+  });
+  it('결제 승인은 /v1/payments/confirm 에 orderId 를 멱등 키로 보낸다', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify({ paymentKey: 'pk', orderId: 'seat-1', status: 'DONE', totalAmount: 27500 }), { status: 200 }));
+    const r = await confirmPayment(fetchFn, 'sk', { paymentKey: 'pk', orderId: 'seat-1-abcdef', amount: 27500 });
+    expect(r.status).toBe('DONE');
+    const [url, init] = fetchFn.mock.calls[0];
+    expect(url).toBe('https://api.tosspayments.com/v1/payments/confirm');
+    expect(init.headers['Idempotency-Key']).toBe('seat-1-abcdef');
+    expect(JSON.parse(init.body)).toEqual({ paymentKey: 'pk', orderId: 'seat-1-abcdef', amount: 27500 });
   });
 });

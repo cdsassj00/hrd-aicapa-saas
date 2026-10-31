@@ -118,3 +118,52 @@ export function chargeBilling(fetchFn: FetchLike, secretKey: string, input: Char
   const { billingKey, ...body } = input;
   return post<ChargeResult>(fetchFn, secretKey, `/v1/billing/${encodeURIComponent(billingKey)}`, body, input.orderId);
 }
+
+// ---------------------------------------------------------------------------
+// 응시권(1명 = 1회 응시) 선불 구매 — 일반 결제(1회)
+//
+// 정기결제 심사 전에도 팔 수 있도록 결제창에서 한 번 결제하고, 서버가 승인(confirm)한다.
+// 흐름: 서버가 주문 생성(금액 확정) → 브라우저 requestPayment → successUrl 로
+//       paymentKey·orderId·amount → 서버가 주문 금액과 대조 후 /v1/payments/confirm.
+// 일반결제 MID 의 키는 TOSS_PAYMENT_SECRET_KEY 에 둔다(없으면 TOSS_SECRET_KEY).
+// ---------------------------------------------------------------------------
+
+/** 단가는 랜딩(#pricing)·환불정책(refund.html)의 "1인당 25,000원(부가세 별도)"과 같아야 한다. */
+export const SEAT_PRODUCT = {
+  orderName: "AI 역량평가 응시권",
+  /** 1명분 공급가(부가세 별도) */
+  unitSupplyAmount: 25_000,
+  maxSeatsPerOrder: 1000,
+} as const;
+
+/** 수량 → 부가세 포함 결제 금액. 수량은 1 이상 정수만. */
+export function seatAmount(seats: number): number {
+  if (!Number.isInteger(seats) || seats < 1 || seats > SEAT_PRODUCT.maxSeatsPerOrder) {
+    throw new Error(`invalid seats: ${seats}`);
+  }
+  return withVat(SEAT_PRODUCT.unitSupplyAmount * seats);
+}
+
+export function seatOrderName(seats: number): string {
+  return `${SEAT_PRODUCT.orderName} ${seats}명분`;
+}
+
+export function makeSeatOrderId(orgId: string, now: Date): string {
+  return makeOrderId(orgId, now).replace(/^pro-/, "seat-");
+}
+
+export interface ConfirmResult {
+  paymentKey: string;
+  orderId: string;
+  status: string;
+  totalAmount: number;
+  approvedAt?: string;
+  method?: string;
+}
+
+/** 결제창 결제를 승인한다. orderId 를 멱등 키로 써서 재시도가 이중 승인이 되지 않게 한다. */
+export function confirmPayment(
+  fetchFn: FetchLike, secretKey: string, input: { paymentKey: string; orderId: string; amount: number },
+) {
+  return post<ConfirmResult>(fetchFn, secretKey, "/v1/payments/confirm", input, input.orderId);
+}
