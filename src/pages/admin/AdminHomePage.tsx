@@ -50,6 +50,7 @@ export default function AdminHomePage() {
   const [stats, setStats] = useState({ openExams: 0, monthSessions: 0, toGrade: 0, members: 0 });
   const [recent, setRecent] = useState<RecentExam[]>([]);
   const [sub, setSub] = useState<Sub>(null);
+  const [seats, setSeats] = useState<number | null>(null);
 
   useEffect(() => {
     if (!activeOrgId) return;
@@ -60,7 +61,7 @@ export default function AdminHomePage() {
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
 
-      const [examsRes, monthRes, gradeRes, memberRes, subRes] = await Promise.all([
+      const [examsRes, monthRes, gradeRes, memberRes, subRes, orgRes, seatRes] = await Promise.all([
         supabase.from('exams').select('id, title, status, exam_date, duration_minutes')
           .eq('org_id', activeOrgId).order('created_at', { ascending: false }),
         supabase.from('exam_sessions').select('id', { count: 'exact', head: true })
@@ -71,6 +72,8 @@ export default function AdminHomePage() {
           .eq('org_id', activeOrgId).eq('status', 'active'),
         db.from('subscriptions').select('status, current_period_end, plans(name, code)')
           .eq('org_id', activeOrgId).maybeSingle(),
+        db.from('organizations').select('seat_enforced').eq('id', activeOrgId).maybeSingle(),
+        db.rpc('org_seat_balance', { _org_id: activeOrgId }),
       ]);
       if (cancelled) return;
       const exams = (examsRes.data ?? []) as RecentExam[];
@@ -82,6 +85,8 @@ export default function AdminHomePage() {
       });
       setRecent(exams.slice(0, 5));
       setSub((subRes.data as unknown as Sub) ?? null);
+      // 응시권으로 과금되는 조직만 남은 수량을 보여 준다(0044). 아니면 숨긴다.
+      setSeats((orgRes.data as { seat_enforced?: boolean } | null)?.seat_enforced ? ((seatRes.data as number | null) ?? 0) : null);
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -111,6 +116,11 @@ export default function AdminHomePage() {
               <Link to="/admin/billing" className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-indigo-200 hover:bg-white">
                 <CreditCard className="h-3 w-3" /> {planName}
               </Link>
+              {seats !== null && sub?.status !== 'active' && (
+                <Link to="/admin/billing" className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 hover:bg-white ${seats > 0 ? 'bg-white/80 text-indigo-700 ring-indigo-200' : 'bg-red-50 text-red-700 ring-red-200'}`}>
+                  응시권 {seats}명분 남음
+                </Link>
+              )}
             </div>
             <h1 className="mt-1.5 text-[22px] font-semibold tracking-tight text-slate-900">
               안녕하세요{firstName ? `, ${firstName}님` : ''}

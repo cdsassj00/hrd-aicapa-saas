@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { openBillingAuth, TOSS_CLIENT_KEY } from '@/lib/tossSdk';
 import { CreditCard, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import SeatPurchaseCard from '@/components/billing/SeatPurchaseCard';
 
 // 판매 단위 — supabase/functions/_shared/tossBilling.ts 의 PRO_PLAN, 랜딩 #pricing,
 // refund.html 과 같은 값이어야 한다(카드사 심사가 페이지 금액과 결제 금액을 대조).
@@ -162,6 +163,8 @@ export default function BillingPage() {
           <AlertDescription>{result.text}</AlertDescription>
         </Alert>
       )}
+
+      <SeatPurchaseCard />
 
       <Card>
         <CardHeader>

@@ -5,6 +5,8 @@
 const SDK_URL = 'https://js.tosspayments.com/v2/standard';
 
 export const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY?.trim() ?? '';
+/** 일반 결제(1회) MID 의 클라이언트 키. 정기결제(빌링) MID 와 다를 수 있다. 없으면 위 키를 쓴다. */
+export const TOSS_PAYMENT_CLIENT_KEY = import.meta.env.VITE_TOSS_PAYMENT_CLIENT_KEY?.trim() || TOSS_CLIENT_KEY;
 
 interface TossBillingAuthRequest {
   method: 'CARD';
@@ -14,8 +16,20 @@ interface TossBillingAuthRequest {
   customerName?: string;
 }
 
+interface TossPaymentRequest {
+  method: 'CARD';
+  amount: { currency: 'KRW'; value: number };
+  orderId: string;
+  orderName: string;
+  successUrl: string;
+  failUrl: string;
+  customerEmail?: string;
+  customerName?: string;
+}
+
 interface TossPaymentInstance {
   requestBillingAuth(req: TossBillingAuthRequest): Promise<void>;
+  requestPayment(req: TossPaymentRequest): Promise<void>;
 }
 
 interface TossPaymentsInstance {
@@ -54,4 +68,14 @@ export async function openBillingAuth(customerKey: string, req: Omit<TossBilling
   if (!window.TossPayments) throw new Error('결제 모듈 초기화에 실패했습니다.');
   const toss = window.TossPayments(TOSS_CLIENT_KEY);
   await toss.payment({ customerKey }).requestBillingAuth({ method: 'CARD', ...req });
+}
+
+/** 일반 결제(1회) 결제창. 성공 시 successUrl 로 paymentKey·orderId·amount 가 붙어 돌아온다.
+ *  금액·주문번호는 서버(seat-checkout create)가 정한 값을 그대로 넘긴다. */
+export async function openPayment(req: Omit<TossPaymentRequest, 'method'>): Promise<void> {
+  if (!TOSS_PAYMENT_CLIENT_KEY) throw new Error('결제 설정(VITE_TOSS_PAYMENT_CLIENT_KEY)이 없습니다.');
+  await loadScript();
+  if (!window.TossPayments) throw new Error('결제 모듈 초기화에 실패했습니다.');
+  const toss = window.TossPayments(TOSS_PAYMENT_CLIENT_KEY);
+  await toss.payment({ customerKey: crypto.randomUUID() }).requestPayment({ method: 'CARD', ...req });
 }

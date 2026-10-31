@@ -68,6 +68,20 @@ export default function PlatformDashboard() {
     void load();
   };
 
+  // 계좌이체·별도 계약·보상 등 결제창 밖에서 판 응시권을 장부에 넣는다(0044). 음수는 회수.
+  const grant = async (o: Org) => {
+    const raw = window.prompt(`"${o.name}" 에 지급할 응시권 수량(명). 회수는 음수로 입력하세요.`, '10');
+    const seats = Number(raw);
+    if (!raw || !Number.isInteger(seats) || seats === 0) return;
+    const note = window.prompt('메모(예: 계좌이체 입금 확인, 계약번호)', '') ?? '';
+    const { data, error } = await supabase.rpc('grant_seats', { _org_id: o.id, _seats: seats, _note: note || null });
+    if (error) {
+      toast({ title: '지급 실패', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: '응시권 반영', description: `${o.name}: ${seats > 0 ? '+' : ''}${seats}명분 → 잔액 ${data}명분` });
+  };
+
   const newCount = inquiries.filter(i => i.status === '신규').length;
 
   return (
@@ -156,7 +170,7 @@ export default function PlatformDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>생성일</TableHead><TableHead>조직명</TableHead><TableHead>주소(slug)</TableHead><TableHead>상태</TableHead>
+                      <TableHead>생성일</TableHead><TableHead>조직명</TableHead><TableHead>주소(slug)</TableHead><TableHead>상태</TableHead><TableHead>응시권</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -166,10 +180,13 @@ export default function PlatformDashboard() {
                         <TableCell className="font-medium">{o.name}</TableCell>
                         <TableCell className="text-xs font-mono text-muted-foreground">{o.slug}</TableCell>
                         <TableCell><Badge variant={o.status === 'active' ? 'default' : 'secondary'}>{o.status}</Badge></TableCell>
+                        <TableCell>
+                          <Button size="sm" variant="outline" className="h-8" onClick={() => void grant(o)}>응시권 지급</Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                     {orgs.length === 0 && !loading && (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">조직이 없습니다.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">조직이 없습니다.</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
