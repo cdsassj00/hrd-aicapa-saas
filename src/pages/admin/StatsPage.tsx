@@ -1,3 +1,4 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +17,7 @@ interface CategoryAvg { category: string; avg: number; max: number }
 const gradeMap: Record<string, string> = { green: '그린', blue: '블루', black: '블랙', '전문인재': '전문인재' };
 
 export default function StatsPage() {
+  const { activeOrgId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [examOptions, setExamOptions] = useState<ExamOption[]>([]);
   const [selectedExam, setSelectedExam] = useState<string>('all');
@@ -25,13 +27,16 @@ export default function StatsPage() {
   const [categoryAvg, setCategoryAvg] = useState<CategoryAvg[]>([]);
 
   useEffect(() => {
-    supabase.from('exams').select('id, title, grade').order('exam_date', { ascending: false })
-      .then(({ data }) => { if (data) setExamOptions(data); });
-  }, []);
+    setSelectedExam('all');
+    if (!activeOrgId) return;
+    supabase.from('exams').select('id, title, grade').eq('org_id', activeOrgId ?? '').order('exam_date', { ascending: false })
+      .then(({ data }) => { setExamOptions(data ?? []); });
+  }, [activeOrgId]);
 
-  useEffect(() => { fetchStats(); }, [selectedExam]);
+  useEffect(() => { fetchStats(); }, [selectedExam, activeOrgId]);
 
   const fetchStats = async () => {
+    if (!activeOrgId) return;
     setLoading(true);
     try {
       await Promise.all([
@@ -46,11 +51,11 @@ export default function StatsPage() {
   };
 
   const fetchGradeStats = async () => {
-    let sessionsQuery = supabase.from('exam_sessions').select('status, exam_id');
+    let sessionsQuery = supabase.from('exam_sessions').select('status, exam_id').eq('org_id', activeOrgId ?? '');
     if (selectedExam !== 'all') sessionsQuery = sessionsQuery.eq('exam_id', selectedExam);
     const { data: sessions } = await sessionsQuery;
 
-    const { data: exams } = await supabase.from('exams').select('id, grade');
+    const { data: exams } = await supabase.from('exams').select('id, grade').eq('org_id', activeOrgId ?? '');
     if (!sessions || !exams) return;
 
     const examGradeMap = Object.fromEntries(exams.map(e => [e.id, e.grade]));
@@ -79,7 +84,7 @@ export default function StatsPage() {
   };
 
   const fetchMonthlyTrend = async () => {
-    let query = supabase.from('certifications').select('issued_at, exam_id').eq('status', 'valid');
+    let query = supabase.from('certifications').select('issued_at, exam_id').eq('org_id', activeOrgId ?? '').eq('status', 'valid');
     if (selectedExam !== 'all') query = query.eq('exam_id', selectedExam);
     const { data: certs } = await query;
     if (!certs) return;
@@ -96,7 +101,7 @@ export default function StatsPage() {
   };
 
   const fetchOrgStats = async () => {
-    let query = supabase.from('certifications').select('applicant_id, grade, status, exam_id').eq('status', 'valid');
+    let query = supabase.from('certifications').select('applicant_id, grade, status, exam_id').eq('org_id', activeOrgId ?? '').eq('status', 'valid');
     if (selectedExam !== 'all') query = query.eq('exam_id', selectedExam);
     const { data: certs } = await query;
     const { data: profiles } = await supabase.from('profiles').select('id, organization');
@@ -128,7 +133,7 @@ export default function StatsPage() {
       if (sessionIds.length === 0) { setCategoryAvg([]); return; }
     }
 
-    let answersQuery = supabase.from('answers').select('question_id, score, session_id');
+    let answersQuery = supabase.from('answers').select('question_id, score, session_id').eq('org_id', activeOrgId ?? '');
     if (sessionIds) answersQuery = answersQuery.in('session_id', sessionIds);
     const { data: answers } = await answersQuery;
     // 문항 분류는 answer_key(0022 이후 표준) 에 있다. 구 화면의 category/max_score 형태로 펼친다.

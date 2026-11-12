@@ -1,3 +1,4 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ const eventTypeLabels: Record<MonitoringEventType, string> = {
 };
 
 export default function EventLogPage() {
+  const { activeOrgId } = useAuth();
   const [filter, setFilter] = useState('all');
   const [reviewFilter, setReviewFilter] = useState('all');
   const [events, setEvents] = useState<any[]>([]);
@@ -25,12 +27,14 @@ export default function EventLogPage() {
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [activeOrgId]);
 
   const fetchEvents = async () => {
+    if (!activeOrgId) return;
     const { data } = await supabase
       .from('monitoring_events')
       .select('*, exam_sessions(applicant_id, exam_id, exams(title))')
+      .eq('org_id', activeOrgId ?? '')
       .order('detected_at', { ascending: false });
     if (data) {
       setEvents(data);
