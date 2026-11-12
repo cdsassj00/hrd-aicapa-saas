@@ -31,6 +31,8 @@ const menuConfig = {
     { title: '구독 · 결제', url: '/admin/billing', icon: CreditCard },
     { title: '시스템 설정', url: '/admin/settings', icon: Settings },
     { title: '얼굴 대조 테스트', url: '/admin/face-compare-test', icon: ScanFace },
+    // 관리자가 응시자 화면을 직접 체험(테스트 모드 회차는 응시권 차감 없음)
+    { title: '응시자 화면 체험', url: '/applicant', icon: Home },
   ],
   viewer: [
     { title: '인증자 조회', url: '/admin/certifications', icon: Users },

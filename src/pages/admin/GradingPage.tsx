@@ -191,10 +191,19 @@ export default function GradingPage() {
       const job = await waitForJob(jobId);
       if (job.status === 'failed') throw new Error(job.error_message || '채점 실패');
 
-      toast({
-        title: 'AI 채점 완료',
-        description: `총점: ${job.result_total}점 → ${job.result_status === 'passed' ? '합격' : '불합격'}`,
-      });
+      // 실무형·파일 제출(세트) 문항은 AI 가 확정하지 않는다(ai-grade needsExternalGrading).
+      // 그때는 총점이 비어 오므로 '불합격'이 아니라 남은 할 일을 안내한다.
+      if (job.result_total == null) {
+        toast({
+          title: 'AI 채점 완료 (일부)',
+          description: '객관식·단답·서술형은 채점했습니다. 실무형·파일 제출 문항은 아래에서 점수를 입력한 뒤 [채점 저장]을 눌러야 총점이 확정됩니다.',
+        });
+      } else {
+        toast({
+          title: 'AI 채점 완료',
+          description: `총점: ${job.result_total}점 → ${job.result_status === 'passed' ? '합격' : '불합격'}`,
+        });
+      }
 
       await openDetail(selectedSession);
       fetchSessions();
