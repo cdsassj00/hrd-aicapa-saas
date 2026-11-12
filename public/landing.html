@@ -981,6 +981,11 @@
   closeBtn.addEventListener('click', close);
   modal.addEventListener('click', function(e){ if(e.target === modal) close(); });
   addEventListener('keydown', function(e){ if(e.key === 'Escape' && modal.classList.contains('open')) close(); });
+  // 다른 화면(데모 등)에서 /landing.html#inquiry 로 들어오면 문의 창을 바로 연다
+  if (location.hash === '#inquiry' || location.hash === '#contact') {
+    var s = document.getElementById('contact'); if (s) s.scrollIntoView();
+    open();
+  }
 
   form.addEventListener('submit', async function(e){
     e.preventDefault();

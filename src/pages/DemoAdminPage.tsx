@@ -60,7 +60,7 @@ export default function DemoAdminPage() {
                 가이드 다시 보기
               </Button>
             )}
-            <a href="https://ai-hrd.com/#contact"><Button variant="outline" size="sm" className="text-[13px] font-medium">도입 문의</Button></a>
+            <a href="/landing.html#inquiry"><Button variant="outline" size="sm" className="text-[13px] font-medium">도입 문의</Button></a>
             <Link to="/login?tab=signup"><Button size="sm" className="text-[13px] font-medium">회원가입</Button></Link>
           </div>
         </div>
