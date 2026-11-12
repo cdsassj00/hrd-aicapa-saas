@@ -53,10 +53,17 @@ export function useDailyRoom() {
       const { data, error } = await supabase.functions.invoke('daily-room', {
         body: { action: 'create-token', room_name: roomName, user_name: userName, is_owner: isOwner },
       });
-      if (error) throw error;
+      if (error) {
+        // functions.invoke 는 4xx/5xx 를 'non-2xx' 로만 알려 준다. 서버가 준 이유를 꺼낸다.
+        let reason = '';
+        try { reason = (await (error as any).context?.json?.())?.error ?? ''; } catch { /* 본문 없음 */ }
+        throw new Error(reason === 'forbidden'
+          ? '이 시험의 감독 권한이 없습니다. 상단에서 시험이 속한 조직을 선택했는지 확인하세요.'
+          : reason || error.message);
+      }
       return data?.token as string;
     } catch (err: any) {
-      toast({ title: '토큰 생성 실패', description: err.message, variant: 'destructive' });
+      toast({ title: '감독 화면 연결 실패', description: err.message, variant: 'destructive' });
       return null;
     }
   }, [toast]);

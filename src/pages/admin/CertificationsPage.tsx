@@ -1,3 +1,4 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { PageHeader } from '@/components/PageHeader';
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
@@ -12,16 +13,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CertificationsPage() {
+  const { activeOrgId } = useAuth();
   const [certs, setCerts] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
   const [search, setSearch] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
   const { toast } = useToast();
 
-  useEffect(() => { fetchCerts(); }, []);
+  useEffect(() => { fetchCerts(); }, [activeOrgId]);
 
   const fetchCerts = async () => {
-    const { data } = await supabase.from('certifications').select('*').order('issued_at', { ascending: false });
+    if (!activeOrgId) return;
+    const { data } = await supabase.from('certifications').select('*').eq('org_id', activeOrgId ?? '').order('issued_at', { ascending: false });
     if (data) {
       setCerts(data);
       const userIds = [...new Set(data.map(c => c.applicant_id))];

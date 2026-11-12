@@ -1,3 +1,4 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { PageHeader } from '@/components/PageHeader';
 import { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
@@ -42,6 +43,7 @@ function autoGradeSlot(slot: SubmissionSlot, value: string): { score: number; ma
 }
 
 export default function GradingPage() {
+  const { activeOrgId } = useAuth();
   const [sessions, setSessions] = useState<any[]>([]);
   const [exams, setExams] = useState<Map<string, any>>(new Map());
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
@@ -72,12 +74,14 @@ export default function GradingPage() {
 
   const { toast } = useToast();
 
-  useEffect(() => { fetchSessions(); }, []);
+  useEffect(() => { fetchSessions(); }, [activeOrgId]);
 
   const fetchSessions = async () => {
+    if (!activeOrgId) return;
     const { data } = await supabase
       .from('exam_sessions')
       .select('*')
+      .eq('org_id', activeOrgId ?? '')
       .in('status', ['submitted', 'passed', 'failed'])
       .order('submit_time', { ascending: false });
     if (data) {

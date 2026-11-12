@@ -1,3 +1,4 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,6 +53,7 @@ interface ChatMessage {
 }
 
 export default function MonitorDashboard() {
+  const { activeOrgId } = useAuth();
   const [exams, setExams] = useState<any[]>([]);
   const [selectedExam, setSelectedExam] = useState('');
   const [filter, setFilter] = useState<(typeof filterOptions)[number]>('전체');
@@ -151,9 +153,11 @@ export default function MonitorDashboard() {
     });
   }, []);
 
+  // 현재 조직의 시험만 (플랫폼 관리자·여러 조직 소속이면 RLS 상 다른 조직 시험도 보인다)
   useEffect(() => {
+    setSelectedExam('');
     fetchExams();
-  }, []);
+  }, [activeOrgId]);
 
   useEffect(() => {
     if (!selectedExam) return;
@@ -353,7 +357,9 @@ export default function MonitorDashboard() {
 
   const fetchExams = async () => {
     trackQuery();
-    const { data } = await supabase.from('exams').select('*').order('exam_date', { ascending: false });
+    if (!activeOrgId) { setExams([]); return; }
+    const { data } = await supabase.from('exams').select('*').eq('org_id', activeOrgId).order('exam_date', { ascending: false });
+    setExams(data ?? []);
     if (data && data.length > 0) {
       setExams(data);
       setSelectedExam((prev) => prev || data[0].id);

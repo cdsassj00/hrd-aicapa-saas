@@ -1,3 +1,4 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { PageHeader } from '@/components/PageHeader';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -196,6 +197,7 @@ function assessChunk(c: ChunkRow, prev: ChunkRow | null): ChunkHealth {
 }
 
 export default function RecordingReviewPage() {
+  const { activeOrgId } = useAuth();
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
@@ -688,10 +690,12 @@ export default function RecordingReviewPage() {
     setSearching(true);
     try {
       // 1) 최근 녹화 청크가 있는 세션을 먼저 모은다 (녹화 없는 세션 제외)
+      if (!activeOrgId) { setSessions([]); return; }
       const sinceIso = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
       const { data: chunkRows, error: chunkErr } = await supabase
         .from('recording_chunks')
         .select('session_id, created_at')
+        .eq('org_id', activeOrgId ?? '')
         .gte('created_at', sinceIso)
         .order('created_at', { ascending: false })
         .limit(2000);
@@ -757,7 +761,7 @@ export default function RecordingReviewPage() {
     }
   };
 
-  useEffect(() => { runSearch(); /* initial load */ }, []);
+  useEffect(() => { runSearch(); /* 조직 바뀌면 다시 */ }, [activeOrgId]);
 
   const loadSession = async (s: SessionRow) => {
     setActiveSession(s);
