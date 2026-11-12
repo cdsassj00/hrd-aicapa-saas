@@ -154,7 +154,7 @@ export default function DemoExamPage() {
           <span className="hidden items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[12.5px] font-medium tabular-nums text-slate-700 sm:flex">
             <Clock className="h-3.5 w-3.5 text-slate-500" /> 남은 시간 52:10
           </span>
-          <a href="https://ai-hrd.com/#contact">
+          <a href="/landing.html#inquiry">
             <Button variant="outline" size="sm" className="text-[13px] font-medium">도입 문의</Button>
           </a>
           <Link to="/login?tab=signup">
@@ -344,7 +344,7 @@ export default function DemoExamPage() {
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 <Link to="/login?tab=signup"><Button className="text-[13px] font-medium">회원가입</Button></Link>
-                <a href="https://ai-hrd.com/#contact"><Button variant="secondary" className="text-[13px] font-medium">도입 문의</Button></a>
+                <a href="/landing.html#inquiry"><Button variant="secondary" className="text-[13px] font-medium">도입 문의</Button></a>
                 <Link to="/login"><Button variant="outline" className="text-[13px] font-medium">로그인</Button></Link>
               </div>
             </div>
@@ -521,7 +521,7 @@ function ChatPanel(props: {
             <p className="mt-0.5 text-[11.5px] text-slate-500">실제 응시에서는 제한 없이 AI와 대화하며 산출물을 만들어 제출합니다.</p>
             <div className="mt-2 flex justify-center gap-2">
               <Link to="/login?tab=signup"><Button size="sm" className="h-7 text-[12px]">회원가입</Button></Link>
-              <a href="https://ai-hrd.com/#contact"><Button size="sm" variant="secondary" className="h-7 text-[12px]">도입 문의</Button></a>
+              <a href="/landing.html#inquiry"><Button size="sm" variant="secondary" className="h-7 text-[12px]">도입 문의</Button></a>
             </div>
           </div>
         )}

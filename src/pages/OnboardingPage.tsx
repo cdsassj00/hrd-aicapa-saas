@@ -271,7 +271,7 @@ export default function OnboardingPage() {
               )}
 
               <div className="flex flex-wrap gap-2 pt-1">
-                <a href="https://ai-hrd.com/#contact"><Button variant="outline" className="text-[13px]">도입 문의 페이지</Button></a>
+                <a href="/landing.html#inquiry"><Button variant="outline" className="text-[13px]">도입 문의 페이지</Button></a>
                 <Button variant="outline" className="text-[13px]" onClick={() => navigate('/demo')}>응시 화면 미리보기</Button>
               </div>
             </CardContent>
