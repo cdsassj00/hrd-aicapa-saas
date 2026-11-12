@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -512,7 +513,10 @@ export default function QuestionBankPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <h1>문제 관리</h1>
+          <div>
+            <div className="text-[12px] font-medium text-muted-foreground">출제 · 운영</div>
+            <h1 className="mt-0.5 text-[22px] font-semibold leading-tight tracking-tight">문제은행</h1>
+          </div>
           <Tabs value={tab} onValueChange={(v) => setTab(v as 'bank' | 'sets')}>
             <TabsList className="h-8">
               <TabsTrigger value="bank" className="text-[12px] h-7">문제은행 (단독)</TabsTrigger>

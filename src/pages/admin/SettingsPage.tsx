@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -42,11 +43,8 @@ export default function SettingsPage() {
   if (isLoading) return <div className="p-6 text-muted-foreground text-sm">로딩 중...</div>;
 
   return (
-    <div className="p-6 max-w-2xl space-y-6">
-      <div className="flex items-center gap-2">
-        <Settings className="h-5 w-5 text-muted-foreground" />
-        <h1 className="text-lg font-bold">시스템 설정</h1>
-      </div>
+    <div className="max-w-2xl space-y-6">
+      <PageHeader section="조직" title="시스템 설정" description="브랜딩, 알림, 응시 기본값 등 조직 전체 설정입니다." />
 
       <Card>
         <CardHeader>

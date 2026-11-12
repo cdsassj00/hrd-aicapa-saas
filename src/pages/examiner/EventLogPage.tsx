@@ -62,7 +62,10 @@ export default function EventLogPage() {
 
   return (
     <div className="space-y-4">
-      <h1>이벤트 로그</h1>
+      <div>
+          <div className="text-[12px] font-medium text-muted-foreground">출제 · 운영</div>
+          <h1 className="mt-0.5 text-[22px] font-semibold leading-tight tracking-tight">이벤트 로그</h1>
+        </div>
 
       <div className="flex gap-3 items-center">
         <Select value={filter} onValueChange={setFilter}>

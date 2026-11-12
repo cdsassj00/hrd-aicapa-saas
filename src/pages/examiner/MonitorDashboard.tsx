@@ -525,7 +525,10 @@ export default function MonitorDashboard() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1>실시간 모니터링</h1>
+        <div>
+          <div className="text-[12px] font-medium text-muted-foreground">출제 · 운영</div>
+          <h1 className="mt-0.5 text-[22px] font-semibold leading-tight tracking-tight">실시간 모니터링</h1>
+        </div>
         <div className="flex items-center gap-2">
           {/* Feature 1: Global announcement button */}
           <Button variant="outline" size="sm" className="text-[12px] gap-1" onClick={() => setAnnounceOpen(true)}>

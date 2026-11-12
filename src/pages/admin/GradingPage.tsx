@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -460,8 +461,12 @@ export default function GradingPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1>채점 관리</h1>
+      <div className="flex items-end justify-between flex-wrap gap-3 border-b pb-4">
+        <div>
+          <div className="text-[12px] font-medium text-muted-foreground">채점 · 결과</div>
+          <h1 className="mt-0.5 text-[22px] font-semibold leading-tight tracking-tight">채점 관리</h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">제출된 답안을 AI로 채점하고, 실무형 문항을 확정한 뒤 리포트를 발행합니다.</p>
+        </div>
         <div className="flex gap-2">
           <Button
             variant="outline"

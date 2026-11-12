@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -123,13 +124,12 @@ export default function OrgMembersPage() {
   const pending = invites.filter(i => !i.accepted_at && !i.revoked_at);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">{activeOrg?.orgName} 멤버</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          역할은 이 조직 안에서만 유효합니다. 다른 조직의 권한에는 영향을 주지 않습니다.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        section="조직"
+        title="멤버 · 초대"
+        description={`${activeOrg?.orgName ?? ''} — 역할은 이 조직 안에서만 유효하며, 다른 조직의 권한에는 영향을 주지 않습니다.`}
+      />
 
       {isAdmin && (
         <Card>

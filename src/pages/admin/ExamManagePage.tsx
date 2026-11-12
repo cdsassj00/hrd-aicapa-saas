@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -232,10 +233,12 @@ export default function ExamManagePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1>시험 관리</h1>
-        <Button size="sm" className="text-[12px] gap-1 bg-action text-action-foreground hover:bg-action/90" onClick={openCreate}><Plus className="h-3.5 w-3.5" />시험 생성</Button>
-      </div>
+      <PageHeader
+        section="출제 · 운영"
+        title="시험 관리"
+        description="회차를 만들고 문항 배정, 응시자 초대, 감독 방식을 설정합니다."
+        actions={<Button size="sm" className="text-[12px] gap-1" onClick={openCreate}><Plus className="h-3.5 w-3.5" />시험 생성</Button>}
+      />
       <Card>
         <Table>
           <TableHeader>
