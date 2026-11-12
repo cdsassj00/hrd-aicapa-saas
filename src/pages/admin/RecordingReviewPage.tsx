@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -989,11 +990,12 @@ export default function RecordingReviewPage() {
   };
 
   return (
-    <div className="p-6 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold">녹화 조회 및 재생</h1>
-        <p className="text-sm text-muted-foreground">녹화 청크가 저장된 세션만 최신순으로 표시합니다. 응시생/시험명/세션ID로 좁힐 수 있습니다.</p>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        section="출제 · 운영"
+        title="녹화 조회"
+        description="녹화가 저장된 세션을 최신순으로 보여 줍니다. 응시자·시험명·세션 ID로 좁힐 수 있습니다."
+      />
 
       <RecordingStatsPanel />
 

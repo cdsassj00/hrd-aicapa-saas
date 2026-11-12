@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,10 +47,12 @@ export default function CertificationsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1>인증자 DB (AI챔피언 인재 명부)</h1>
-        <Button variant="outline" size="sm" className="text-[12px] gap-1"><Download className="h-3.5 w-3.5" />엑셀 다운로드</Button>
-      </div>
+      <PageHeader
+        section="채점 · 결과"
+        title="인증자 DB"
+        description="기준을 충족한 인재 명부입니다."
+        actions={<Button variant="outline" size="sm" className="text-[12px] gap-1"><Download className="h-3.5 w-3.5" />엑셀 다운로드</Button>}
+      />
 
       <div className="flex gap-3">
         <div className="relative flex-1 max-w-[300px]">

@@ -163,7 +163,10 @@ export default function StatsPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1>통계 대시보드</h1>
+        <div>
+          <div className="text-[12px] font-medium text-muted-foreground">채점 · 결과</div>
+          <h1 className="mt-0.5 text-[22px] font-semibold leading-tight tracking-tight">통계</h1>
+        </div>
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
         </div>
@@ -180,7 +183,10 @@ export default function StatsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1>통계 대시보드</h1>
+        <div>
+          <div className="text-[12px] font-medium text-muted-foreground">채점 · 결과</div>
+          <h1 className="mt-0.5 text-[22px] font-semibold leading-tight tracking-tight">통계</h1>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-[12px] text-muted-foreground">시험 필터:</span>
           <Select value={selectedExam} onValueChange={setSelectedExam}>

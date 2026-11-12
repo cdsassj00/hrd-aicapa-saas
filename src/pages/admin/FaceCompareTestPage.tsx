@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -74,13 +75,12 @@ export default function FaceCompareTestPage() {
   const reset = () => { setSelfie(null); setIdPhoto(null); setResult(null); stream?.getTracks().forEach(t => t.stop()); setStream(null); };
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">얼굴 대조 테스트</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          AWS Rekognition(서울 리전) 본인 확인 엔진 점검용 페이지입니다. 운영 흐름(verify-identity)과 독립적으로 동작합니다.
-        </p>
-      </div>
+    <div className="max-w-4xl space-y-4">
+      <PageHeader
+        section="도구"
+        title="얼굴 대조 테스트"
+        description="본인 확인 엔진(AWS Rekognition, 서울 리전) 점검용 화면입니다. 실제 응시 흐름과 독립적으로 동작합니다."
+      />
 
       <Card>
         <CardContent className="py-3 flex items-center gap-2 flex-wrap">

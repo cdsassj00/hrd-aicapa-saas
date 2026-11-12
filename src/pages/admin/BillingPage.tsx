@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -151,10 +152,7 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-2">
-        <CreditCard className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">구독 · 결제</h1>
-      </div>
+      <PageHeader section="조직" title="구독 · 결제" description="응시권 구매, 요금제, 결제 내역을 관리합니다." />
 
       {result && (
         <Alert variant={result.kind === 'error' ? 'destructive' : 'default'}>
